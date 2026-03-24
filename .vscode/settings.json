@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^powershell -ExecutionPolicy Bypass -File \"C:\\\\myPrjt01\\\\push4myList\\.ps1\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
