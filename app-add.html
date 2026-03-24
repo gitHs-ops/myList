@@ -20,7 +20,10 @@
 </head>
 <body>
   <div class="container">
-    <h1 id="formTitle">앱 등록</h1>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h1 id="formTitle" style="margin-bottom:0;">앱 등록</h1>
+      <a href="app-list.html" class="back-link" style="margin:0;">← 목록으로</a>
+    </div>
     <form id="appForm" autocomplete="off" onsubmit="return false;">
       <label for="name">앱 이름</label>
       <input type="text" id="name" required maxlength="32" autocomplete="off">
@@ -30,8 +33,8 @@
       <input type="url" id="url" required placeholder="예: ai-briefing.html" autocomplete="off">
       <button class="btn" id="submitBtn" onclick="addOrEditApp()">등록하기</button>
     </form>
-    <a href="app-list.html" class="back-link">← 목록으로 돌아가기</a>
     <div id="msg" class="msg"></div>
+    <div id="editLinkWrap"></div>
   </div>
   <script>
     // 등록/수정 겸용
@@ -49,6 +52,8 @@
       document.getElementById('name').value = apps[editIdx].name;
       document.getElementById('desc').value = apps[editIdx].desc;
       document.getElementById('url').value = apps[editIdx].url;
+      // 하단 바로가기 버튼 추가
+      document.getElementById('editLinkWrap').innerHTML = `<a href="${apps[editIdx].url}" class="btn" style="width:100%;margin-top:18px;display:inline-block;text-align:center;">바로가기</a>`;
     }
     function addOrEditApp() {
       const name = document.getElementById('name').value.trim();
