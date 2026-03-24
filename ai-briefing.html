@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데일리 브리핑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gmarket+Sans:wght@300;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+body{background:#0f0c1a;color:#ede9fe;font-family:'Noto Sans KR',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+.card{background:#1e1833;border-radius:18px;box-shadow:0 8px 32px rgba(124,58,237,.18);padding:40px 32px;max-width:400px;width:100%;border:1px solid rgba(167,139,250,.15);}
+.card-title{font-family:'Gmarket Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:10px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;}
+.card-title .live-dot{width:10px;height:10px;border-radius:50%;background:#f9a8d4;animation:pulse 2s infinite;display:inline-block;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+.card-date{font-size:.9rem;color:#a89cc8;margin-bottom:18px;}
+.card-desc{font-size:1.05rem;color:#ede9fe;margin-bottom:28px;line-height:1.7;}
+.card-btn{display:inline-block;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;padding:13px 32px;border-radius:30px;font-weight:700;text-decoration:none;font-size:1rem;box-shadow:0 4px 24px rgba(124,58,237,.18);transition:transform .2s,box-shadow .2s;}
+.card-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,58,237,.28);}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-title"><span class="live-dot"></span>📰 데일리 브리핑</div>
+    <div class="card-date" id="today"></div>
+    <div class="card-desc">오늘의 주요 이슈, 날씨, 증시를 한눈에 확인하세요.<br>매일 아침 자동 업데이트!</div>
+    <a href="dashboard-landing.html" class="card-btn">대시보드로 돌아가기</a>
+  </div>
+<script>
+const d=new Date();
+document.getElementById('today').textContent=
+  d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0')+' ('+'일월화수목금토'[d.getDay()]+')';
+</script>
+</body>
+</html>
