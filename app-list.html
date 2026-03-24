@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>앱 목록 게시판</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { background: #f4f6fb; color: #222; font-family: 'Noto Sans KR', sans-serif; margin: 0; }
+    .nav { background: #fff; border-bottom: 1.5px solid #e2e8f4; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-shadow: 0 2px 8px rgba(51,88,244,.04); }
+    .nav-logo { font-weight: 800; font-size: 1.1rem; color: #3358f4; letter-spacing: -0.02em; }
+    .nav-menu { display: flex; gap: 24px; }
+    .nav-menu a { color: #4a567a; text-decoration: none; font-size: .95rem; font-weight: 500; transition: color .15s; }
+    .nav-menu a:hover { color: #3358f4; }
+    .container { max-width: 820px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(51,88,244,.10); padding: 40px 32px; }
+    h1 { font-size: 1.6rem; color: #3358f4; margin-bottom: 8px; }
+    .subtitle { color: #8893b0; font-size: 1.05rem; margin-bottom: 28px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    thead { background: #f4f6fb; }
+    th, td { padding: 14px 10px; text-align: left; }
+    th { color: #4a567a; font-size: .98rem; border-bottom: 2px solid #e2e8f4; }
+    tr { border-bottom: 1px solid #e2e8f4; }
+    td { font-size: .97rem; color: #222; }
+    .app-title { font-weight: 700; color: #3358f4; }
+    .desc { color: #4a567a; font-size: .96rem; }
+    .date { color: #8893b0; font-size: .93rem; }
+    .btn { background: #3358f4; color: #fff; border: none; border-radius: 8px; padding: 7px 18px; font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn:hover { background: #223a99; }
+    @media (max-width: 600px) {
+      .container { padding: 18px 4vw; }
+      .nav { padding: 0 12px; }
+      th, td { padding: 10px 4px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-logo">AppList <span style="color:#0ec7a5;">Board</span></div>
+    <div class="nav-menu">
+      <a href="#">홈</a>
+      <a href="#">소개</a>
+      <a href="#">문의</a>
+    </div>
+  </nav>
+  <div class="container">
+    <h1>앱 목록 게시판</h1>
+    <div class="subtitle">최신 앱과 도구를 한눈에 확인하고 바로 이동하세요.</div>
+    <table>
+      <thead>
+        <tr>
+          <th>앱 이름</th>
+          <th>설명</th>
+          <th>등록일</th>
+          <th>바로가기</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="app-title">데일리 브리핑</td>
+          <td class="desc">오늘의 주요 이슈, 날씨, 증시를 한눈에!</td>
+          <td class="date">2026-03-24</td>
+          <td><a href="ai-briefing.html" class="btn">이동</a></td>
+        </tr>
+        <tr>
+          <td class="app-title">전과목 시험지 생성기</td>
+          <td class="desc">중학교 전과목 AI 자동 시험지 생성</td>
+          <td class="date">2026-03-23</td>
+          <td><a href="exam_generator.html" class="btn">이동</a></td>
+        </tr>
+        <tr>
+          <td class="app-title">한문 문제지</td>
+          <td class="desc">한문 퀴즈 및 문제지 자동 생성</td>
+          <td class="date">2026-03-23</td>
+          <td><a href="hanja_quiz_v2.html" class="btn">이동</a></td>
+        </tr>
+        <!-- 필요시 추가 항목 -->
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
