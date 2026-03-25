@@ -61,6 +61,13 @@
 </head>
 <body>
   <div class="container">
+      <!-- 파일 미리보기 모달 -->
+      <div id="fileModal" style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(20,24,40,0.38);align-items:center;justify-content:center;">
+        <div style="background:#fff;max-width:700px;width:90vw;max-height:80vh;overflow:auto;border-radius:14px;box-shadow:0 8px 32px rgba(51,88,244,.18);padding:32px 24px;position:relative;">
+          <button id="closeModalBtn" style="position:absolute;top:12px;right:18px;font-size:1.3rem;background:none;border:none;color:#888;cursor:pointer;">✕</button>
+          <div id="fileModalContent" style="white-space:pre-wrap;font-family:inherit;font-size:1rem;color:#222;"></div>
+        </div>
+      </div>
     <h1 id="pageTitle">개발 일지 목록</h1>
     <form class="add-form" id="addForm" autocomplete="off" enctype="multipart/form-data">
       <input type="text" id="workInput" placeholder="작업 내용을 입력하세요" required maxlength="200">
@@ -135,7 +142,6 @@
           const ext = item.fileName.split('.').pop().toLowerCase();
           const viewable = ['txt','html','htm','md','csv','json','js','css'];
           if (viewable.includes(ext)) {
-            // Blob 방식으로 새 탭에서 보기 (Data URL 직접 사용 시 일부 브라우저 blank)
             fileCell = `<a href="#" class="view-file" data-idx="${idx}" style="color:var(--primary)">${item.fileName}</a>`;
           } else {
             fileCell = `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
@@ -199,23 +205,41 @@
         const idx = e.target.getAttribute('data-idx');
         window.location.href = `edit_work.html?idx=${idx}`;
       }
-      // 텍스트/HTML 파일 보기
+      // 텍스트/HTML 파일 보기 (모달)
       if(e.target.classList.contains('view-file')) {
         e.preventDefault();
         const idx = e.target.getAttribute('data-idx');
         const list = loadList();
         const item = list[idx];
         if(item && item.fileUrl && item.fileName) {
-          // Data URL → Blob → Object URL
+          const ext = item.fileName.split('.').pop().toLowerCase();
           fetch(item.fileUrl)
-            .then(res => res.blob())
-            .then(blob => {
-              const url = URL.createObjectURL(blob);
-              window.open(url, '_blank');
-              setTimeout(()=>URL.revokeObjectURL(url), 10000);
+            .then(res => res.text())
+            .then(text => {
+              const modal = document.getElementById('fileModal');
+              const contentDiv = document.getElementById('fileModalContent');
+              if(ext === 'html' || ext === 'htm') {
+                // HTML은 iframe으로 렌더링
+                contentDiv.innerHTML = `<iframe srcdoc="${text.replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" style="width:100%;height:60vh;border:none;"></iframe>`;
+              } else {
+                contentDiv.textContent = text;
+              }
+              modal.style.display = 'flex';
             });
         }
       }
+        // 모달 닫기 버튼
+        document.getElementById('closeModalBtn').onclick = function() {
+          document.getElementById('fileModal').style.display = 'none';
+          document.getElementById('fileModalContent').innerHTML = '';
+        };
+        // 모달 바깥 클릭 시 닫기
+        document.getElementById('fileModal').onclick = function(e) {
+          if(e.target === this) {
+            this.style.display = 'none';
+            document.getElementById('fileModalContent').innerHTML = '';
+          }
+        };
     });
     // Initial render
     renderList();
