@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>개발 일지 목록 — DailyBrief</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f4f6fb;--bg2:#ffffff;--surface:#ffffff;--surface2:#f0f3fa;
+      --border:#e2e8f4;--primary:#3358f4;--primary2:#5b7fff;
+      --accent:#0ec7a5;--warn:#f59e0b;--danger:#ef4444;
+      --text:#0f1729;--sub:#4a567a;--muted:#8893b0;
+      --mono:'DM Mono',monospace;--sans:'Noto Sans KR',sans-serif;
+      --shadow:0 4px 24px rgba(51,88,244,.10);
+      --shadow-lg:0 12px 48px rgba(28, 31, 40, 0.14);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow-x:hidden;}
+    .container{
+      max-width:900px;margin:60px auto 0 auto;padding:40px 24px 60px 24px;
+      background:var(--surface);border-radius:18px;box-shadow:var(--shadow-lg);
+    }
+    h1{
+      font-size:2.1rem;font-weight:900;margin-bottom:32px;text-align:center;letter-spacing:-.02em;
+    }
+    .add-form{
+      display:flex;gap:12px;margin-bottom:32px;justify-content:center;align-items:center;
+    }
+    .add-form input[type="text"]{
+      flex:1;min-width:0;padding:12px 14px;font-size:1rem;border:1.5px solid var(--border);
+      border-radius:8px;font-family:var(--sans);background:var(--surface2);transition:border-color .15s;
+    }
+    .add-form input[type="text"]:focus{border-color:var(--primary);outline:none;}
+    .add-form button{
+      background:var(--primary);color:#fff;border:none;border-radius:8px;padding:12px 28px;
+      font-family:var(--sans);font-size:1rem;font-weight:700;cursor:pointer;box-shadow:var(--shadow);
+      transition:opacity .15s,transform .15s;
+    }
+    .add-form button:hover{opacity:.88;transform:translateY(-1px);}
+    table{
+      width:100%;border-collapse:collapse;background:var(--surface2);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);}
+    th,td{
+      padding:14px 10px;text-align:left;font-size:.98rem;
+    }
+    th{
+      background:var(--bg2);color:var(--primary);font-weight:800;border-bottom:2px solid var(--border);}
+    td{border-bottom:1px solid var(--border);color:var(--sub);}
+    tr:last-child td{border-bottom:none;}
+    .delete-btn{
+      background:var(--danger);color:#fff;border:none;border-radius:6px;padding:7px 16px;
+      font-size:.92rem;font-weight:700;cursor:pointer;transition:opacity .15s;}
+    .delete-btn:hover{opacity:.7;}
+    @media(max-width:960px){
+      .container{padding:24px 4vw;}
+      h1{font-size:1.3rem;}
+      th,td{font-size:.92rem;padding:10px 6px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>개발 일지 목록</h1>
+    <form class="add-form" id="addForm" autocomplete="off">
+      <input type="text" id="workInput" placeholder="작업 내용을 입력하세요" required maxlength="200">
+      <button type="submit">등록</button>
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:120px">등록일</th>
+          <th>작업 내용</th>
+          <th style="width:80px">삭제</th>
+        </tr>
+      </thead>
+      <tbody id="workList"></tbody>
+    </table>
+  </div>
+  <script>
+    // LocalStorage key
+    const STORAGE_KEY = 'dayWorkReportList';
+    // Load list from localStorage
+    function loadList() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    }
+    // Save list to localStorage
+    function saveList(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+    // Render list
+    function renderList() {
+      const list = loadList();
+      const tbody = document.getElementById('workList');
+      tbody.innerHTML = '';
+      if(list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#b0b8c9;padding:32px 0;">등록된 작업이 없습니다</td></tr>';
+        return;
+      }
+      list.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.date}</td>
+          <td>${item.content}</td>
+          <td><button class="delete-btn" data-idx="${idx}">삭제</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    // Add new work
+    document.getElementById('addForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const input = document.getElementById('workInput');
+      const content = input.value.trim();
+      if(!content) return;
+      const today = new Date();
+      const dateStr = today.getFullYear() + '.' + String(today.getMonth()+1).padStart(2,'0') + '.' + String(today.getDate()).padStart(2,'0');
+      const list = loadList();
+      list.unshift({date: dateStr, content});
+      saveList(list);
+      input.value = '';
+      renderList();
+    });
+    // Delete work
+    document.getElementById('workList').addEventListener('click', function(e) {
+      if(e.target.classList.contains('delete-btn')) {
+        const idx = e.target.getAttribute('data-idx');
+        const list = loadList();
+        list.splice(idx,1);
+        saveList(list);
+        renderList();
+      }
+    });
+    // Initial render
+    renderList();
+  </script>
+</body>
+</html>
