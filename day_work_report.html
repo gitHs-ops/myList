@@ -277,27 +277,6 @@
     </script>
   </body>
   </html>
-
-  // Initial render
-  renderList(1);
-  </script>
-          fetch(item.fileUrl)
-            .then(res => res.text())
-            .then(text => {
-              const modal = document.getElementById('fileModal');
-              const contentDiv = document.getElementById('fileModalContent');
-              const titleDiv = document.getElementById('fileModalTitle');
-              titleDiv.textContent = item.fileName;
-              if(ext === 'html' || ext === 'htm') {
-                // HTML은 iframe으로 렌더링
-                contentDiv.innerHTML = `<iframe srcdoc="${text.replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" style="width:100%;height:60vh;border:none;"></iframe>`;
-              } else {
-                contentDiv.textContent = text;
-              }
-              modal.style.display = 'flex';
-            });
-        }
-      }
         // 모달 닫기 버튼
         document.getElementById('closeModalBtn').onclick = function() {
           document.getElementById('fileModal').style.display = 'none';
