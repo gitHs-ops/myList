@@ -18,13 +18,14 @@
     body::before {
       content: '';
       position: fixed;
-      inset: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       z-index: 0;
       background-image: radial-gradient(circle,rgba(51,88,244,.12) 1px,transparent 1px);
       background-size: 32px 32px;
       mask-image: radial-gradient(ellipse 80% 60% at 50% 50%,#000 30%,transparent 100%);
       pointer-events: none;
     }
+    .container { max-width: 1100px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(51,88,244,.10); padding: 40px 32px; position:relative; z-index:1; }
     .nav { background: #fff; border-bottom: 1.5px solid #e2e8f4; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-shadow: 0 2px 8px rgba(51,88,244,.04); }
     .nav-logo { font-weight: 800; font-size: 1.1rem; color: #3358f4; letter-spacing: -0.02em; }
     .nav-menu { display: flex; gap: 24px; }
@@ -44,8 +45,8 @@
     .date { color: #8893b0; font-size: .93rem; }
     .btn { background: #3358f4; color: #fff; border: none; border-radius: 8px; padding: 7px 18px; font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .15s; }
     .btn:hover { background: #223a99; }
-    @media (max-width: 600px) {
-      .container { padding: 18px 4vw; }
+    @media (max-width: 960px) {
+      .container { max-width: 98vw; padding: 18px 4vw; }
       .nav { padding: 0 12px; }
       th, td { padding: 10px 4px; }
     }
