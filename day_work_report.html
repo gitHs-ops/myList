@@ -79,12 +79,8 @@
       <thead>
         <tr>
           <th style="width:120px">등록일시
-            <button id="sortAscBtn" title="오름차순" style="border:none;background:none;padding:0 2px;cursor:pointer;vertical-align:middle;">
-              <span style="font-size:1rem;">▲</span>
-            </button>
-            <button id="sortDescBtn" title="내림차순" style="border:none;background:none;padding:0 2px;cursor:pointer;vertical-align:middle;">
-              <span style="font-size:1rem;">▼</span>
-            </button>
+            <button id="sortAscBtn" title="오름차순" class="sort-btn">▲</button>
+            <button id="sortDescBtn" title="내림차순" class="sort-btn">▼</button>
           </th>
               let sortOrder = 'desc'; // 기본: 최신순
               function parseDateStr(dateStr) {
@@ -98,61 +94,79 @@
           <th>작업 내용</th>
           <th style="width:120px">문서 파일</th>
           <th style="width:80px">삭제</th>
-        </tr>
-      </thead>
-      <tbody id="workList"></tbody>
-    </table>
-    <div id="pagingNav" style="display:flex;justify-content:center;gap:8px;margin-top:18px;"></div>
-  </div>
-  <script>
-    // LocalStorage key
-    const STORAGE_KEY = 'dayWorkReportList';
-    // Load list from localStorage
-    function loadList() {
-      const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    }
-    // Save list to localStorage
-    function saveList(list) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    }
-    // Version/date logic
-    function getTodayStr() {
-      const d = new Date();
-      return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
-    }
-    function getVersion() {
-      const verKey = 'dayWorkReportVer';
-      const dateKey = 'dayWorkReportVerDate';
-      const today = getTodayStr();
-      let ver = localStorage.getItem(verKey);
-      let vdate = localStorage.getItem(dateKey);
-      if (!ver || !vdate || vdate !== today) {
-        ver = '1.0';
-        vdate = today;
-      } else {
-        ver = (parseFloat(ver) + 0.1).toFixed(1);
-      }
-      localStorage.setItem(verKey, ver);
-      localStorage.setItem(dateKey, vdate);
-      return ver;
-    }
-    function setPageTitle() {
-      const ver = getVersion();
-      const today = getTodayStr();
-      document.getElementById('pageTitle').textContent = `개발 일지 목록  ver ${ver} (${today})`;
-    }
-    // Render list
-    // 페이징 변수
-    let currentPage = 1;
-    const PAGE_SIZE = 5;
+        let currentPage = 1;
+        const PAGE_SIZE = 5;
+        let sortOrder = 'desc'; // 기본: 최신순
 
-    function renderList(page) {
-      setPageTitle();
-      let list = loadList();
-      // 정렬
-      list.sort((a,b)=>{
-        const da = parseDateStr(a.date);
+        function parseDateStr(dateStr) {
+          const [datePart, timePart] = dateStr.split(' ');
+          const [y, m, d] = datePart.split('.').map(Number);
+          let h = 0, mi = 0, s = 0;
+          if (timePart) [h, mi, s] = timePart.split(':').map(Number);
+          return new Date(y, m - 1, d, h, mi, s);
+        }
+
+        function getSortedList() {
+          const list = loadList();
+          return list.sort((a, b) => {
+            const da = parseDateStr(a.date);
+            const db = parseDateStr(b.date);
+            return sortOrder === 'asc' ? da - db : db - da;
+          });
+        }
+
+        function renderList(page) {
+          setPageTitle();
+          const list = getSortedList();
+          const tbody = document.getElementById('workList');
+          const pagingNav = document.getElementById('pagingNav');
+          tbody.innerHTML = '';
+          pagingNav.innerHTML = '';
+          if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#b0b8c9;padding:32px 0;">등록된 작업이 없습니다</td></tr>';
+            return;
+          }
+          const total = list.length;
+          const totalPages = Math.ceil(total / PAGE_SIZE);
+          currentPage = page || currentPage;
+          if (currentPage > totalPages) currentPage = totalPages;
+          if (currentPage < 1) currentPage = 1;
+          const startIdx = (currentPage - 1) * PAGE_SIZE;
+          const endIdx = Math.min(startIdx + PAGE_SIZE, total);
+          for (let i = startIdx; i < endIdx; i++) {
+            const item = list[i];
+            const tr = document.createElement('tr');
+            let fileCell = '';
+            if (item.fileName && item.fileUrl) {
+              const ext = item.fileName.split('.').pop().toLowerCase();
+              const viewable = ['txt', 'html', 'htm', 'md', 'csv', 'json', 'js', 'css'];
+              if (viewable.includes(ext)) {
+                fileCell = `<a href="#" class="view-file" data-idx="${i}" style="color:var(--primary)">${item.fileName}</a>`;
+              } else {
+                fileCell = `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
+              }
+            }
+            tr.innerHTML = `
+              <td>${item.date}</td>
+              <td><a href="#" class="edit-link" data-idx="${i}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
+              <td>${fileCell}</td>
+              <td><button class="delete-btn" data-idx="${i}">삭제</button></td>
+            `;
+            tbody.appendChild(tr);
+          }
+          // 페이징 네비게이션
+          if (totalPages > 1) {
+            let navHtml = '';
+            navHtml += `<button class="page-btn" data-page="1" ${currentPage === 1 ? 'disabled' : ''}>&laquo;</button>`;
+            navHtml += `<button class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>&lt;</button>`;
+            for (let p = 1; p <= totalPages; p++) {
+              navHtml += `<button class="page-btn" data-page="${p}" ${currentPage === p ? 'style=\'background:var(--primary);color:#fff;font-weight:700\'' : ''}>${p}</button>`;
+            }
+            navHtml += `<button class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>&gt;</button>`;
+            navHtml += `<button class="page-btn" data-page="${totalPages}" ${currentPage === totalPages ? 'disabled' : ''}>&raquo;</button>`;
+            pagingNav.innerHTML = navHtml;
+          }
+        }
         const db = parseDateStr(b.date);
         return sortOrder==='asc' ? da-db : db-da;
       });
@@ -206,16 +220,20 @@
         pagingNav.innerHTML = navHtml;
       }
     }
-        // 정렬 버튼 이벤트
-        document.addEventListener('DOMContentLoaded', function() {
-          document.getElementById('sortAscBtn').onclick = function(e) {
+        // 정렬 버튼 이벤트 및 스타일
+        document.addEventListener('DOMContentLoaded', function () {
+          document.getElementById('sortAscBtn').onclick = function (e) {
             sortOrder = 'asc';
             renderList(1);
           };
-          document.getElementById('sortDescBtn').onclick = function(e) {
+          document.getElementById('sortDescBtn').onclick = function (e) {
             sortOrder = 'desc';
             renderList(1);
           };
+          // 스타일 추가
+          const style = document.createElement('style');
+          style.textContent = `.sort-btn{border:none;background:none;padding:0 2px;cursor:pointer;vertical-align:middle;color:var(--primary);font-size:1rem;}`;
+          document.head.appendChild(style);
         });
     // Add new work
     document.getElementById('addForm').addEventListener('submit', function(e) {
