@@ -602,7 +602,7 @@ let currentFilter = 'all';
 function saveData() {
   try { localStorage.setItem('hb_data', JSON.stringify(DATA)); } catch(e){}
 }
-const DATA_VERSION = '2';
+const DATA_VERSION = '3';
 function loadData() {
   try {
     const version = localStorage.getItem('hb_version');
