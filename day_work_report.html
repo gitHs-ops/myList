@@ -86,6 +86,7 @@
       </thead>
       <tbody id="workList"></tbody>
     </table>
+    <div id="pagingNav" style="display:flex;justify-content:center;gap:8px;margin-top:18px;"></div>
   </div>
   <script>
     // LocalStorage key
@@ -126,36 +127,62 @@
       document.getElementById('pageTitle').textContent = `개발 일지 목록  ver ${ver} (${today})`;
     }
     // Render list
-    function renderList() {
+    // 페이징 변수
+    let currentPage = 1;
+    const PAGE_SIZE = 5;
+
+    function renderList(page) {
       setPageTitle();
       const list = loadList();
       const tbody = document.getElementById('workList');
+      const pagingNav = document.getElementById('pagingNav');
       tbody.innerHTML = '';
+      pagingNav.innerHTML = '';
       if(list.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#b0b8c9;padding:32px 0;">등록된 작업이 없습니다</td></tr>';
         return;
       }
-      list.forEach((item, idx) => {
+      // 페이징 처리
+      const total = list.length;
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      currentPage = page || currentPage;
+      if(currentPage > totalPages) currentPage = totalPages;
+      if(currentPage < 1) currentPage = 1;
+      const startIdx = (currentPage-1)*PAGE_SIZE;
+      const endIdx = Math.min(startIdx+PAGE_SIZE, total);
+      for(let i=startIdx; i<endIdx; i++) {
+        const item = list[i];
         const tr = document.createElement('tr');
-        // 작업 내용 클릭 시 수정 화면 이동 (edit page: edit_work.html?idx=...)
         let fileCell = '';
         if (item.fileName && item.fileUrl) {
           const ext = item.fileName.split('.').pop().toLowerCase();
           const viewable = ['txt','html','htm','md','csv','json','js','css'];
           if (viewable.includes(ext)) {
-            fileCell = `<a href="#" class="view-file" data-idx="${idx}" style="color:var(--primary)">${item.fileName}</a>`;
+            fileCell = `<a href="#" class="view-file" data-idx="${i}" style="color:var(--primary)">${item.fileName}</a>`;
           } else {
             fileCell = `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
           }
         }
         tr.innerHTML = `
           <td>${item.date}</td>
-          <td><a href="#" class="edit-link" data-idx="${idx}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
+          <td><a href="#" class="edit-link" data-idx="${i}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
           <td>${fileCell}</td>
-          <td><button class="delete-btn" data-idx="${idx}">삭제</button></td>
+          <td><button class="delete-btn" data-idx="${i}">삭제</button></td>
         `;
         tbody.appendChild(tr);
-      });
+      }
+      // 페이징 네비게이션
+      if(totalPages > 1) {
+        let navHtml = '';
+        navHtml += `<button class="page-btn" data-page="1" ${currentPage===1?'disabled':''}>&laquo;</button>`;
+        navHtml += `<button class="page-btn" data-page="${currentPage-1}" ${currentPage===1?'disabled':''}>&lt;</button>`;
+        for(let p=1;p<=totalPages;p++) {
+          navHtml += `<button class="page-btn" data-page="${p}" ${currentPage===p?'style=\'background:var(--primary);color:#fff;font-weight:700\'':''}>${p}</button>`;
+        }
+        navHtml += `<button class="page-btn" data-page="${currentPage+1}" ${currentPage===totalPages?'disabled':''}>&gt;</button>`;
+        navHtml += `<button class="page-btn" data-page="${totalPages}" ${currentPage===totalPages?'disabled':''}>&raquo;</button>`;
+        pagingNav.innerHTML = navHtml;
+      }
     }
     // Add new work
     document.getElementById('addForm').addEventListener('submit', function(e) {
@@ -246,8 +273,17 @@
           }
         };
     });
+    // 페이징 버튼 클릭
+    document.getElementById('pagingNav').addEventListener('click', function(e) {
+      if(e.target.classList.contains('page-btn')) {
+        const page = parseInt(e.target.getAttribute('data-page'));
+        if(!isNaN(page)) {
+          renderList(page);
+        }
+      }
+    });
     // Initial render
-    renderList();
+    renderList(1);
   </script>
 </body>
 </html>
