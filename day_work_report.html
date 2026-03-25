@@ -122,6 +122,7 @@
 
     function renderList(page) {
       setPageTitle();
+      const rawList = loadList();
       const list = getSortedList();
       const tbody = document.getElementById('workList');
       const pagingNav = document.getElementById('pagingNav');
@@ -140,22 +141,23 @@
       const endIdx = Math.min(startIdx + PAGE_SIZE, total);
       for (let i = startIdx; i < endIdx; i++) {
         const item = list[i];
+        const origIdx = rawList.findIndex(r => r.date === item.date && r.content === item.content);
         const tr = document.createElement('tr');
         let fileCell = '';
         if (item.fileName && item.fileUrl) {
           const ext = item.fileName.split('.').pop().toLowerCase();
           const viewable = ['txt', 'html', 'htm', 'md', 'csv', 'json', 'js', 'css', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'pdf'];
           if (viewable.includes(ext)) {
-            fileCell = `<a href="#" class="view-file" data-idx="${i}" style="color:var(--primary)">${item.fileName}</a>`;
+            fileCell = `<a href="#" class="view-file" data-idx="${origIdx}" style="color:var(--primary)">${item.fileName}</a>`;
           } else {
             fileCell = `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
           }
         }
         tr.innerHTML = `
           <td>${item.date}</td>
-          <td><a href="#" class="edit-link" data-idx="${i}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
+          <td><a href="#" class="edit-link" data-idx="${origIdx}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
           <td>${fileCell}</td>
-          <td><button class="delete-btn" data-idx="${i}" title="삭제"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></td>
+          <td><button class="delete-btn" data-idx="${origIdx}" title="삭제"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></td>
         `;
         tbody.appendChild(tr);
       }

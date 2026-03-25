@@ -51,7 +51,7 @@
       alert('잘못된 접근입니다.');
       window.location.href = 'day_work_report.html';
     }
-    const STORAGE_KEY = 'dayWorkReportList';
+    const STORAGE_KEY = 'workList';
     function loadList() {
       const data = localStorage.getItem(STORAGE_KEY);
       return data ? JSON.parse(data) : [];
