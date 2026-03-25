@@ -29,232 +29,254 @@
       display:flex;gap:12px;margin-bottom:32px;justify-content:center;align-items:center;
     }
     .add-form input[type="text"]{
-      flex:1;min-width:0;padding:12px 14px;font-size:1rem;border:1.5px solid var(--border);
-      border-radius:8px;font-family:var(--sans);background:var(--surface2);transition:border-color .15s;
+      .add-form button{
+        background:var(--primary);color:#fff;border:none;border-radius:8px;padding:12px 28px;
+        font-family:var(--sans);font-size:1rem;font-weight:700;cursor:pointer;box-shadow:var(--shadow);
+        transition:opacity .15s,transform .15s;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 파일 미리보기 모달 -->
+      <div id="fileModal" style="display:none;position:fixed;z-index:9999;left:0;top:0;width:100vw;height:100vh;background:rgba(20,24,40,0.38);align-items:center;justify-content:center;">
+        <div style="background:#fff;max-width:700px;width:90vw;max-height:80vh;overflow:auto;border-radius:14px;box-shadow:0 8px 32px rgba(51,88,244,.18);padding:32px 24px;position:relative;">
+          <button id="closeModalBtn" style="position:absolute;top:12px;right:18px;font-size:1.3rem;background:none;border:none;color:#888;cursor:pointer;">✕</button>
+          <div id="fileModalTitle" style="font-weight:700;font-size:1.08rem;margin-bottom:18px;color:var(--primary);"></div>
+          <div id="fileModalContent" style="white-space:pre-wrap;font-family:inherit;font-size:1rem;color:#222;"></div>
+        </div>
+      </div>
+      <h1 id="pageTitle">개발 일지 목록</h1>
+      <form class="add-form" id="addForm" autocomplete="off" enctype="multipart/form-data">
+        <input type="text" id="workInput" placeholder="작업 내용을 입력하세요" required maxlength="200">
+        <input type="file" id="fileInput" style="flex:1;min-width:0;">
+        <button type="submit">등록</button>
+      </form>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:120px">등록일시
+              <button id="sortAscBtn" title="오름차순" class="sort-btn">▲</button>
+              <button id="sortDescBtn" title="내림차순" class="sort-btn">▼</button>
+            </th>
+            <th>작업 내용</th>
+            <th style="width:120px">문서 파일</th>
+            <th style="width:80px">삭제</th>
+          </tr>
+        </thead>
+        <tbody id="workList"></tbody>
+      </table>
+      <div id="pagingNav" style="margin-top:18px;text-align:center;"></div>
+    </div>
+    <script>
+    let sortOrder = 'desc'; // 기본: 최신순
+    let currentPage = 1;
+    const PAGE_SIZE = 5;
+
+    function parseDateStr(dateStr) {
+      // 'YYYY.MM.DD HH:mm:ss' → Date 객체
+      const [datePart, timePart] = dateStr.split(' ');
+      const [y, m, d] = datePart.split('.').map(Number);
+      let h = 0, mi = 0, s = 0;
+      if (timePart) [h, mi, s] = timePart.split(':').map(Number);
+      return new Date(y, m - 1, d, h, mi, s);
     }
-    .add-form input[type="text"]:focus{border-color:var(--primary);outline:none;}
-    .add-form button{
-      background:var(--primary);color:#fff;border:none;border-radius:8px;padding:12px 28px;
-      font-family:var(--sans);font-size:1rem;font-weight:700;cursor:pointer;box-shadow:var(--shadow);
-      transition:opacity .15s,transform .15s;
+
+    function loadList() {
+      return JSON.parse(localStorage.getItem('workList') || '[]');
     }
-        <tr>
-          <th style="width:120px">등록일시
-            <button id="sortAscBtn" title="오름차순" class="sort-btn">▲</button>
-            <button id="sortDescBtn" title="내림차순" class="sort-btn">▼</button>
-          </th>
-          <th>작업 내용</th>
-          <th style="width:120px">문서 파일</th>
-          <th style="width:80px">삭제</th>
-            <button id="sortAscBtn" title="오름차순" class="sort-btn">▲</button>
-            <button id="sortDescBtn" title="내림차순" class="sort-btn">▼</button>
-    <tbody id="workList"></tbody>
-    </table>
-    <div id="pagingNav" style="margin-top:18px;text-align:center;"></div>
-  </div>
-  <script>
-  let sortOrder = 'desc'; // 기본: 최신순
-  let currentPage = 1;
-  const PAGE_SIZE = 5;
+    function saveList(list) {
+      localStorage.setItem('workList', JSON.stringify(list));
+    }
 
-  function parseDateStr(dateStr) {
-    // 'YYYY.MM.DD HH:mm:ss' → Date 객체
-    const [datePart, timePart] = dateStr.split(' ');
-    const [y, m, d] = datePart.split('.').map(Number);
-    let h = 0, mi = 0, s = 0;
-    if (timePart) [h, mi, s] = timePart.split(':').map(Number);
-    return new Date(y, m - 1, d, h, mi, s);
-  }
+    function getSortedList() {
+      const list = loadList();
+      return list.sort((a, b) => {
+        const da = parseDateStr(a.date);
+        const db = parseDateStr(b.date);
+        return sortOrder === 'asc' ? da - db : db - da;
+      });
+    }
 
-  function loadList() {
-    return JSON.parse(localStorage.getItem('workList') || '[]');
-  }
-  function saveList(list) {
-    localStorage.setItem('workList', JSON.stringify(list));
-  }
+    function setPageTitle() {
+      document.getElementById('pageTitle').textContent = '개발 일지 목록';
+    }
 
-  function getSortedList() {
-    const list = loadList();
-    return list.sort((a, b) => {
-      const da = parseDateStr(a.date);
-      const db = parseDateStr(b.date);
-      return sortOrder === 'asc' ? da - db : db - da;
+    function renderList(page) {
+      setPageTitle();
+      const list = getSortedList();
+      const tbody = document.getElementById('workList');
+      const pagingNav = document.getElementById('pagingNav');
+      tbody.innerHTML = '';
+      pagingNav.innerHTML = '';
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#b0b8c9;padding:32px 0;">등록된 작업이 없습니다</td></tr>';
+        return;
+      }
+      const total = list.length;
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      currentPage = page || currentPage;
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      const startIdx = (currentPage - 1) * PAGE_SIZE;
+      const endIdx = Math.min(startIdx + PAGE_SIZE, total);
+      for (let i = startIdx; i < endIdx; i++) {
+        const item = list[i];
+        const tr = document.createElement('tr');
+        let fileCell = '';
+        if (item.fileName && item.fileUrl) {
+          const ext = item.fileName.split('.').pop().toLowerCase();
+          const viewable = ['txt', 'html', 'htm', 'md', 'csv', 'json', 'js', 'css'];
+          if (viewable.includes(ext)) {
+            fileCell = `<a href="#" class="view-file" data-idx="${i}" style="color:var(--primary)">${item.fileName}</a>`;
+          } else {
+            fileCell = `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
+          }
+        }
+        tr.innerHTML = `
+          <td>${item.date}</td>
+          <td><a href="#" class="edit-link" data-idx="${i}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
+          <td>${fileCell}</td>
+          <td><button class="delete-btn" data-idx="${i}">삭제</button></td>
+        `;
+        tbody.appendChild(tr);
+      }
+      // 페이징 네비게이션
+      if (totalPages > 1) {
+        let navHtml = '';
+        navHtml += `<button class="page-btn" data-page="1" ${currentPage === 1 ? 'disabled' : ''}>&laquo;</button>`;
+        navHtml += `<button class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>&lt;</button>`;
+        for (let p = 1; p <= totalPages; p++) {
+          navHtml += `<button class="page-btn" data-page="${p}" ${currentPage === p ? 'style=\'background:var(--primary);color:#fff;font-weight:700\'' : ''}>${p}</button>`;
+        }
+        navHtml += `<button class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>&gt;</button>`;
+        navHtml += `<button class="page-btn" data-page="${totalPages}" ${currentPage === totalPages ? 'disabled' : ''}>&raquo;</button>`;
+        pagingNav.innerHTML = navHtml;
+      }
+    }
+
+    // 정렬 버튼 이벤트 및 스타일
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('sortAscBtn').onclick = function (e) {
+        sortOrder = 'asc';
+        renderList(1);
+      };
+      document.getElementById('sortDescBtn').onclick = function (e) {
+        sortOrder = 'desc';
+        renderList(1);
+      };
+      // 스타일 추가
+      const style = document.createElement('style');
+      style.textContent = `.sort-btn{border:none;background:none;padding:0 2px;cursor:pointer;vertical-align:middle;color:var(--primary);font-size:1rem;}`;
+      document.head.appendChild(style);
     });
-  }
 
-  function setPageTitle() {
-    document.getElementById('pageTitle').textContent = '개발 일지 목록';
-  }
+    // Add new work
+    document.getElementById('addForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const input = document.getElementById('workInput');
+      const fileInput = document.getElementById('fileInput');
+      const content = input.value.trim();
+      if(!content) return;
+      const today = new Date();
+      const dateStr = today.getFullYear() + '.' + String(today.getMonth()+1).padStart(2,'0') + '.' + String(today.getDate()).padStart(2,'0') + ' ' + String(today.getHours()).padStart(2,'0') + ':' + String(today.getMinutes()).padStart(2,'0') + ':' + String(today.getSeconds()).padStart(2,'0');
+      let fileName = '', fileUrl = '';
+      if(fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        fileName = file.name;
+        // 파일을 base64로 저장 (로컬 저장소 한계 내에서)
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          fileUrl = evt.target.result;
+          const list = loadList();
+          list.unshift({date: dateStr, content, fileName, fileUrl});
+          saveList(list);
+          input.value = '';
+          fileInput.value = '';
+          renderList();
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+      // 파일 없을 때 바로 저장
+      const list = loadList();
+      list.unshift({date: dateStr, content, fileName, fileUrl});
+      saveList(list);
+      input.value = '';
+      fileInput.value = '';
+      renderList();
+    });
 
-  function renderList(page) {
-    setPageTitle();
-    const list = getSortedList();
-    const tbody = document.getElementById('workList');
-    const pagingNav = document.getElementById('pagingNav');
-    tbody.innerHTML = '';
-    pagingNav.innerHTML = '';
-    if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#b0b8c9;padding:32px 0;">등록된 작업이 없습니다</td></tr>';
-      return;
-    }
-    const total = list.length;
-    const totalPages = Math.ceil(total / PAGE_SIZE);
-    currentPage = page || currentPage;
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
-    const startIdx = (currentPage - 1) * PAGE_SIZE;
-    const endIdx = Math.min(startIdx + PAGE_SIZE, total);
-    for (let i = startIdx; i < endIdx; i++) {
-      const item = list[i];
-      const tr = document.createElement('tr');
-      let fileCell = '';
-      if (item.fileName && item.fileUrl) {
-        const ext = item.fileName.split('.').pop().toLowerCase();
-        const viewable = ['txt', 'html', 'htm', 'md', 'csv', 'json', 'js', 'css'];
-        if (viewable.includes(ext)) {
-          fileCell = `<a href="#" class="view-file" data-idx="${i}" style="color:var(--primary)">${item.fileName}</a>`;
-        } else {
-          fileCell = `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
+    // Delete work & file view & edit
+    document.getElementById('workList').addEventListener('click', function(e) {
+      if(e.target.classList.contains('delete-btn')) {
+        const idx = e.target.getAttribute('data-idx');
+        const list = loadList();
+        list.splice(idx,1);
+        saveList(list);
+        renderList();
+      }
+      // 작업 내용 클릭 시 수정 화면 이동
+      if(e.target.classList.contains('edit-link')) {
+        const idx = e.target.getAttribute('data-idx');
+        window.location.href = `edit_work.html?idx=${idx}`;
+      }
+      // 텍스트/HTML 파일 보기 (모달)
+      if(e.target.classList.contains('view-file')) {
+        e.preventDefault();
+        const idx = e.target.getAttribute('data-idx');
+        const list = loadList();
+        const item = list[idx];
+        if(item && item.fileUrl && item.fileName) {
+          const ext = item.fileName.split('.').pop().toLowerCase();
+          fetch(item.fileUrl)
+            .then(res => res.text())
+            .then(text => {
+              const modal = document.getElementById('fileModal');
+              const contentDiv = document.getElementById('fileModalContent');
+              const titleDiv = document.getElementById('fileModalTitle');
+              titleDiv.textContent = item.fileName;
+              if(ext === 'html' || ext === 'htm') {
+                // HTML은 iframe으로 렌더링
+                contentDiv.innerHTML = `<iframe srcdoc="${text.replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" style="width:100%;height:60vh;border:none;"></iframe>`;
+              } else {
+                contentDiv.textContent = text;
+              }
+              modal.style.display = 'flex';
+            });
         }
       }
-      tr.innerHTML = `
-        <td>${item.date}</td>
-        <td><a href="#" class="edit-link" data-idx="${i}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
-        <td>${fileCell}</td>
-        <td><button class="delete-btn" data-idx="${i}">삭제</button></td>
-      `;
-      tbody.appendChild(tr);
-    }
-    // 페이징 네비게이션
-    if (totalPages > 1) {
-      let navHtml = '';
-      navHtml += `<button class="page-btn" data-page="1" ${currentPage === 1 ? 'disabled' : ''}>&laquo;</button>`;
-      navHtml += `<button class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>&lt;</button>`;
-      for (let p = 1; p <= totalPages; p++) {
-        navHtml += `<button class="page-btn" data-page="${p}" ${currentPage === p ? 'style=\'background:var(--primary);color:#fff;font-weight:700\'' : ''}>${p}</button>`;
-      }
-      navHtml += `<button class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>&gt;</button>`;
-      navHtml += `<button class="page-btn" data-page="${totalPages}" ${currentPage === totalPages ? 'disabled' : ''}>&raquo;</button>`;
-      pagingNav.innerHTML = navHtml;
-    }
-  }
-
-  // 정렬 버튼 이벤트 및 스타일
-  document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('sortAscBtn').onclick = function (e) {
-      sortOrder = 'asc';
-      renderList(1);
-    };
-    document.getElementById('sortDescBtn').onclick = function (e) {
-      sortOrder = 'desc';
-      renderList(1);
-    };
-    // 스타일 추가
-    const style = document.createElement('style');
-    style.textContent = `.sort-btn{border:none;background:none;padding:0 2px;cursor:pointer;vertical-align:middle;color:var(--primary);font-size:1rem;}`;
-    document.head.appendChild(style);
-  });
-
-  // Add new work
-  document.getElementById('addForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const input = document.getElementById('workInput');
-    const fileInput = document.getElementById('fileInput');
-    const content = input.value.trim();
-    if(!content) return;
-    const today = new Date();
-    const dateStr = today.getFullYear() + '.' + String(today.getMonth()+1).padStart(2,'0') + '.' + String(today.getDate()).padStart(2,'0') + ' ' + String(today.getHours()).padStart(2,'0') + ':' + String(today.getMinutes()).padStart(2,'0') + ':' + String(today.getSeconds()).padStart(2,'0');
-    let fileName = '', fileUrl = '';
-    if(fileInput.files && fileInput.files[0]) {
-      const file = fileInput.files[0];
-      fileName = file.name;
-      // 파일을 base64로 저장 (로컬 저장소 한계 내에서)
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        fileUrl = evt.target.result;
-        const list = loadList();
-        list.unshift({date: dateStr, content, fileName, fileUrl});
-        saveList(list);
-        input.value = '';
-        fileInput.value = '';
-        renderList();
-      };
-      reader.readAsDataURL(file);
-      return;
-    }
-    // 파일 없을 때 바로 저장
-    const list = loadList();
-    list.unshift({date: dateStr, content, fileName, fileUrl});
-    saveList(list);
-    input.value = '';
-    fileInput.value = '';
-    renderList();
-  });
-
-  // Delete work & file view & edit
-  document.getElementById('workList').addEventListener('click', function(e) {
-    if(e.target.classList.contains('delete-btn')) {
-      const idx = e.target.getAttribute('data-idx');
-      const list = loadList();
-      list.splice(idx,1);
-      saveList(list);
-      renderList();
-    }
-    // 작업 내용 클릭 시 수정 화면 이동
-    if(e.target.classList.contains('edit-link')) {
-      const idx = e.target.getAttribute('data-idx');
-      window.location.href = `edit_work.html?idx=${idx}`;
-    }
-    // 텍스트/HTML 파일 보기 (모달)
-    if(e.target.classList.contains('view-file')) {
-      e.preventDefault();
-      const idx = e.target.getAttribute('data-idx');
-      const list = loadList();
-      const item = list[idx];
-      if(item && item.fileUrl && item.fileName) {
-        const ext = item.fileName.split('.').pop().toLowerCase();
-        fetch(item.fileUrl)
-          .then(res => res.text())
-          .then(text => {
-            const modal = document.getElementById('fileModal');
-            const contentDiv = document.getElementById('fileModalContent');
-            const titleDiv = document.getElementById('fileModalTitle');
-            titleDiv.textContent = item.fileName;
-            if(ext === 'html' || ext === 'htm') {
-              // HTML은 iframe으로 렌더링
-              contentDiv.innerHTML = `<iframe srcdoc="${text.replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" style="width:100%;height:60vh;border:none;"></iframe>`;
-            } else {
-              contentDiv.textContent = text;
-            }
-            modal.style.display = 'flex';
-          });
-      }
-    }
-    // 모달 닫기 버튼
-    document.getElementById('closeModalBtn').onclick = function() {
-      document.getElementById('fileModal').style.display = 'none';
-      document.getElementById('fileModalContent').innerHTML = '';
-      document.getElementById('fileModalTitle').textContent = '';
-    };
-    // 모달 바깥 클릭 시 닫기
-    document.getElementById('fileModal').onclick = function(e) {
-      if(e.target === this) {
-        this.style.display = 'none';
+      // 모달 닫기 버튼
+      document.getElementById('closeModalBtn').onclick = function() {
+        document.getElementById('fileModal').style.display = 'none';
         document.getElementById('fileModalContent').innerHTML = '';
         document.getElementById('fileModalTitle').textContent = '';
-      }
-    };
-  });
+      };
+      // 모달 바깥 클릭 시 닫기
+      document.getElementById('fileModal').onclick = function(e) {
+        if(e.target === this) {
+          this.style.display = 'none';
+          document.getElementById('fileModalContent').innerHTML = '';
+          document.getElementById('fileModalTitle').textContent = '';
+        }
+      };
+    });
 
-  // 페이징 버튼 클릭
-  document.getElementById('pagingNav').addEventListener('click', function(e) {
-    if(e.target.classList.contains('page-btn')) {
-      const page = parseInt(e.target.getAttribute('data-page'));
-      if(!isNaN(page)) {
-        renderList(page);
+    // 페이징 버튼 클릭
+    document.getElementById('pagingNav').addEventListener('click', function(e) {
+      if(e.target.classList.contains('page-btn')) {
+        const page = parseInt(e.target.getAttribute('data-page'));
+        if(!isNaN(page)) {
+          renderList(page);
+        }
       }
-    }
-  });
+    });
+
+    // Initial render
+    renderList(1);
+    </script>
+  </body>
+  </html>
 
   // Initial render
   renderList(1);
