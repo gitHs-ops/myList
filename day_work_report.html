@@ -61,7 +61,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>개발 일지 목록</h1>
+    <h1 id="pageTitle">개발 일지 목록</h1>
     <form class="add-form" id="addForm" autocomplete="off" enctype="multipart/form-data">
       <input type="text" id="workInput" placeholder="작업 내용을 입력하세요" required maxlength="200">
       <input type="file" id="fileInput" style="flex:1;min-width:0;">
@@ -91,8 +91,35 @@
     function saveList(list) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     }
+    // Version/date logic
+    function getTodayStr() {
+      const d = new Date();
+      return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+    }
+    function getVersion() {
+      const verKey = 'dayWorkReportVer';
+      const dateKey = 'dayWorkReportVerDate';
+      const today = getTodayStr();
+      let ver = localStorage.getItem(verKey);
+      let vdate = localStorage.getItem(dateKey);
+      if (!ver || !vdate || vdate !== today) {
+        ver = '1.0';
+        vdate = today;
+      } else {
+        ver = (parseFloat(ver) + 0.1).toFixed(1);
+      }
+      localStorage.setItem(verKey, ver);
+      localStorage.setItem(dateKey, vdate);
+      return ver;
+    }
+    function setPageTitle() {
+      const ver = getVersion();
+      const today = getTodayStr();
+      document.getElementById('pageTitle').textContent = `개발 일지 목록  ver ${ver} (${today})`;
+    }
     // Render list
     function renderList() {
+      setPageTitle();
       const list = loadList();
       const tbody = document.getElementById('workList');
       tbody.innerHTML = '';
@@ -103,18 +130,21 @@
       list.forEach((item, idx) => {
         const tr = document.createElement('tr');
         // 작업 내용 클릭 시 수정 화면 이동 (edit page: edit_work.html?idx=...)
+        let fileCell = '';
+        if (item.fileName && item.fileUrl) {
+          const ext = item.fileName.split('.').pop().toLowerCase();
+          const viewable = ['txt','html','htm','md','csv','json','js','css'];
+          if (viewable.includes(ext)) {
+            // Blob 방식으로 새 탭에서 보기 (Data URL 직접 사용 시 일부 브라우저 blank)
+            fileCell = `<a href="#" class="view-file" data-idx="${idx}" style="color:var(--primary)">${item.fileName}</a>`;
+          } else {
+            fileCell = `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
+          }
+        }
         tr.innerHTML = `
           <td>${item.date}</td>
           <td><a href="#" class="edit-link" data-idx="${idx}" style="color:var(--primary);text-decoration:underline;cursor:pointer;">${item.content}</a></td>
-          <td>${item.fileName ? (() => {
-            const ext = item.fileName.split('.').pop().toLowerCase();
-            const viewable = ['txt','html','htm','md','csv','json','js','css'];
-            if (viewable.includes(ext)) {
-              return `<a href="${item.fileUrl}" target="_blank" rel="noopener">${item.fileName}</a>`;
-            } else {
-              return `<a href="${item.fileUrl}" target="_blank" rel="noopener" download="${item.fileName}">${item.fileName}</a>`;
-            }
-          })() : ''}</td>
+          <td>${fileCell}</td>
           <td><button class="delete-btn" data-idx="${idx}">삭제</button></td>
         `;
         tbody.appendChild(tr);
@@ -155,7 +185,7 @@
       fileInput.value = '';
       renderList();
     });
-    // Delete work
+    // Delete work & file view & edit
     document.getElementById('workList').addEventListener('click', function(e) {
       if(e.target.classList.contains('delete-btn')) {
         const idx = e.target.getAttribute('data-idx');
@@ -168,6 +198,23 @@
       if(e.target.classList.contains('edit-link')) {
         const idx = e.target.getAttribute('data-idx');
         window.location.href = `edit_work.html?idx=${idx}`;
+      }
+      // 텍스트/HTML 파일 보기
+      if(e.target.classList.contains('view-file')) {
+        e.preventDefault();
+        const idx = e.target.getAttribute('data-idx');
+        const list = loadList();
+        const item = list[idx];
+        if(item && item.fileUrl && item.fileName) {
+          // Data URL → Blob → Object URL
+          fetch(item.fileUrl)
+            .then(res => res.blob())
+            .then(blob => {
+              const url = URL.createObjectURL(blob);
+              window.open(url, '_blank');
+              setTimeout(()=>URL.revokeObjectURL(url), 10000);
+            });
+        }
       }
     });
     // Initial render
