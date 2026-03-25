@@ -100,7 +100,7 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 .t-head {
   background:linear-gradient(135deg, var(--primary), var(--primary-dark));
   display:grid;
-  grid-template-columns: 120px 130px 130px 140px 120px 1fr;
+  grid-template-columns: 100px 100px 100px 110px 90px 100px 110px 1fr;
   padding: 14px 20px;
 }
 .th {
@@ -124,7 +124,7 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 /* ── TABLE ROW ── */
 .t-row {
   display:grid;
-  grid-template-columns: 120px 130px 130px 140px 120px 1fr;
+  grid-template-columns: 100px 100px 100px 110px 90px 100px 110px 1fr;
   padding:0 20px;
   border-bottom:1px solid var(--border);
   align-items:start;
@@ -353,7 +353,7 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
   .summary-grid { grid-template-columns:1fr 1fr; }
   .sum-card.card-date { grid-column:1/-1; }
   .app-header,.summary-section,.filter-section,.table-section { padding-left:16px; padding-right:16px; }
-  .t-head,.t-row { grid-template-columns:80px 100px 100px 110px 90px 1fr; font-size:.78rem; }
+  .t-head,.t-row { grid-template-columns:70px 75px 75px 85px 70px 75px 85px 1fr; font-size:.72rem; }
 }
 </style>
 </head>
@@ -411,6 +411,8 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
       <div class="th">국민</div>
       <div class="th">정기예금</div>
       <div class="th">적금</div>
+      <div class="th">연금저축</div>
+      <div class="th">미래에셋</div>
       <div class="th th-detail">세부내역</div>
     </div>
     <div id="tableBody"></div>
@@ -480,6 +482,16 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
         <div class="form-group">
           <label class="form-label">적금 (만원)</label>
           <input class="form-input" type="number" id="fSaving" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">연금저축 (만원)</label>
+          <input class="form-input" type="number" id="fPension" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">미래에셋 (만원)</label>
+          <input class="form-input" type="number" id="fMirae" placeholder="0">
         </div>
       </div>
       <div class="form-group">
@@ -603,7 +615,7 @@ let currentFilter = 'all';
 function saveData() {
   try { localStorage.setItem('hb_data', JSON.stringify(DATA)); } catch(e){}
 }
-const DATA_VERSION = '3';
+const DATA_VERSION = '4';
 function loadData() {
   try {
     const version = localStorage.getItem('hb_version');
@@ -686,6 +698,8 @@ function renderTable() {
         <div class="td td-amount">${row.kbm!=null?row.kbm+'만':'—'}</div>
         <div class="td td-amount">${row.deposit!=null?row.deposit+'만':'—'}</div>
         <div class="td td-amount">${row.saving!=null?row.saving+'만':'—'}</div>
+        <div class="td td-amount">${row.pension!=null?row.pension+'만':'—'}</div>
+        <div class="td td-amount">${row.mirae!=null?row.mirae+'만':'—'}</div>
         <div class="td td-detail">${detailsHtml}</div>
         <div class="row-actions">
           <button class="btn-row btn-row-edit" title="편집" onclick="openEditModal(${row.id})">✏️</button>
@@ -746,6 +760,8 @@ function openEditModal(id) {
   document.getElementById('fKbm').value = row.kbm ?? '';
   document.getElementById('fDeposit').value = row.deposit ?? '';
   document.getElementById('fSaving').value = row.saving ?? '';
+  document.getElementById('fPension').value = row.pension ?? '';
+  document.getElementById('fMirae').value = row.mirae ?? '';
   // 세부내역
   const di = document.getElementById('detailInputs');
   di.innerHTML = '';
@@ -785,16 +801,18 @@ function saveEntry() {
   const kbm = document.getElementById('fKbm').value !== '' ? parseFloat(document.getElementById('fKbm').value) : null;
   const deposit = document.getElementById('fDeposit').value !== '' ? parseFloat(document.getElementById('fDeposit').value) : null;
   const saving = document.getElementById('fSaving').value !== '' ? parseFloat(document.getElementById('fSaving').value) : null;
+  const pension = document.getElementById('fPension').value !== '' ? parseFloat(document.getElementById('fPension').value) : null;
+  const mirae = document.getElementById('fMirae').value !== '' ? parseFloat(document.getElementById('fMirae').value) : null;
   const details = [...document.querySelectorAll('#detailInputs .form-input')]
     .map(i=>i.value.trim()).filter(v=>v);
 
   const wasEdit = editId !== null;
   if(wasEdit) {
     const idx = DATA.findIndex(d=>d.id===editId);
-    DATA[idx] = { id:editId, year, month, kb, kbm, deposit, saving, details };
+    DATA[idx] = { id:editId, year, month, kb, kbm, deposit, saving, pension, mirae, details };
   } else {
     const newId = DATA.length ? Math.max(...DATA.map(d=>d.id))+1 : 1;
-    DATA.push({ id:newId, year, month, kb, kbm, deposit, saving, details });
+    DATA.push({ id:newId, year, month, kb, kbm, deposit, saving, pension, mirae, details });
   }
   saveData();
   closeModal();
