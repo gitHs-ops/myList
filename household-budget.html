@@ -93,6 +93,19 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 .sum-unit { font-size:.75rem; font-weight:500; color:var(--sub); }
 .sum-card.card-date .sum-card-val { font-size:1.1rem; color:var(--primary); }
 
+/* ── UNIT TOGGLE ── */
+.unit-toggle {
+  display:flex; margin-left:auto;
+  border:1.5px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.unit-toggle-btn {
+  padding:6px 14px; border:none; background:var(--surface);
+  font-family:var(--sans); font-size:.8rem; font-weight:700;
+  color:var(--sub); cursor:pointer; transition:all .15s;
+}
+.unit-toggle-btn.active { background:var(--primary); color:#fff; }
+.unit-toggle-btn:not(.active):hover { background:var(--surface2); }
+
 /* ── FILTER BAR ── */
 .filter-section { padding: 18px 32px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .filter-label { font-size:.8rem; color:var(--muted); font-weight:600; margin-right:4px; }
@@ -632,6 +645,18 @@ let DATA = [
 ];
 let editId = null;
 let currentFilter = 'all';
+let UNIT_MODE = 'man'; // 'man' | 'won'
+
+function formatAmount(val) {
+  if(val == null) return '—';
+  if(UNIT_MODE === 'won') return (val * 10000).toLocaleString('ko-KR') + '원';
+  return val.toLocaleString('ko-KR') + '만';
+}
+function setUnit(mode) {
+  UNIT_MODE = mode;
+  try { localStorage.setItem('hb_unit', mode); } catch(e){}
+  render();
+}
 
 // ── 앱 타이틀 ─────────────────────────
 let APP_TITLE = '나의 가계부';
@@ -771,7 +796,7 @@ function updateSummary() {
     ${COLUMNS.map(col=>`
     <div class="sum-card">
       <div class="sum-card-label">${col.label}</div>
-      <div class="sum-card-val"><span>${latest[col.key]??'—'}</span><span class="sum-unit">${latest[col.key]!=null?' 만':''}</span></div>
+      <div class="sum-card-val"><span>${formatAmount(latest[col.key])}</span></div>
     </div>`).join('')}`;
 }
 
@@ -806,6 +831,13 @@ function renderFilters() {
   sel.value = currentFilter;
   sel.onchange = ()=>{ currentFilter = sel.value==='all' ? 'all' : parseInt(sel.value); render(); };
   sec.appendChild(sel);
+  // 단위 토글
+  const toggle = document.createElement('div');
+  toggle.className = 'unit-toggle';
+  toggle.innerHTML = `
+    <button class="unit-toggle-btn${UNIT_MODE==='man'?' active':''}" onclick="setUnit('man')">만원</button>
+    <button class="unit-toggle-btn${UNIT_MODE==='won'?' active':''}" onclick="setUnit('won')">원</button>`;
+  sec.appendChild(toggle);
 }
 
 function renderTable() {
@@ -848,8 +880,8 @@ function renderTable() {
       const sum = COLUMNS.reduce((a,col)=>a+(row[col.key]??0),0);
       r.innerHTML = `
         <div class="td td-month">${row.month}월</div>
-        ${COLUMNS.map(col=>`<div class="td td-amount">${row[col.key]!=null?row[col.key]+'만':'—'}</div>`).join('')}
-        <div class="td td-amount" style="font-weight:700;">${sum>0?sum+'만':'—'}</div>
+        ${COLUMNS.map(col=>`<div class="td td-amount">${formatAmount(row[col.key])}</div>`).join('')}
+        <div class="td td-amount" style="font-weight:700;">${sum>0?formatAmount(sum):'—'}</div>
         <div class="td td-detail">${detailsHtml}</div>
         <div class="row-actions">
           <button class="btn-row btn-row-edit" title="편집" onclick="openEditModal(${row.id})">✏️</button>
@@ -1114,6 +1146,8 @@ function showToast(msg) {
     sel.appendChild(opt);
   }
 })();
+const savedUnit = localStorage.getItem('hb_unit');
+if(savedUnit) UNIT_MODE = savedUnit;
 loadWorkspace();
 render();
 applyAppTitle();
