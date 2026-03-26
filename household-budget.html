@@ -359,8 +359,21 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
   font-size:.88rem;
 }
 
+/* ── COLUMN EDITOR ── */
+.btn-col-edit {
+  margin-left:auto;
+  padding:7px 14px; border-radius:9px;
+  border:1.5px solid var(--border);
+  background:var(--surface); color:var(--sub);
+  font-family:var(--sans); font-size:.8rem; font-weight:600;
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.btn-col-edit:hover { border-color:var(--primary); color:var(--primary); }
+.col-editor-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.col-editor-row .form-input { flex:1; }
+
 @media(max-width:900px) {
-  .summary-grid { grid-template-columns:repeat(5,1fr); gap:6px; }
+  .summary-grid { grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:6px; }
   .sum-card { padding:10px 8px; }
   .sum-card-label { font-size:.62rem; margin-bottom:4px; }
   .sum-card-val { font-size:1rem; }
@@ -389,28 +402,7 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 
 <!-- SUMMARY CARDS -->
 <div class="summary-section">
-  <div class="summary-grid">
-    <div class="sum-card card-date">
-      <div class="sum-card-label">최근 월</div>
-      <div class="sum-card-val" id="sumDate">—</div>
-    </div>
-    <div class="sum-card">
-      <div class="sum-card-label">카뱅</div>
-      <div class="sum-card-val"><span id="sumKb">0</span><span class="sum-unit">만원</span></div>
-    </div>
-    <div class="sum-card">
-      <div class="sum-card-label">국민</div>
-      <div class="sum-card-val"><span id="sumKbm">0</span><span class="sum-unit">만원</span></div>
-    </div>
-    <div class="sum-card">
-      <div class="sum-card-label">정기예금</div>
-      <div class="sum-card-val"><span id="sumDeposit">0</span><span class="sum-unit">만원</span></div>
-    </div>
-    <div class="sum-card">
-      <div class="sum-card-label">적금</div>
-      <div class="sum-card-val"><span id="sumSaving">0</span><span class="sum-unit">만원</span></div>
-    </div>
-  </div>
+  <div class="summary-grid" id="summaryGrid"></div>
 </div>
 
 <!-- FILTER -->
@@ -421,17 +413,7 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 <!-- TABLE -->
 <div class="table-section">
   <div class="table-wrap">
-    <div class="t-head">
-      <div class="th">년 / 월</div>
-      <div class="th">카뱅</div>
-      <div class="th">국민</div>
-      <div class="th">정기예금</div>
-      <div class="th">적금</div>
-      <div class="th">연금저축</div>
-      <div class="th">미래에셋</div>
-      <div class="th">합계</div>
-      <div class="th th-detail">세부내역</div>
-    </div>
+    <div class="t-head" id="tHead"></div>
     <div id="tableBody"></div>
   </div>
 </div>
@@ -455,6 +437,24 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 <!-- FAB -->
 <button class="fab" onclick="openAddModal()" title="새 항목 추가">＋</button>
 
+<!-- COLUMN EDITOR MODAL -->
+<div class="modal-overlay" id="colEditorOverlay" onclick="closeColEditorOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">헤더 항목 편집</div>
+      <button class="modal-close" onclick="closeColEditor()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="colEditorList"></div>
+      <button class="btn-add-detail" onclick="addColRow()" style="margin-top:8px;width:100%;">+ 항목 추가</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-save" onclick="saveColEditor()">저장하기</button>
+      <button class="btn-cancel" onclick="closeColEditor()">취소</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD/EDIT MODAL -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
   <div class="modal">
@@ -477,36 +477,7 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
           </select>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">카뱅 (만원)</label>
-          <input class="form-input" type="number" id="fKb" placeholder="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">국민 (만원)</label>
-          <input class="form-input" type="number" id="fKbm" placeholder="0">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">정기예금 (만원)</label>
-          <input class="form-input" type="number" id="fDeposit" placeholder="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">적금 (만원)</label>
-          <input class="form-input" type="number" id="fSaving" placeholder="0">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">연금저축 (만원)</label>
-          <input class="form-input" type="number" id="fPension" placeholder="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">미래에셋 (만원)</label>
-          <input class="form-input" type="number" id="fMirae" placeholder="0">
-        </div>
-      </div>
+      <div id="colInputs"></div>
       <div class="form-group">
         <label class="form-label">세부내역</label>
         <div class="detail-input-wrap" id="detailInputs">
@@ -624,11 +595,32 @@ let DATA = [
 let editId = null;
 let currentFilter = 'all';
 
+// ── 컬럼 설정 ──────────────────────────
+const DEFAULT_COLUMNS = [
+  { key:'kb',      label:'카뱅' },
+  { key:'kbm',     label:'국민' },
+  { key:'deposit', label:'정기예금' },
+  { key:'saving',  label:'적금' },
+  { key:'pension', label:'연금저축' },
+  { key:'mirae',   label:'미래에셋' },
+];
+let COLUMNS = DEFAULT_COLUMNS.map(c=>({...c}));
+
+function saveColumns() {
+  try { localStorage.setItem('hb_columns', JSON.stringify(COLUMNS)); } catch(e){}
+}
+function loadColumns() {
+  try {
+    const saved = localStorage.getItem('hb_columns');
+    if(saved) COLUMNS = JSON.parse(saved);
+  } catch(e){}
+}
+
 // ── 저장/불러오기 ──────────────────────
 function saveData() {
   try { localStorage.setItem('hb_data', JSON.stringify(DATA)); } catch(e){}
 }
-const DATA_VERSION = '4';
+const DATA_VERSION = '5';
 function loadData() {
   try {
     const version = localStorage.getItem('hb_version');
@@ -651,14 +643,21 @@ function render() {
 }
 
 function updateSummary() {
-  if(DATA.length === 0) return;
+  const grid = document.getElementById('summaryGrid');
+  if(DATA.length === 0) { grid.innerHTML=''; return; }
   const sorted = [...DATA].sort((a,b)=> b.year*100+b.month - (a.year*100+a.month));
   const latest = sorted[0];
-  document.getElementById('sumDate').textContent = `${latest.year}/${latest.month}`;
-  document.getElementById('sumKb').textContent = latest.kb ?? '—';
-  document.getElementById('sumKbm').textContent = latest.kbm ?? '—';
-  document.getElementById('sumDeposit').textContent = latest.deposit != null ? latest.deposit : '—';
-  document.getElementById('sumSaving').textContent = latest.saving != null ? latest.saving : '—';
+  grid.style.gridTemplateColumns = `1.4fr ${COLUMNS.map(()=>'1fr').join(' ')}`;
+  grid.innerHTML = `
+    <div class="sum-card card-date">
+      <div class="sum-card-label">최근 월</div>
+      <div class="sum-card-val">${latest.year}/${latest.month}</div>
+    </div>
+    ${COLUMNS.map(col=>`
+    <div class="sum-card">
+      <div class="sum-card-label">${col.label}</div>
+      <div class="sum-card-val"><span>${latest[col.key]??'—'}</span><span class="sum-unit">${latest[col.key]!=null?' 만':'''}</span></div>
+    </div>`).join('')}`;
 }
 
 function renderFilters() {
@@ -692,9 +691,26 @@ function renderFilters() {
   sel.value = currentFilter;
   sel.onchange = ()=>{ currentFilter = sel.value==='all' ? 'all' : parseInt(sel.value); render(); };
   sec.appendChild(sel);
+  // 컬럼 편집 버튼
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn-col-edit';
+  editBtn.textContent = '⚙ 항목 편집';
+  editBtn.onclick = openColEditor;
+  sec.appendChild(editBtn);
 }
 
 function renderTable() {
+  const gridCols = `100px ${COLUMNS.map(()=>'100px').join(' ')} 100px 1fr`;
+  const minW = (100 + COLUMNS.length * 100 + 300) + 'px';
+  // t-head 동적 렌더링
+  const tHead = document.getElementById('tHead');
+  tHead.style.gridTemplateColumns = gridCols;
+  tHead.style.minWidth = minW;
+  tHead.innerHTML = `<div class="th">년 / 월</div>
+    ${COLUMNS.map(col=>`<div class="th">${col.label}</div>`).join('')}
+    <div class="th">합계</div>
+    <div class="th th-detail">세부내역</div>`;
+
   const body = document.getElementById('tableBody');
   body.innerHTML = '';
   const filtered = currentFilter==='all'
@@ -705,7 +721,6 @@ function renderTable() {
     return;
   }
   filtered.sort((a,b)=> b.year*100+b.month - (a.year*100+a.month));
-  // 연도 그룹핑
   const byYear = {};
   filtered.forEach(d=>{
     if(!byYear[d.year]) byYear[d.year]=[];
@@ -718,16 +733,14 @@ function renderTable() {
     byYear[year].forEach(row=>{
       const r = document.createElement('div');
       r.className = 't-row';
+      r.style.gridTemplateColumns = gridCols;
+      r.style.minWidth = minW;
       const detailsHtml = buildDetailHtml(row);
+      const sum = COLUMNS.reduce((a,col)=>a+(row[col.key]??0),0);
       r.innerHTML = `
         <div class="td td-month">${row.month}월</div>
-        <div class="td td-amount">${row.kb!=null?row.kb+'만':'—'}</div>
-        <div class="td td-amount">${row.kbm!=null?row.kbm+'만':'—'}</div>
-        <div class="td td-amount">${row.deposit!=null?row.deposit+'만':'—'}</div>
-        <div class="td td-amount">${row.saving!=null?row.saving+'만':'—'}</div>
-        <div class="td td-amount">${row.pension!=null?row.pension+'만':'—'}</div>
-        <div class="td td-amount">${row.mirae!=null?row.mirae+'만':'—'}</div>
-        <div class="td td-amount" style="font-weight:700;">${(()=>{const s=[row.kb,row.kbm,row.deposit,row.saving,row.pension,row.mirae].reduce((a,v)=>a+(v??0),0);return s>0?s+'만':'—';})()}</div>
+        ${COLUMNS.map(col=>`<div class="td td-amount">${row[col.key]!=null?row[col.key]+'만':'—'}</div>`).join('')}
+        <div class="td td-amount" style="font-weight:700;">${sum>0?sum+'만':'—'}</div>
         <div class="td td-detail">${detailsHtml}</div>
         <div class="row-actions">
           <button class="btn-row btn-row-edit" title="편집" onclick="openEditModal(${row.id})">✏️</button>
@@ -759,15 +772,31 @@ function toggleDetail(uid) {
 }
 
 // ── 모달 ─────────────────────────────
+function buildColInputs(row) {
+  const wrap = document.getElementById('colInputs');
+  wrap.innerHTML = '';
+  for(let i=0; i<COLUMNS.length; i+=2) {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'form-row';
+    [COLUMNS[i], COLUMNS[i+1]].filter(Boolean).forEach(col=>{
+      const grp = document.createElement('div');
+      grp.className = 'form-group';
+      const val = row ? (row[col.key] ?? '') : '';
+      grp.innerHTML = `
+        <label class="form-label">${col.label} (만원)</label>
+        <input class="form-input" type="number" data-key="${col.key}" placeholder="0" value="${val}">`;
+      rowDiv.appendChild(grp);
+    });
+    wrap.appendChild(rowDiv);
+  }
+}
+
 function openAddModal() {
   editId = null;
   document.getElementById('modalTitle').textContent = '항목 추가';
   document.getElementById('fYear').value = new Date().getFullYear();
   document.getElementById('fMonth').value = new Date().getMonth()+1;
-  document.getElementById('fKb').value = '';
-  document.getElementById('fKbm').value = '';
-  document.getElementById('fDeposit').value = '';
-  document.getElementById('fSaving').value = '';
+  buildColInputs(null);
   document.getElementById('detailInputs').innerHTML = `
     <div class="detail-input-row">
       <input class="form-input" type="text" placeholder="예: 카뱅 서브 50만">
@@ -784,18 +813,13 @@ function openEditModal(id) {
   document.getElementById('modalTitle').textContent = `${row.year}년 ${row.month}월 편집`;
   document.getElementById('fYear').value = row.year;
   document.getElementById('fMonth').value = row.month;
-  document.getElementById('fKb').value = row.kb ?? '';
-  document.getElementById('fKbm').value = row.kbm ?? '';
-  document.getElementById('fDeposit').value = row.deposit ?? '';
-  document.getElementById('fSaving').value = row.saving ?? '';
-  document.getElementById('fPension').value = row.pension ?? '';
-  document.getElementById('fMirae').value = row.mirae ?? '';
+  buildColInputs(row);
   // 세부내역
   const di = document.getElementById('detailInputs');
   di.innerHTML = '';
   (row.details||[]).forEach(d=>{
     di.innerHTML += `<div class="detail-input-row">
-      <input class="form-input" type="text" value="${d}" placeholder="예: 카뱅 서브 50만">
+      <input class="form-input" type="text" value="${d.replace(/"/g,'&quot;')}" placeholder="예: 카뱅 서브 50만">
       <button class="btn-del-detail" onclick="removeDetail(this)">−</button>
     </div>`;
   });
@@ -825,22 +849,20 @@ function removeDetail(btn) {
 function saveEntry() {
   const year = parseInt(document.getElementById('fYear').value);
   const month = parseInt(document.getElementById('fMonth').value);
-  const kb = document.getElementById('fKb').value !== '' ? parseFloat(document.getElementById('fKb').value) : null;
-  const kbm = document.getElementById('fKbm').value !== '' ? parseFloat(document.getElementById('fKbm').value) : null;
-  const deposit = document.getElementById('fDeposit').value !== '' ? parseFloat(document.getElementById('fDeposit').value) : null;
-  const saving = document.getElementById('fSaving').value !== '' ? parseFloat(document.getElementById('fSaving').value) : null;
-  const pension = document.getElementById('fPension').value !== '' ? parseFloat(document.getElementById('fPension').value) : null;
-  const mirae = document.getElementById('fMirae').value !== '' ? parseFloat(document.getElementById('fMirae').value) : null;
+  const colData = {};
+  document.querySelectorAll('#colInputs [data-key]').forEach(inp=>{
+    colData[inp.dataset.key] = inp.value !== '' ? parseFloat(inp.value) : null;
+  });
   const details = [...document.querySelectorAll('#detailInputs .form-input')]
     .map(i=>i.value.trim()).filter(v=>v);
 
   const wasEdit = editId !== null;
   if(wasEdit) {
     const idx = DATA.findIndex(d=>d.id===editId);
-    DATA[idx] = { id:editId, year, month, kb, kbm, deposit, saving, pension, mirae, details };
+    DATA[idx] = { ...DATA[idx], year, month, ...colData, details };
   } else {
     const newId = DATA.length ? Math.max(...DATA.map(d=>d.id))+1 : 1;
-    DATA.push({ id:newId, year, month, kb, kbm, deposit, saving, pension, mirae, details });
+    DATA.push({ id:newId, year, month, ...colData, details });
   }
   saveData();
   closeModal();
@@ -884,6 +906,56 @@ function closeConfirmOutside(e) {
   if(e.target===document.getElementById('confirmOverlay')) closeConfirm();
 }
 
+// ── 컬럼 편집 ────────────────────────
+function openColEditor() {
+  const list = document.getElementById('colEditorList');
+  list.innerHTML = '';
+  COLUMNS.forEach(col=>{
+    const row = document.createElement('div');
+    row.className = 'col-editor-row';
+    row.innerHTML = `
+      <input class="form-input col-editor-input" type="text" value="${col.label}" data-key="${col.key}" placeholder="항목명">
+      <button class="btn-del-detail" onclick="removeColRow(this)" title="삭제">−</button>`;
+    list.appendChild(row);
+  });
+  document.getElementById('colEditorOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeColEditor() {
+  document.getElementById('colEditorOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+function closeColEditorOutside(e) {
+  if(e.target===document.getElementById('colEditorOverlay')) closeColEditor();
+}
+function addColRow() {
+  const list = document.getElementById('colEditorList');
+  const row = document.createElement('div');
+  row.className = 'col-editor-row';
+  const newKey = 'c' + Date.now();
+  row.innerHTML = `
+    <input class="form-input col-editor-input" type="text" value="" data-key="${newKey}" placeholder="항목명">
+    <button class="btn-del-detail" onclick="removeColRow(this)" title="삭제">−</button>`;
+  list.appendChild(row);
+}
+function removeColRow(btn) {
+  btn.closest('.col-editor-row').remove();
+}
+function saveColEditor() {
+  const rows = document.querySelectorAll('#colEditorList .col-editor-row');
+  COLUMNS = [];
+  rows.forEach(row=>{
+    const inp = row.querySelector('.col-editor-input');
+    const label = inp.value.trim();
+    const key = inp.dataset.key;
+    if(label) COLUMNS.push({ key, label });
+  });
+  saveColumns();
+  closeColEditor();
+  render();
+  showToast('✅ 항목이 저장되었습니다.');
+}
+
 // ── 토스트 ────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -903,6 +975,7 @@ function showToast(msg) {
     sel.appendChild(opt);
   }
 })();
+loadColumns();
 loadData();
 render();
 </script>
