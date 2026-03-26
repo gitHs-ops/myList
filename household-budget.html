@@ -360,11 +360,15 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 }
 
 @media(max-width:900px) {
-  .summary-grid { grid-template-columns:1fr 1fr; }
-  .sum-card.card-date { grid-column:1/-1; }
+  .summary-grid { grid-template-columns:repeat(5,1fr); gap:6px; }
+  .sum-card { padding:10px 8px; }
+  .sum-card-label { font-size:.62rem; margin-bottom:4px; }
+  .sum-card-val { font-size:1rem; }
+  .sum-card.card-date .sum-card-val { font-size:.9rem; }
+  .sum-unit { font-size:.7rem; }
   .app-header,.summary-section,.filter-section,.table-section { padding-left:16px; padding-right:16px; }
   .t-head,.t-row { font-size:.78rem; }
-  .filter-label, .filter-btn { display:none; }
+  .filter-btn { display:none; }
   .filter-select { display:block; }
 }
 </style>
