@@ -656,7 +656,7 @@ function updateSummary() {
     ${COLUMNS.map(col=>`
     <div class="sum-card">
       <div class="sum-card-label">${col.label}</div>
-      <div class="sum-card-val"><span>${latest[col.key]??'—'}</span><span class="sum-unit">${latest[col.key]!=null?' 만':'''}</span></div>
+      <div class="sum-card-val"><span>${latest[col.key]??'—'}</span><span class="sum-unit">${latest[col.key]!=null?' 만':''}</span></div>
     </div>`).join('')}`;
 }
 
