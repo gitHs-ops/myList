@@ -47,6 +47,29 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 }
 .header-title { font-size:1.1rem; font-weight:900; color:var(--text); }
 .header-count { font-size:.8rem; color:var(--muted); font-family:var(--mono); }
+.title-wrapper { position:relative; display:flex; align-items:center; gap:5px; }
+.title-dropdown-btn {
+  background:transparent; border:none; cursor:pointer;
+  color:var(--primary); font-size:.8rem; padding:3px 5px;
+  border-radius:5px; line-height:1; transition:background .15s;
+}
+.title-dropdown-btn:hover { background:var(--primary-light); }
+.title-dropdown {
+  display:none; position:absolute; top:calc(100% + 10px); left:0;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; box-shadow:var(--shadow-lg);
+  min-width:200px; z-index:500; overflow:hidden;
+}
+.title-dropdown.open { display:block; animation:fadeIn .15s ease; }
+.title-dropdown-item {
+  padding:11px 16px; font-size:.87rem; font-weight:600;
+  cursor:pointer; color:var(--sub); transition:background .12s;
+  border-bottom:1px solid var(--border);
+}
+.title-dropdown-item:last-child { border-bottom:none; }
+.title-dropdown-item:hover { background:var(--surface2); }
+.title-dropdown-item.active { color:var(--primary); background:var(--primary-light); }
+.title-dropdown-item.new-book { color:var(--accent); font-weight:700; }
 
 /* ── SUMMARY CARDS ── */
 .summary-section { padding: 20px 32px 0; }
@@ -396,7 +419,11 @@ body { background:linear-gradient(180deg,#167684 0%,#7ed6d3 100%); color:var(--t
 <div class="app-header">
   <div class="header-left">
     <div class="header-icon">🪙</div>
-    <div class="header-title">나의 가계부</div>
+    <div class="title-wrapper">
+      <div class="header-title" id="appTitleEl">나의 가계부</div>
+      <button class="title-dropdown-btn" onclick="toggleTitleDropdown()" title="가계부 전환">▾</button>
+      <div class="title-dropdown" id="titleDropdown"></div>
+    </div>
   </div>
   <div style="display:flex;align-items:center;gap:14px;">
     <div class="header-count" id="totalCount">총 0건</div>
@@ -608,17 +635,8 @@ let currentFilter = 'all';
 
 // ── 앱 타이틀 ─────────────────────────
 let APP_TITLE = '나의 가계부';
-function saveAppTitle() {
-  try { localStorage.setItem('hb_title', APP_TITLE); } catch(e){}
-}
-function loadAppTitle() {
-  try {
-    const saved = localStorage.getItem('hb_title');
-    if(saved) APP_TITLE = saved;
-  } catch(e){}
-}
 function applyAppTitle() {
-  document.querySelector('.header-title').textContent = APP_TITLE;
+  document.getElementById('appTitleEl').textContent = APP_TITLE;
   document.title = APP_TITLE;
   document.getElementById('modalAppTitle').textContent = APP_TITLE;
 }
@@ -634,32 +652,101 @@ const DEFAULT_COLUMNS = [
 ];
 let COLUMNS = DEFAULT_COLUMNS.map(c=>({...c}));
 
-function saveColumns() {
-  try { localStorage.setItem('hb_columns', JSON.stringify(COLUMNS)); } catch(e){}
+// ── 멀티 워크스페이스 ──────────────────
+let BOOKS = [];
+let CURRENT_BOOK_ID = null;
+let newBookMode = false;
+
+function saveData() {
+  try { localStorage.setItem(`hb_data_${CURRENT_BOOK_ID}`, JSON.stringify(DATA)); } catch(e){}
 }
-function loadColumns() {
+function saveColumns() {
+  try { localStorage.setItem(`hb_cols_${CURRENT_BOOK_ID}`, JSON.stringify(COLUMNS)); } catch(e){}
+}
+function saveWorkspace() {
+  const idx = BOOKS.findIndex(b=>b.id===CURRENT_BOOK_ID);
+  if(idx>=0) BOOKS[idx].title = APP_TITLE;
+  try { localStorage.setItem('hb_workspace', JSON.stringify({current:CURRENT_BOOK_ID, books:BOOKS})); } catch(e){}
+}
+
+function loadWorkspace() {
   try {
-    const saved = localStorage.getItem('hb_columns');
-    if(saved) COLUMNS = JSON.parse(saved);
+    const wsRaw = localStorage.getItem('hb_workspace');
+    if(wsRaw) {
+      const ws = JSON.parse(wsRaw);
+      BOOKS = ws.books || [];
+      CURRENT_BOOK_ID = ws.current;
+      const book = BOOKS.find(b=>b.id===CURRENT_BOOK_ID);
+      if(book) APP_TITLE = book.title;
+      const savedCols = localStorage.getItem(`hb_cols_${CURRENT_BOOK_ID}`);
+      if(savedCols) COLUMNS = JSON.parse(savedCols);
+      const savedData = localStorage.getItem(`hb_data_${CURRENT_BOOK_ID}`);
+      if(savedData) DATA = JSON.parse(savedData);
+    } else {
+      // 기존 데이터 마이그레이션
+      const id = 'book_' + Date.now();
+      const savedTitle = localStorage.getItem('hb_title');
+      if(savedTitle) APP_TITLE = savedTitle;
+      const savedCols = localStorage.getItem('hb_columns');
+      if(savedCols) COLUMNS = JSON.parse(savedCols);
+      if(localStorage.getItem('hb_version') === '5') {
+        const savedData = localStorage.getItem('hb_data');
+        if(savedData) DATA = JSON.parse(savedData);
+      }
+      BOOKS = [{id, title: APP_TITLE}];
+      CURRENT_BOOK_ID = id;
+      localStorage.setItem('hb_workspace', JSON.stringify({current:id, books:BOOKS}));
+      localStorage.setItem(`hb_data_${id}`, JSON.stringify(DATA));
+      localStorage.setItem(`hb_cols_${id}`, JSON.stringify(COLUMNS));
+    }
   } catch(e){}
 }
 
-// ── 저장/불러오기 ──────────────────────
-function saveData() {
-  try { localStorage.setItem('hb_data', JSON.stringify(DATA)); } catch(e){}
+function switchBook(id) {
+  if(id === CURRENT_BOOK_ID) { closeTitleDropdown(); return; }
+  saveData();
+  CURRENT_BOOK_ID = id;
+  localStorage.setItem('hb_workspace', JSON.stringify({current:id, books:BOOKS}));
+  const book = BOOKS.find(b=>b.id===id);
+  APP_TITLE = book ? book.title : '가계부';
+  const savedCols = localStorage.getItem(`hb_cols_${id}`);
+  COLUMNS = savedCols ? JSON.parse(savedCols) : DEFAULT_COLUMNS.map(c=>({...c}));
+  const savedData = localStorage.getItem(`hb_data_${id}`);
+  DATA = savedData ? JSON.parse(savedData) : [];
+  currentFilter = 'all';
+  closeTitleDropdown();
+  applyAppTitle();
+  render();
 }
-const DATA_VERSION = '5';
-function loadData() {
-  try {
-    const version = localStorage.getItem('hb_version');
-    if(version === DATA_VERSION) {
-      const saved = localStorage.getItem('hb_data');
-      if(saved) DATA = JSON.parse(saved);
-    } else {
-      saveData();
-      localStorage.setItem('hb_version', DATA_VERSION);
-    }
-  } catch(e){}
+
+function renderTitleDropdown() {
+  const dd = document.getElementById('titleDropdown');
+  dd.innerHTML = '';
+  BOOKS.forEach(book=>{
+    const item = document.createElement('div');
+    item.className = 'title-dropdown-item' + (book.id===CURRENT_BOOK_ID?' active':'');
+    item.textContent = book.title;
+    item.onclick = ()=>switchBook(book.id);
+    dd.appendChild(item);
+  });
+  const newItem = document.createElement('div');
+  newItem.className = 'title-dropdown-item new-book';
+  newItem.textContent = '＋ 새 타이틀';
+  newItem.onclick = ()=>{ closeTitleDropdown(); createNewBook(); };
+  dd.appendChild(newItem);
+}
+
+function toggleTitleDropdown() {
+  const dd = document.getElementById('titleDropdown');
+  if(dd.classList.contains('open')) { dd.classList.remove('open'); }
+  else { renderTitleDropdown(); dd.classList.add('open'); }
+}
+function closeTitleDropdown() {
+  document.getElementById('titleDropdown').classList.remove('open');
+}
+function createNewBook() {
+  newBookMode = true;
+  openColEditor();
 }
 
 // ── 렌더링 ────────────────────────────
@@ -930,14 +1017,17 @@ function closeConfirmOutside(e) {
 
 // ── 컬럼 편집 ────────────────────────
 function openColEditor() {
-  document.getElementById('fAppTitle').value = APP_TITLE;
+  document.getElementById('fAppTitle').value = newBookMode ? '' : APP_TITLE;
+  document.querySelector('#colEditorOverlay .modal-title').textContent =
+    newBookMode ? '새 가계부 만들기' : '헤더 항목 편집';
   const list = document.getElementById('colEditorList');
   list.innerHTML = '';
   COLUMNS.forEach(col=>{
     const row = document.createElement('div');
     row.className = 'col-editor-row';
+    const newKey = newBookMode ? 'c' + Date.now() + Math.random() : col.key;
     row.innerHTML = `
-      <input class="form-input col-editor-input" type="text" value="${col.label}" data-key="${col.key}" placeholder="항목명">
+      <input class="form-input col-editor-input" type="text" value="${col.label}" data-key="${newKey}" placeholder="항목명">
       <button class="btn-del-detail" onclick="removeColRow(this)" title="삭제">−</button>`;
     list.appendChild(row);
   });
@@ -966,19 +1056,43 @@ function removeColRow(btn) {
 }
 function saveColEditor() {
   const titleVal = document.getElementById('fAppTitle').value.trim();
-  if(titleVal) { APP_TITLE = titleVal; saveAppTitle(); applyAppTitle(); }
   const rows = document.querySelectorAll('#colEditorList .col-editor-row');
-  COLUMNS = [];
+  const newCols = [];
   rows.forEach(row=>{
     const inp = row.querySelector('.col-editor-input');
     const label = inp.value.trim();
     const key = inp.dataset.key;
-    if(label) COLUMNS.push({ key, label });
+    if(label) newCols.push({ key, label });
   });
-  saveColumns();
-  closeColEditor();
-  render();
-  showToast('✅ 저장되었습니다.');
+
+  if(newBookMode) {
+    const id = 'book_' + Date.now();
+    const title = titleVal || '새 가계부';
+    saveData(); // 현재 책 저장
+    BOOKS.push({id, title});
+    CURRENT_BOOK_ID = id;
+    APP_TITLE = title;
+    COLUMNS = newCols.length ? newCols : DEFAULT_COLUMNS.map(c=>({...c}));
+    DATA = [];
+    currentFilter = 'all';
+    localStorage.setItem(`hb_cols_${id}`, JSON.stringify(COLUMNS));
+    localStorage.setItem(`hb_data_${id}`, JSON.stringify(DATA));
+    localStorage.setItem('hb_workspace', JSON.stringify({current:id, books:BOOKS}));
+    newBookMode = false;
+    closeColEditor();
+    applyAppTitle();
+    render();
+    showToast('✅ 새 가계부가 생성되었습니다.');
+  } else {
+    if(titleVal) APP_TITLE = titleVal;
+    if(newCols.length) COLUMNS = newCols;
+    saveColumns();
+    saveWorkspace();
+    closeColEditor();
+    applyAppTitle();
+    render();
+    showToast('✅ 저장되었습니다.');
+  }
 }
 
 // ── 토스트 ────────────────────────────
@@ -1000,11 +1114,13 @@ function showToast(msg) {
     sel.appendChild(opt);
   }
 })();
-loadAppTitle();
-loadColumns();
-loadData();
+loadWorkspace();
 render();
 applyAppTitle();
+document.addEventListener('click', e=>{
+  const wrapper = document.querySelector('.title-wrapper');
+  if(wrapper && !wrapper.contains(e.target)) closeTitleDropdown();
+});
 </script>
 </body>
 </html>
