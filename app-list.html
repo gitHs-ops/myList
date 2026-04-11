@@ -37,6 +37,14 @@
     .date { color: #8893b0; font-size: .93rem; }
     .btn { background: #3358f4; color: #fff; border: none; border-radius: 8px; padding: 7px 18px; font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .15s; }
     .btn:hover { background: #223a99; }
+    .btn-icon { border: none; border-radius: 8px; width: 36px; height: 36px; font-size: 1.1rem; cursor: pointer; transition: background .15s, transform .1s; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-icon:hover { transform: scale(1.12); }
+    .btn-edit { background: #e8effe; color: #3358f4; }
+    .btn-edit:hover { background: #c7d3fc; }
+    .btn-del { background: #fee2e2; color: #ef4444; }
+    .btn-del:hover { background: #fca5a5; }
+    .btn-go { background: #e6faf7; color: #0ec7a5; }
+    .btn-go:hover { background: #b2f0e8; }
     @media (max-width: 960px) {
       .container { max-width: 98vw; padding: 18px 4vw; }
       .nav { padding: 0 12px; }
@@ -69,7 +77,7 @@
           <th>설명</th>
           <th>등록일</th>
           <th>바로가기</th>
-          <th>삭제</th>
+          <th>관리</th>
         </tr>
       </thead>
       <tbody id="appTbody">
@@ -115,7 +123,7 @@
         const tbody = document.getElementById('appTbody');
         tbody.innerHTML = '';
         apps.forEach((app, idx) => {
-          tbody.innerHTML += `<tr><td class="app-title"><a href="app-add.html?edit=${idx}" style="color:#3358f4;text-decoration:underline;cursor:pointer;">${app.name}</a></td><td class="desc">${app.desc}</td><td class="date">${app.date}</td><td><a href="${app.url}" class="btn">이동</a></td><td><button class="btn" style="background:#ef4444;" onclick="deleteApp(${idx})">삭제</button></td></tr>`;
+          tbody.innerHTML += `<tr><td class="app-title">${app.name}</td><td class="desc">${app.desc}</td><td class="date">${app.date}</td><td><a href="${app.url}" class="btn-icon btn-go" title="이동" style="text-decoration:none;">🚀</a></td><td style="display:flex;gap:6px;align-items:center;"><button class="btn-icon btn-edit" title="수정" onclick="location.href='app-add.html?edit=${idx}'">✏️</button><button class="btn-icon btn-del" title="삭제" onclick="deleteApp(${idx})">🗑️</button></td></tr>`;
         });
       }
       function deleteApp(idx) {
