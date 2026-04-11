@@ -10,12 +10,15 @@
     .container { max-width: 420px; margin: 48px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(51,88,244,.10); padding: 36px 28px; }
     h1 { font-size: 1.3rem; color: #3358f4; margin-bottom: 18px; }
     label { display: block; margin-bottom: 7px; color: #4a567a; font-weight: 600; }
-    input, textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f4; border-radius: 8px; font-size: 1rem; margin-bottom: 18px; font-family: inherit; background: #f4f6fb; }
+    input, textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f4; border-radius: 8px; font-size: 1rem; margin-bottom: 18px; font-family: inherit; background: #f4f6fb; box-sizing: border-box; }
     textarea { resize: vertical; min-height: 60px; }
     .btn { background: #3358f4; color: #fff; border: none; border-radius: 8px; padding: 11px 0; font-size: 1.05rem; font-weight: 700; width: 100%; cursor: pointer; transition: background .15s; }
     .btn:hover { background: #223a99; }
+    .btn:disabled { background: #8893b0; cursor: default; }
     .back-link { display: block; margin-top: 18px; text-align: center; color: #3358f4; text-decoration: none; font-size: .98rem; }
-    .msg { color: #0ec7a5; font-weight: 700; text-align: center; margin-bottom: 12px; }
+    .msg { font-weight: 700; text-align: center; margin-bottom: 12px; min-height: 20px; }
+    .msg.ok { color: #0ec7a5; }
+    .msg.err { color: #ef4444; }
   </style>
 </head>
 <body>
@@ -24,60 +27,92 @@
       <h1 id="formTitle" style="margin-bottom:0;">앱 등록</h1>
       <a href="app-list.html" class="back-link" style="margin:0;">← 목록으로</a>
     </div>
+    <br>
     <form id="appForm" autocomplete="off" onsubmit="return false;">
       <label for="name">앱 이름</label>
       <input type="text" id="name" required maxlength="32" autocomplete="off">
       <label for="desc">설명</label>
       <textarea id="desc" required maxlength="80" autocomplete="off"></textarea>
       <label for="url">바로가기 URL</label>
-      <input type="url" id="url" required placeholder="예: ai-briefing.html" autocomplete="off">
+      <input type="url" id="url" required placeholder="예: https://giths-ops.github.io/..." autocomplete="off">
+      <div id="msg" class="msg"></div>
       <button class="btn" id="submitBtn" onclick="addOrEditApp()">등록하기</button>
     </form>
-    <div id="msg" class="msg"></div>
     <div id="editLinkWrap"></div>
   </div>
   <script>
-    // 등록/수정 겸용
+    // ── 설정 ──
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZDRXoaAZb6ukSoUWNI3d20dD3ROPOhkYRdga3F0kmX3RQUoskIprVtSS046cdNefq-Q/exec';
+
     function getQueryParam(key) {
-      const params = new URLSearchParams(window.location.search);
-      return params.get(key);
+      return new URLSearchParams(window.location.search).get(key);
     }
+
+    function getCachedApps() {
+      try { return JSON.parse(localStorage.getItem('apps') || '[]'); } catch(e) { return []; }
+    }
+
+    function setMsg(text, isErr) {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = 'msg ' + (isErr ? 'err' : 'ok');
+    }
+
+    // ── GAS에 전체 목록 저장 ──
+    async function saveApps(apps) {
+      const data = encodeURIComponent(JSON.stringify(apps));
+      const res = await fetch(`${APPS_SCRIPT_URL}?action=save&data=${data}`);
+      const json = await res.json();
+      if (!json.ok) throw new Error('저장 실패');
+      localStorage.setItem('apps', JSON.stringify(apps));
+    }
+
+    // ── 수정 모드 초기화 ──
     const editIdx = getQueryParam('edit');
-    let apps = [];
-    try { apps = JSON.parse(localStorage.getItem('apps')||'[]'); } catch(e) { apps = []; }
+    const apps = getCachedApps();
     if (editIdx !== null && apps[editIdx]) {
-      // 수정 모드: 기존 값 채우기
       document.getElementById('formTitle').textContent = '앱 수정';
       document.getElementById('submitBtn').textContent = '수정하기';
       document.getElementById('name').value = apps[editIdx].name;
       document.getElementById('desc').value = apps[editIdx].desc;
       document.getElementById('url').value = apps[editIdx].url;
-      // 하단 바로가기 버튼 추가
-      document.getElementById('editLinkWrap').innerHTML = `<a href="${apps[editIdx].url}" class="btn" style="width:100%;margin-top:18px;display:inline-block;text-align:center;">바로가기</a>`;
+      document.getElementById('editLinkWrap').innerHTML =
+        `<a href="${apps[editIdx].url}" class="btn" style="margin-top:12px;display:inline-block;text-align:center;text-decoration:none;">🚀 바로가기</a>`;
     }
-    function addOrEditApp() {
+
+    // ── 등록/수정 실행 ──
+    async function addOrEditApp() {
       const name = document.getElementById('name').value.trim();
       const desc = document.getElementById('desc').value.trim();
-      const url = document.getElementById('url').value.trim();
+      const url  = document.getElementById('url').value.trim();
       if (!name || !desc || !url) {
-        document.getElementById('msg').textContent = '모든 항목을 입력해 주세요.';
-        return;
+        setMsg('모든 항목을 입력해 주세요.', true); return;
       }
-      let apps = [];
-      try { apps = JSON.parse(localStorage.getItem('apps')||'[]'); } catch(e) { apps = []; }
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = '저장 중...';
+
+      let apps = getCachedApps();
       const today = new Date();
-      const date = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+      const date = today.getFullYear() + '-' +
+        String(today.getMonth()+1).padStart(2,'0') + '-' +
+        String(today.getDate()).padStart(2,'0');
+
       if (editIdx !== null && apps[editIdx]) {
-        // 수정
-        apps[editIdx] = {name, desc, url, date};
-        document.getElementById('msg').textContent = '앱이 수정되었습니다! 목록으로 이동합니다...';
+        apps[editIdx] = { name, desc, url, date };
       } else {
-        // 등록
-        apps.unshift({name, desc, url, date});
-        document.getElementById('msg').textContent = '앱이 등록되었습니다! 목록으로 이동합니다...';
+        apps.unshift({ name, desc, url, date });
       }
-      localStorage.setItem('apps', JSON.stringify(apps));
-      setTimeout(function(){ window.location.href = 'app-list.html'; }, 900);
+
+      try {
+        await saveApps(apps);
+        setMsg(editIdx !== null ? '✅ 수정 완료! 목록으로 이동합니다...' : '✅ 등록 완료! 목록으로 이동합니다...');
+        setTimeout(() => { window.location.href = 'app-list.html'; }, 900);
+      } catch(e) {
+        setMsg('❌ 저장 실패: ' + e.message, true);
+        btn.disabled = false;
+        btn.textContent = editIdx !== null ? '수정하기' : '등록하기';
+      }
     }
   </script>
 </body>

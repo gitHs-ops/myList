@@ -15,9 +15,6 @@
       position: relative;
       overflow-x: hidden;
     }
-    body::before {
-      content: none;
-    }
     .container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(51,88,244,.10); padding: 40px 32px; position:relative; z-index:1; }
     .nav { background: #fff; border-bottom: 1.5px solid #e2e8f4; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; box-shadow: 0 2px 8px rgba(51,88,244,.04); }
     .nav-logo { font-weight: 800; font-size: 1.1rem; color: #3358f4; letter-spacing: -0.02em; }
@@ -45,6 +42,8 @@
     .btn-del:hover { background: #fca5a5; }
     .btn-go { background: #e6faf7; color: #0ec7a5; }
     .btn-go:hover { background: #b2f0e8; }
+    .status-bar { font-size: .85rem; color: #8893b0; margin-bottom: 10px; min-height: 20px; }
+    .status-bar.err { color: #ef4444; }
     @media (max-width: 960px) {
       .container { max-width: 98vw; padding: 18px 4vw; }
       .nav { padding: 0 12px; }
@@ -70,6 +69,7 @@
       <a href="app-add.html" class="btn" style="padding:9px 20px;font-size:.98rem;">+ 앱 추가</a>
     </div>
     <div class="subtitle">최신 앱과 도구를 한눈에 확인하고 바로 이동하세요.</div>
+    <div id="statusBar" class="status-bar">⏳ 목록 불러오는 중...</div>
     <table>
       <thead>
         <tr>
@@ -80,64 +80,117 @@
           <th>관리</th>
         </tr>
       </thead>
-      <tbody id="appTbody">
-        <!-- 앱 목록이 여기에 동적으로 렌더링됩니다. -->
-      </tbody>
+      <tbody id="appTbody"></tbody>
     </table>
-    <script>
-      // 버전 자동증가 및 날짜 표시 (1.0부터 시작, 0.1씩 증가, 날짜 바뀌면 1.0으로 리셋)
-      (function(){
-        const verKey = 'appListVer';
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = ('0'+(today.getMonth()+1)).slice(-2);
-        const d = ('0'+today.getDate()).slice(-2);
-        const dateStr = `${y}-${m}-${d}`;
-        let verObj = {v: 1.0, date: dateStr};
-        try {
-          verObj = JSON.parse(localStorage.getItem(verKey)) || verObj;
-        } catch(e) {}
-        if (verObj.date !== dateStr) {
-          verObj = {v: 1.0, date: dateStr};
-        } else {
-          verObj.v = Math.round((verObj.v + 0.1) * 10) / 10;
-        }
-        localStorage.setItem(verKey, JSON.stringify(verObj));
-        document.addEventListener('DOMContentLoaded', function(){
-          const el = document.getElementById('verInfo');
-          if(el) el.textContent = `Ver ${verObj.v.toFixed(1)} (${dateStr})`;
-        });
-      })();
-      // 기본 앱 목록 (초기 3개)
-      const defaultApps = [
-        {name:'데일리 브리핑',desc:'오늘의 주요 이슈, 날씨, 증시를 한눈에!',url:'ai-briefing.html',date:'2026-03-24'},
-        {name:'전과목 시험지 생성기',desc:'중학교 전과목 AI 자동 시험지 생성',url:'exam_generator.html',date:'2026-03-23'},
-        {name:'한문 문제지',desc:'한문 퀴즈 및 문제지 자동 생성',url:'hanja_quiz_v2.html',date:'2026-03-23'}
-      ];
-      function renderApps() {
-        let apps = [];
-        try {
-          apps = JSON.parse(localStorage.getItem('apps')||'[]');
-        } catch(e) { apps = []; }
-        if (!apps.length) apps = defaultApps;
-        const tbody = document.getElementById('appTbody');
-        tbody.innerHTML = '';
-        apps.forEach((app, idx) => {
-          tbody.innerHTML += `<tr><td class="app-title">${app.name}</td><td class="desc">${app.desc}</td><td class="date">${app.date}</td><td><a href="${app.url}" class="btn-icon btn-go" title="이동" style="text-decoration:none;">🚀</a></td><td style="display:flex;gap:6px;align-items:center;"><button class="btn-icon btn-edit" title="수정" onclick="location.href='app-add.html?edit=${idx}'">✏️</button><button class="btn-icon btn-del" title="삭제" onclick="deleteApp(${idx})">🗑️</button></td></tr>`;
-        });
-      }
-      function deleteApp(idx) {
-        let apps = [];
-        try {
-          apps = JSON.parse(localStorage.getItem('apps')||'[]');
-        } catch(e) { apps = []; }
-        if (!apps.length) return;
-        apps.splice(idx, 1);
-        localStorage.setItem('apps', JSON.stringify(apps));
-        renderApps();
-      }
-      renderApps();
-    </script>
   </div>
+  <script>
+    // ── 설정 ──
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZDRXoaAZb6ukSoUWNI3d20dD3ROPOhkYRdga3F0kmX3RQUoskIprVtSS046cdNefq-Q/exec';
+    const SHEET_ID = '1tIHCgQNqSQgWmjilcP74z7SWvfO0JbD-V8dC0fJ5CV0';
+
+    // ── 버전 표시 ──
+    (function(){
+      const verKey = 'appListVer';
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = ('0'+(today.getMonth()+1)).slice(-2);
+      const d = ('0'+today.getDate()).slice(-2);
+      const dateStr = `${y}-${m}-${d}`;
+      let verObj = {v: 1.0, date: dateStr};
+      try { verObj = JSON.parse(localStorage.getItem(verKey)) || verObj; } catch(e) {}
+      if (verObj.date !== dateStr) {
+        verObj = {v: 1.0, date: dateStr};
+      } else {
+        verObj.v = Math.round((verObj.v + 0.1) * 10) / 10;
+      }
+      localStorage.setItem(verKey, JSON.stringify(verObj));
+      document.addEventListener('DOMContentLoaded', function(){
+        const el = document.getElementById('verInfo');
+        if(el) el.textContent = `Ver ${verObj.v.toFixed(1)} (${dateStr})`;
+      });
+    })();
+
+    // ── 상태 메시지 ──
+    function setStatus(msg, isErr) {
+      const el = document.getElementById('statusBar');
+      el.textContent = msg;
+      el.className = 'status-bar' + (isErr ? ' err' : '');
+    }
+
+    // ── GAS에서 목록 로드 ──
+    async function loadApps() {
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=list`);
+        const json = await res.json();
+        if (!json.ok) throw new Error('GAS 응답 오류');
+        // GAS 데이터를 localStorage에도 캐시
+        localStorage.setItem('apps', JSON.stringify(json.data));
+        renderApps(json.data);
+        setStatus(`✅ ${json.data.length}개 앱 로드 완료`);
+      } catch(e) {
+        // GAS 실패 시 localStorage 캐시로 폴백
+        const cached = getCachedApps();
+        if (cached.length) {
+          renderApps(cached);
+          setStatus('⚠️ 오프라인 캐시로 표시 중 (GAS 연결 실패)', true);
+        } else {
+          setStatus('❌ 데이터 로드 실패: ' + e.message, true);
+        }
+      }
+    }
+
+    function getCachedApps() {
+      try { return JSON.parse(localStorage.getItem('apps') || '[]'); } catch(e) { return []; }
+    }
+
+    // ── GAS에 전체 목록 저장 ──
+    async function saveApps(apps) {
+      const data = encodeURIComponent(JSON.stringify(apps));
+      const res = await fetch(`${APPS_SCRIPT_URL}?action=save&data=${data}`);
+      const json = await res.json();
+      if (!json.ok) throw new Error('저장 실패');
+      localStorage.setItem('apps', JSON.stringify(apps));
+    }
+
+    // ── 렌더링 ──
+    function renderApps(apps) {
+      const tbody = document.getElementById('appTbody');
+      tbody.innerHTML = '';
+      if (!apps.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8893b0;padding:32px;">등록된 앱이 없습니다.</td></tr>';
+        return;
+      }
+      apps.forEach((app, idx) => {
+        tbody.innerHTML += `<tr>
+          <td class="app-title">${app.name}</td>
+          <td class="desc">${app.desc}</td>
+          <td class="date">${app.date}</td>
+          <td><a href="${app.url}" class="btn-icon btn-go" title="이동" style="text-decoration:none;">🚀</a></td>
+          <td style="display:flex;gap:6px;align-items:center;">
+            <button class="btn-icon btn-edit" title="수정" onclick="location.href='app-add.html?edit=${idx}'">✏️</button>
+            <button class="btn-icon btn-del" title="삭제" onclick="deleteApp(${idx})">🗑️</button>
+          </td>
+        </tr>`;
+      });
+    }
+
+    // ── 삭제 ──
+    async function deleteApp(idx) {
+      if (!confirm('이 앱을 삭제할까요?')) return;
+      let apps = getCachedApps();
+      apps.splice(idx, 1);
+      setStatus('⏳ 삭제 중...');
+      try {
+        await saveApps(apps);
+        renderApps(apps);
+        setStatus(`✅ 삭제 완료`);
+      } catch(e) {
+        setStatus('❌ 삭제 실패: ' + e.message, true);
+      }
+    }
+
+    // ── 초기 로드 ──
+    loadApps();
+  </script>
 </body>
 </html>
