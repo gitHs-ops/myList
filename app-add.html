@@ -106,6 +106,8 @@
 
       try {
         await saveApps(apps);
+        // 버전 증가
+        try { const v=JSON.parse(localStorage.getItem('appListVer')||'{}'); v.v=Math.round(((v.v||1.0)+0.1)*10)/10; localStorage.setItem('appListVer',JSON.stringify(v)); } catch(e){}
         setMsg(editIdx !== null ? '✅ 수정 완료! 목록으로 이동합니다...' : '✅ 등록 완료! 목록으로 이동합니다...');
         setTimeout(() => { window.location.href = 'app-list.html'; }, 900);
       } catch(e) {

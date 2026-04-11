@@ -88,27 +88,30 @@
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZDRXoaAZb6ukSoUWNI3d20dD3ROPOhkYRdga3F0kmX3RQUoskIprVtSS046cdNefq-Q/exec';
     const SHEET_ID = '1tIHCgQNqSQgWmjilcP74z7SWvfO0JbD-V8dC0fJ5CV0';
 
-    // ── 버전 표시 ──
+    // ── 버전 표시 (페이지 로드 시 고정, 앱 저장 시에만 증가) ──
+    const VER_KEY = 'appListVer';
     (function(){
-      const verKey = 'appListVer';
       const today = new Date();
-      const y = today.getFullYear();
-      const m = ('0'+(today.getMonth()+1)).slice(-2);
-      const d = ('0'+today.getDate()).slice(-2);
-      const dateStr = `${y}-${m}-${d}`;
-      let verObj = {v: 1.0, date: dateStr};
-      try { verObj = JSON.parse(localStorage.getItem(verKey)) || verObj; } catch(e) {}
+      const dateStr = today.getFullYear() + '-' +
+        ('0'+(today.getMonth()+1)).slice(-2) + '-' +
+        ('0'+today.getDate()).slice(-2);
+      let verObj = { v: 1.0, date: dateStr };
+      try { verObj = JSON.parse(localStorage.getItem(VER_KEY)) || verObj; } catch(e) {}
       if (verObj.date !== dateStr) {
-        verObj = {v: 1.0, date: dateStr};
-      } else {
-        verObj.v = Math.round((verObj.v + 0.1) * 10) / 10;
+        verObj = { v: 1.0, date: dateStr };
+        localStorage.setItem(VER_KEY, JSON.stringify(verObj));
       }
-      localStorage.setItem(verKey, JSON.stringify(verObj));
       document.addEventListener('DOMContentLoaded', function(){
         const el = document.getElementById('verInfo');
-        if(el) el.textContent = `Ver ${verObj.v.toFixed(1)} (${dateStr})`;
+        if(el) el.textContent = 'Ver ' + verObj.v.toFixed(1) + ' (' + verObj.date + ')';
       });
     })();
+    function bumpVersion() {
+      let verObj = { v: 1.0, date: '' };
+      try { verObj = JSON.parse(localStorage.getItem(VER_KEY)) || verObj; } catch(e) {}
+      verObj.v = Math.round((verObj.v + 0.1) * 10) / 10;
+      localStorage.setItem(VER_KEY, JSON.stringify(verObj));
+    }
 
     // ── 상태 메시지 ──
     function setStatus(msg, isErr) {
