@@ -44,6 +44,11 @@
     .btn-go:hover { background: #b2f0e8; }
     .status-bar { font-size: .85rem; color: #8893b0; margin-bottom: 10px; min-height: 20px; }
     .status-bar.err { color: #ef4444; }
+    .pagination { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:28px; margin-bottom:8px; flex-wrap:wrap; }
+    .page-btn { border:1.5px solid #e2e8f4; border-radius:8px; background:#fff; color:#4a567a; width:44px; height:44px; font-size:1.1rem; font-weight:700; cursor:pointer; transition:background .15s, color .15s; font-family:'Noto Sans KR',sans-serif; }
+    .page-btn:hover { background:#f4f6fb; color:#3358f4; border-color:#3358f4; }
+    .page-btn.active { background:#3358f4; color:#fff; border-color:#3358f4; }
+    .page-btn:disabled { opacity:.35; cursor:default; }
     @media (max-width: 960px) {
       .container { max-width: 98vw; padding: 18px 4vw; }
       .nav { padding: 0 12px; }
@@ -82,6 +87,7 @@
       </thead>
       <tbody id="appTbody"></tbody>
     </table>
+    <div class="pagination" id="pagination"></div>
   </div>
   <script>
     // ── 설정 ──
@@ -155,15 +161,29 @@
       localStorage.setItem('apps', JSON.stringify(apps));
     }
 
-    // ── 렌더링 ──
+    // ── 페이징 ──
+    const PAGE_SIZE = 5;
+    let currentPage = 1;
+    let allApps = [];
+
     function renderApps(apps) {
+      allApps = apps;
+      currentPage = 1;
+      renderPage();
+    }
+
+    function renderPage() {
       const tbody = document.getElementById('appTbody');
       tbody.innerHTML = '';
-      if (!apps.length) {
+      if (!allApps.length) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8893b0;padding:32px;">등록된 앱이 없습니다.</td></tr>';
+        renderPagination();
         return;
       }
-      apps.forEach((app, idx) => {
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageItems = allApps.slice(start, start + PAGE_SIZE);
+      pageItems.forEach((app, i) => {
+        const idx = start + i;
         tbody.innerHTML += `<tr>
           <td class="app-title">${app.name}</td>
           <td class="desc">${app.desc}</td>
@@ -175,6 +195,33 @@
           </td>
         </tr>`;
       });
+      renderPagination();
+    }
+
+    function renderPagination() {
+      const total = Math.ceil(allApps.length / PAGE_SIZE);
+      const pg = document.getElementById('pagination');
+      pg.innerHTML = '';
+      if (total <= 1) return;
+      const prev = document.createElement('button');
+      prev.className = 'page-btn';
+      prev.textContent = '‹';
+      prev.disabled = currentPage === 1;
+      prev.onclick = () => { currentPage--; renderPage(); };
+      pg.appendChild(prev);
+      for (let i = 1; i <= total; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick = ((p) => () => { currentPage = p; renderPage(); })(i);
+        pg.appendChild(btn);
+      }
+      const next = document.createElement('button');
+      next.className = 'page-btn';
+      next.textContent = '›';
+      next.disabled = currentPage === total;
+      next.onclick = () => { currentPage++; renderPage(); };
+      pg.appendChild(next);
     }
 
     // ── 삭제 ──
