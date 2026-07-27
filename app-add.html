@@ -25,7 +25,7 @@
   <div class="container">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h1 id="formTitle" style="margin-bottom:0;">앱 등록</h1>
-      <a href="app-list.html" class="back-link" style="margin:0;">← 목록으로</a>
+      <a href="index.html" class="back-link" style="margin:0;">← 목록으로</a>
     </div>
     <br>
     <form id="appForm" autocomplete="off" onsubmit="return false;">
@@ -109,7 +109,7 @@
         // 버전 증가
         try { const v=JSON.parse(localStorage.getItem('appListVer')||'{}'); v.v=Math.round(((v.v||1.0)+0.1)*10)/10; localStorage.setItem('appListVer',JSON.stringify(v)); } catch(e){}
         setMsg(editIdx !== null ? '✅ 수정 완료! 목록으로 이동합니다...' : '✅ 등록 완료! 목록으로 이동합니다...');
-        setTimeout(() => { window.location.href = 'app-list.html'; }, 900);
+        setTimeout(() => { window.location.href = 'index.html'; }, 900);
       } catch(e) {
         setMsg('❌ 저장 실패: ' + e.message, true);
         btn.disabled = false;
