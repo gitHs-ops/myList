@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사다리 타기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: linear-gradient(to bottom, #086266, #9adcda);
+    padding: 30px 16px 60px;
+    color: #0b3a3c;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    text-align: left;
+    color: #ffffff;
+    font-size: 28px;
+    margin: 0;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .ver-inline {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.75);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .btn-try-inline {
+    background: linear-gradient(135deg, #d4af37, #c79a2b);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-try-inline:active { transform: scale(0.97); }
+  .card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  .card h2 {
+    font-size: 16px;
+    margin: 0 0 16px;
+    color: #086266;
+    border-left: 4px solid #d4af37;
+    padding-left: 10px;
+  }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  label { font-size: 14px; font-weight: 600; color: #0b3a3c; min-width: 90px; }
+  input[type=number], input[type=text] {
+    padding: 8px 10px;
+    border: 1px solid #cfe3e2;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus { border-color: #086266; }
+  input[type=number] { width: 90px; }
+  .names-grid, .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .names-grid input, .results-grid input { width: 100%; }
+  .mini-label { font-size: 12px; color: #5a8a89; margin-bottom: 4px; display:block; }
+  button {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 22px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform .1s, box-shadow .1s;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-setup {
+    background: #086266;
+    color: #fff;
+  }
+  .btn-setup:hover { background: #0a7377; }
+  .btn-run {
+    background: linear-gradient(135deg, #d4af37, #c79a2b);
+    color: #fff;
+  }
+  .btn-run:hover { filter: brightness(1.05); }
+  .btn-run:disabled, .btn-setup:disabled {
+    background: #b7c9c8; cursor: not-allowed;
+  }
+  #canvasWrap {
+    overflow-x: auto;
+    text-align: center;
+  }
+  canvas {
+    background: #fbfdfd;
+    border-radius: 12px;
+    border: 1px solid #dceceb;
+  }
+  #resultTable {
+    margin-top: 24px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    display: none;
+  }
+  #resultTable th, #resultTable td {
+    padding: 14px 8px;
+    text-align: center;
+    border-bottom: 1px solid #e5f0ef;
+  }
+  #resultTable th {
+    background: #086266;
+    color: #fff;
+  }
+  #resultTable tr:nth-child(even) { background: #f4faf9; }
+  .hint { font-size: 12px; color: #7a9998; margin-top: -4px; margin-bottom: 10px; }
+  .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+
+  #tryFloatBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 98, 102, 0.35);
+    z-index: 998;
+    display: none;
+  }
+  #tryFloatBtn {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 999;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 22px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #d4af37, #c79a2b);
+    color: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    animation: floatPulse 1.8s ease-in-out infinite;
+  }
+  #tryFloatBtn:hover { filter: brightness(1.06); }
+  #tryFloatBtn .close-x {
+    margin-left: 4px;
+    font-weight: 400;
+    opacity: 0.85;
+    padding: 2px 4px;
+  }
+  @keyframes floatPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
+    50% { transform: translate(-50%, -50%) scale(1.05); box-shadow: 0 12px 26px rgba(0,0,0,0.3); }
+  }
+</style>
+</head>
+<body>
+<div id="tryFloatBackdrop"></div>
+<button id="tryFloatBtn" type="button">
+  ✨ 체험하기
+  <span class="close-x" id="tryFloatClose" title="닫기">✕</span>
+</button>
+<div class="wrap">
+  <div class="title-bar">
+    <h1>🪜 사다리 타기<span class="ver-inline">Ver1.1</span></h1>
+    <button id="inlineTryBtn" class="btn-try-inline" type="button">✨ 체험 실행</button>
+  </div>
+
+  <div class="card">
+    <h2>1. 참가 정보 입력</h2>
+    <div class="row">
+      <label for="numPeople">인원수</label>
+      <input type="number" id="numPeople" min="2" max="12" value="4">
+      <button class="btn-setup" id="genFieldsBtn" type="button">입력칸 생성</button>
+      <button class="btn-setup" id="resetSaveBtn" type="button" style="background:#7f8c8d;">저장값 초기화</button>
+    </div>
+    <div class="hint">"사다리 그리기"를 누르면 입력한 인원수·이름·결과·깊이·속도가 브라우저에 자동 저장되어, 다음에 파일을 열 때 그대로 불러와집니다.</div>
+
+    <div id="fieldsArea" style="display:none;">
+      <span class="mini-label">참가자 이름 (예: 호랑이, 코끼리...)</span>
+      <div class="names-grid" id="namesGrid"></div>
+
+      <span class="mini-label">결과 항목 (당첨/꽝, 상품명 등)</span>
+      <div class="results-grid" id="resultsGrid"></div>
+
+      <div class="row" style="margin-top:6px;">
+        <label for="depth">가로 바 개수</label>
+        <input type="number" id="depth" min="3" max="20" value="8">
+      </div>
+      <div class="hint">입력한 개수만큼 가로 바(사다리 단)가 정확히 생성됩니다. (최대 20개)</div>
+      <div class="hint" id="depthWarning" style="display:none; color:#c0392b; font-weight:700;">⚠️ 가로 바 개수는 최대 20개까지 가능합니다. 20개로 제한됩니다.</div>
+
+      <div class="row">
+        <label>진행 모드</label>
+        <label style="min-width:auto; font-weight:400; display:flex; align-items:center; gap:4px;">
+          <input type="radio" name="animMode" id="modeSimul" value="simultaneous" checked style="width:auto;"> 동시 진행
+        </label>
+        <label style="min-width:auto; font-weight:400; display:flex; align-items:center; gap:4px;">
+          <input type="radio" name="animMode" id="modeSeq" value="sequential" style="width:auto;"> 개별 진행
+        </label>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-setup" id="drawBtn" type="button">🎯 사다리 그리기</button>
+        <button class="btn-run" id="runBtn" type="button" disabled>▶ 사다리 타기 실행</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="ladderCard" style="display:none;">
+    <h2>2. 사다리</h2>
+    <div class="row" id="speedRow">
+      <label for="speedSlider">애니메이션 속도</label>
+      <input type="range" id="speedSlider" min="1" max="10" value="5" style="width:180px;">
+      <span id="speedLabel" style="font-size:13px; color:#5a8a89; min-width:60px;">보통 (5)</span>
+    </div>
+    <div id="canvasWrap"><canvas id="ladderCanvas"></canvas></div>
+    <table id="resultTable">
+      <thead><tr><th>참가자</th><th>→</th><th>결과</th></tr></thead>
+      <tbody id="resultBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#e74c3c','#2980b9','#27ae60','#f39c12','#8e44ad','#16a085','#d35400','#c0392b','#2c3e50','#7f8c8d','#e91e63','#00838f'];
+
+let numPeople = 0;
+let ladderRungs = []; // ladderRungs[row] = array of booleans, true means rung between col and col+1
+let paths = [];
+let canvas, ctx;
+let colGap, topY, bottomY, rowGap, rungTopY, rungBottomY;
+
+const SAVE_KEY = 'ladderGame_lastInput_v1';
+
+function generateFields(n) {
+  numPeople = Math.max(2, Math.min(12, n || 2));
+  document.getElementById('numPeople').value = numPeople;
+
+  const namesGrid = document.getElementById('namesGrid');
+  const resultsGrid = document.getElementById('resultsGrid');
+  namesGrid.innerHTML = '';
+  resultsGrid.innerHTML = '';
+
+  for (let i = 0; i < numPeople; i++) {
+    const ni = document.createElement('input');
+    ni.type = 'text';
+    ni.placeholder = `${i+1}번`;
+    ni.id = `name_${i}`;
+    namesGrid.appendChild(ni);
+
+    const ri = document.createElement('input');
+    ri.type = 'text';
+    ri.placeholder = `결과 ${i+1}`;
+    ri.id = `result_${i}`;
+    resultsGrid.appendChild(ri);
+  }
+
+  document.getElementById('fieldsArea').style.display = 'block';
+}
+
+document.getElementById('genFieldsBtn').addEventListener('click', () => {
+  generateFields(parseInt(document.getElementById('numPeople').value));
+  document.getElementById('ladderCard').style.display = 'none';
+  document.getElementById('runBtn').disabled = true;
+});
+
+function saveInputState() {
+  const names = [];
+  const results = [];
+  for (let i = 0; i < numPeople; i++) {
+    names.push(document.getElementById(`name_${i}`).value.trim());
+    results.push(document.getElementById(`result_${i}`).value.trim());
+  }
+  const data = {
+    numPeople,
+    names,
+    results,
+    depth: document.getElementById('depth').value,
+    speed: document.getElementById('speedSlider').value,
+    mode: document.querySelector('input[name="animMode"]:checked').value
+  };
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('로컬 저장 실패:', e);
+  }
+}
+
+function loadInputState() {
+  let raw;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
+  } catch (e) {
+    return;
+  }
+  if (!raw) return;
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    return;
+  }
+
+  generateFields(data.numPeople);
+  (data.names || []).forEach((v, i) => {
+    const el = document.getElementById(`name_${i}`);
+    if (el) el.value = v;
+  });
+  (data.results || []).forEach((v, i) => {
+    const el = document.getElementById(`result_${i}`);
+    if (el) el.value = v;
+  });
+  if (data.depth) document.getElementById('depth').value = data.depth;
+  if (data.speed) {
+    document.getElementById('speedSlider').value = data.speed;
+    speedSlider.dispatchEvent(new Event('input'));
+  }
+  if (data.mode) {
+    const radio = document.querySelector(`input[name="animMode"][value="${data.mode}"]`);
+    if (radio) radio.checked = true;
+  }
+}
+
+document.getElementById('drawBtn').addEventListener('click', () => {
+  const rawDepth = parseInt(document.getElementById('depth').value) || 8;
+  const depthWarning = document.getElementById('depthWarning');
+  if (rawDepth > 20) {
+    depthWarning.style.display = 'block';
+  } else {
+    depthWarning.style.display = 'none';
+  }
+  const depth = Math.max(3, Math.min(20, rawDepth));
+  document.getElementById('depth').value = depth;
+
+  generateLadder(numPeople, depth);
+  setupCanvas(numPeople, depth);
+  drawLadder([]);
+  saveInputState();
+
+  document.getElementById('ladderCard').style.display = 'block';
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('resultTable').style.display = 'none';
+});
+
+document.getElementById('runBtn').addEventListener('click', () => {
+  document.getElementById('runBtn').disabled = true;
+  computePaths();
+  const mode = document.querySelector('input[name="animMode"]:checked').value;
+  if (mode === 'sequential') {
+    animateSequential();
+  } else {
+    animateAll();
+  }
+});
+
+const speedSlider = document.getElementById('speedSlider');
+const speedLabel = document.getElementById('speedLabel');
+const speedNames = {1:'매우 느림',2:'느림',3:'느림',4:'약간 느림',5:'보통',6:'약간 빠름',7:'빠름',8:'빠름',9:'매우 빠름',10:'최고 속도'};
+speedSlider.addEventListener('input', () => {
+  speedLabel.textContent = `${speedNames[speedSlider.value]} (${speedSlider.value})`;
+});
+
+// 페이지 로드시 마지막으로 저장된 입력값 복원 (그리기 버튼을 눌렀던 시점 기준)
+loadInputState();
+
+document.getElementById('depth').addEventListener('input', () => {
+  document.getElementById('depthWarning').style.display = 'none';
+});
+
+// ── 최초 방문자용 "체험하기" 플로팅 버튼 ──────────────────────────
+const VISIT_KEY = 'ladderGame_hasVisited_v1';
+const tryFloatBtn = document.getElementById('tryFloatBtn');
+const tryFloatBackdrop = document.getElementById('tryFloatBackdrop');
+
+(function checkFirstVisit() {
+  let visited = null;
+  try { visited = localStorage.getItem(VISIT_KEY); } catch (e) {}
+  if (!visited) {
+    tryFloatBtn.style.display = 'inline-flex';
+    tryFloatBackdrop.style.display = 'block';
+  }
+})();
+
+document.getElementById('tryFloatClose').addEventListener('click', (e) => {
+  e.stopPropagation();
+  dismissTryFloat();
+});
+
+tryFloatBackdrop.addEventListener('click', () => {
+  dismissTryFloat();
+});
+
+tryFloatBtn.addEventListener('click', () => {
+  dismissTryFloat();
+  runDemo();
+});
+
+document.getElementById('inlineTryBtn').addEventListener('click', () => {
+  dismissTryFloat();
+  runDemo();
+});
+
+function dismissTryFloat() {
+  tryFloatBtn.style.display = 'none';
+  tryFloatBackdrop.style.display = 'none';
+  try { localStorage.setItem(VISIT_KEY, '1'); } catch (e) {}
+}
+
+function runDemo() {
+  const demoNames = ['호랑이', '코끼리', '사자', '토끼'];
+  const demoResults = ['🎉 당첨', '꽝', '커피 한 잔', '간식 쿠폰'];
+  const demoDepth = 8;
+  const demoSpeed = 5;
+
+  generateFields(demoNames.length);
+  demoNames.forEach((v, i) => { document.getElementById(`name_${i}`).value = v; });
+  demoResults.forEach((v, i) => { document.getElementById(`result_${i}`).value = v; });
+  document.getElementById('depth').value = demoDepth;
+  document.getElementById('speedSlider').value = demoSpeed;
+  speedSlider.dispatchEvent(new Event('input'));
+  document.getElementById('modeSimul').checked = true;
+
+  document.getElementById('depthWarning').style.display = 'none';
+  generateLadder(numPeople, demoDepth);
+  setupCanvas(numPeople, demoDepth);
+  drawLadder([]);
+
+  document.getElementById('ladderCard').style.display = 'block';
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('resultTable').style.display = 'none';
+  document.getElementById('ladderCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  setTimeout(() => {
+    computePaths();
+    animateAll();
+  }, 900);
+}
+
+document.getElementById('resetSaveBtn').addEventListener('click', () => {
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch (e) {}
+  location.reload();
+});
+
+function generateLadder(n, depth) {
+  // depth = 실제로 그려질 가로 바(rung)의 총 개수와 정확히 일치시킴 (행마다 1개씩 배치)
+  ladderRungs = [];
+  let prevCol = -1;
+  const maxCol = n - 2; // 가능한 열 인덱스 최대값 (0 ~ n-2)
+  for (let r = 0; r < depth; r++) {
+    const row = new Array(n - 1).fill(false);
+    let col = Math.floor(Math.random() * (n - 1));
+    // 바로 이전 행과 같은 위치에 연속으로 놓이지 않도록 재시도 (선택 가능한 열이 2개 이상일 때만)
+    if (maxCol > 0) {
+      let attempts = 0;
+      while (col === prevCol && attempts < 5) {
+        col = Math.floor(Math.random() * (n - 1));
+        attempts++;
+      }
+    }
+    row[col] = true;
+    ladderRungs.push(row);
+    prevCol = col;
+  }
+}
+
+function setupCanvas(n, depth) {
+  canvas = document.getElementById('ladderCanvas');
+  ctx = canvas.getContext('2d');
+
+  const width = Math.max(260, n * 45);
+  const height = 500;
+  canvas.width = width;
+  canvas.height = height;
+
+  topY = 60;
+  bottomY = height - 60; // 사다리(세로 바) 길이는 기존과 동일하게 유지
+  // 가로 바는 세로 바 시작점보다 20px 아래에서, 세로 바 끝점보다 20px 위에서 그려지도록 범위 설정
+  rungTopY = topY + 20;
+  rungBottomY = bottomY - 20;
+  colGap = (width - 80) / (n - 1);
+  rowGap = (rungBottomY - rungTopY) / (depth - 1 || 1);
+}
+
+function colX(c) { return 40 + c * colGap; }
+function rowY(r) { return rungTopY + r * rowGap; }
+
+function drawLadder(highlightPaths) {
+  const n = numPeople;
+  const depth = ladderRungs.length;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // vertical lines
+  ctx.strokeStyle = '#b9d4d3';
+  ctx.lineWidth = 3;
+  for (let c = 0; c < n; c++) {
+    ctx.beginPath();
+    ctx.moveTo(colX(c), topY);
+    ctx.lineTo(colX(c), bottomY);
+    ctx.stroke();
+  }
+
+  // rungs
+  ctx.strokeStyle = '#8fb8b6';
+  ctx.lineWidth = 3;
+  for (let r = 0; r < depth; r++) {
+    for (let c = 0; c < n - 1; c++) {
+      if (ladderRungs[r][c]) {
+        ctx.beginPath();
+        ctx.moveTo(colX(c), rowY(r));
+        ctx.lineTo(colX(c + 1), rowY(r));
+        ctx.stroke();
+      }
+    }
+  }
+
+  // top labels
+  ctx.fillStyle = '#086266';
+  ctx.font = 'bold 13px Pretendard, sans-serif';
+  ctx.textAlign = 'center';
+  for (let c = 0; c < n; c++) {
+    const name = document.getElementById(`name_${c}`).value.trim() || `${c+1}번`;
+    ctx.fillText(name, colX(c), topY - 20);
+  }
+
+  // bottom labels (사다리 끝점보다 50px 더 아래로 배치)
+  for (let c = 0; c < n; c++) {
+    const res = document.getElementById(`result_${c}`).value.trim() || `결과${c+1}`;
+    ctx.fillText(res, colX(c), bottomY + 40);
+  }
+
+  // highlighted paths (progress-limited)
+  if (highlightPaths) {
+    highlightPaths.forEach(hp => {
+      ctx.strokeStyle = hp.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      const pts = hp.points;
+      const limit = Math.max(1, Math.floor(pts.length * hp.progress));
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < limit; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+      }
+      ctx.stroke();
+
+      // moving dot
+      if (limit < pts.length) {
+        const p = pts[limit - 1];
+        ctx.fillStyle = hp.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+}
+
+function computePaths() {
+  const n = numPeople;
+  const depth = ladderRungs.length;
+  paths = [];
+
+  for (let start = 0; start < n; start++) {
+    let col = start;
+    const points = [{ x: colX(col), y: topY }];
+    for (let r = 0; r < depth; r++) {
+      const ry = rowY(r);
+      points.push({ x: colX(col), y: ry });
+      // check rung to the right
+      if (col < n - 1 && ladderRungs[r][col]) {
+        col = col + 1;
+        points.push({ x: colX(col), y: ry });
+      } else if (col > 0 && ladderRungs[r][col - 1]) {
+        col = col - 1;
+        points.push({ x: colX(col), y: ry });
+      }
+      const nextY = (r === depth - 1) ? bottomY : rowY(r + 1);
+      points.push({ x: colX(col), y: nextY });
+    }
+    points.push({ x: colX(col), y: bottomY });
+
+    paths.push({
+      start,
+      end: col,
+      points,
+      color: COLORS[start % COLORS.length],
+      progress: 0
+    });
+  }
+}
+
+function animateAll() {
+  // 슬라이더 1(매우 느림) ~ 10(최고 속도) -> duration 9000ms ~ 1500ms (전체적으로 더 느리게 조정)
+  const duration = getDuration();
+  const startTime = performance.now();
+
+  function frame(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    paths.forEach(p => { p.progress = t; });
+    drawLadder(paths);
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      showResults();
+      document.getElementById('runBtn').disabled = false;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function getDuration() {
+  // 슬라이더 1(매우 느림) ~ 10(최고 속도) -> duration 15000ms ~ 3000ms (한층 더 느리게 재조정)
+  const speed = parseInt(document.getElementById('speedSlider').value) || 5;
+  return 15000 - (speed - 1) * (12000 / 9);
+}
+
+function animateSequential() {
+  paths.forEach(p => { p.progress = 0; });
+  document.getElementById('resultBody').innerHTML = '';
+  document.getElementById('resultTable').style.display = 'table';
+
+  const perPersonDuration = getDuration() / Math.max(1, Math.min(3, numPeople / 2));
+  let idx = 0;
+
+  function playNext() {
+    if (idx >= paths.length) {
+      document.getElementById('runBtn').disabled = false;
+      return;
+    }
+    const current = paths[idx];
+    const startTime = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - startTime) / perPersonDuration);
+      current.progress = t;
+      const doneOnes = paths.slice(0, idx);
+      drawLadder([...doneOnes, current]);
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        appendResultRow(current);
+        idx++;
+        setTimeout(playNext, 350);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  playNext();
+}
+
+function appendResultRow(p) {
+  const body = document.getElementById('resultBody');
+  const name = document.getElementById(`name_${p.start}`).value.trim() || `${p.start+1}번`;
+  const res = document.getElementById(`result_${p.end}`).value.trim() || `결과${p.end+1}`;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td style="color:${p.color};font-weight:700;">${name}</td><td>→</td><td style="font-weight:700;">${res}</td>`;
+  body.appendChild(tr);
+}
+
+function showResults() {
+  const body = document.getElementById('resultBody');
+  body.innerHTML = '';
+  paths.forEach(p => appendResultRow(p));
+  document.getElementById('resultTable').style.display = 'table';
+}
+</script>
+</body>
+</html>

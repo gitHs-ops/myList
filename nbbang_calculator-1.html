@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>N빵 계산기</title>
+<style>
+  :root{
+    --teal-deep:#086266;
+    --teal-light:#9adcda;
+    --gold:#d4a017;
+    --ink:#14302f;
+    --paper:#fffdf7;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; margin:0;}
+  body{
+    font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    background:linear-gradient(to bottom, var(--teal-deep), var(--teal-light));
+    min-height:100vh;
+    color:var(--ink);
+    display:flex; justify-content:center;
+  }
+  #app{ width:100%; max-width:480px; padding:18px 18px 40px; }
+
+  h1{ font-size:24px; color:#fff; text-shadow:0 2px 6px rgba(0,0,0,0.25); margin:6px 0 2px; }
+  .sub{ color:#eafffb; opacity:0.9; font-size:13px; margin-bottom:18px; }
+
+  .panel{
+    background:var(--paper); border-radius:18px; padding:18px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.18); margin-bottom:14px;
+  }
+  .panel-label{ font-size:13px; font-weight:700; color:var(--teal-deep); margin-bottom:8px; }
+
+  .amount-input{
+    width:100%; padding:14px; font-size:22px; font-weight:800; text-align:right;
+    border:2px solid #dfe9e8; border-radius:12px; color:var(--ink);
+    -moz-appearance:textfield;
+  }
+  .amount-input::-webkit-outer-spin-button,
+  .amount-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .amount-unit{ text-align:right; font-size:12px; color:#7a8b8a; margin-top:4px; }
+
+  .stepper-row{ display:flex; align-items:center; justify-content:center; }
+  .stepper-row button{
+    width:46px; height:46px; border-radius:50%; border:none;
+    background:var(--teal-deep); color:#fff; font-size:22px; font-weight:800;
+    margin:0 9px; touch-action:manipulation; -webkit-user-select:none; user-select:none;
+    cursor:pointer; -webkit-appearance:none; appearance:none;
+  }
+  .stepper-row button:active{ transform:scale(0.94); }
+  .people-val{ font-size:28px; font-weight:900; color:var(--teal-deep); min-width:70px; text-align:center; }
+  .people-sub{ text-align:center; font-size:11px; color:#7a8b8a; margin-top:6px; }
+
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; }
+  .toggle-row .label{ font-size:14px; font-weight:600; }
+  .switch{ position:relative; width:48px; height:26px; background:#dfe9e8; border-radius:20px; flex:0 0 auto; }
+  .switch.on{ background:var(--gold); }
+  .switch::after{
+    content:''; position:absolute; top:2px; left:2px; width:22px; height:22px; border-radius:50%;
+    background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  .switch.on::after{ left:24px; }
+  .treasurer-note{ font-size:11px; color:#7a8b8a; margin-top:8px; line-height:1.5; }
+
+  /* 결과 카드 */
+  .result-panel{
+    background:linear-gradient(135deg, var(--teal-deep), #0a4f52);
+    border-radius:18px; padding:20px; color:#fff;
+    box-shadow:0 10px 26px rgba(0,0,0,0.3); margin-bottom:14px;
+  }
+  .result-title{ font-size:13px; opacity:0.85; margin-bottom:4px; }
+  .result-badge{
+    display:inline-block; font-size:11px; font-weight:800; padding:3px 10px; border-radius:10px;
+    background:rgba(255,255,255,0.18); margin-bottom:12px;
+  }
+  .result-badge.exact{ background:rgba(76,201,150,0.28); }
+  .result-badge.special{ background:rgba(212,160,23,0.35); }
+
+  .share-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.18);
+  }
+  .share-row:last-child{ border-bottom:none; }
+  .share-row .who{ font-size:14px; font-weight:700; }
+  .share-row .who .tag{ font-size:10px; font-weight:800; background:var(--gold); color:#3a2a00; padding:2px 7px; border-radius:8px; margin-left:6px; }
+  .share-row .amt{ font-size:19px; font-weight:900; }
+  .share-row .amt.refund{ color:#8be3c4; }
+
+  .verify-line{ margin-top:10px; font-size:11px; opacity:0.8; text-align:right; }
+
+  .refund-note{
+    margin-top:12px; padding:10px 12px; background:rgba(139,227,196,0.15);
+    border-left:3px solid #8be3c4; border-radius:8px; font-size:12px; line-height:1.5;
+  }
+  .fund-note{
+    margin-top:12px; padding:10px 12px; background:rgba(212,160,23,0.16);
+    border-left:3px solid var(--gold); border-radius:8px; font-size:12px; line-height:1.5;
+  }
+
+  .bank-select{
+    width:100%; padding:13px; font-size:15px; font-weight:700; color:var(--ink);
+    border:2px solid #dfe9e8; border-radius:12px; background:#f6faf9; margin-bottom:10px;
+  }
+  .account-row{ display:flex; flex-direction:column; gap:8px; }
+  .account-input{
+    width:100%; padding:13px; font-size:16px; font-weight:700; letter-spacing:0.5px;
+    border:2px solid #dfe9e8; border-radius:12px; color:var(--ink);
+  }
+  .copy-btn{
+    width:100%; padding:12px; border:none; border-radius:12px;
+    background:var(--teal-deep); color:#fff; font-size:13.5px; font-weight:700;
+  }
+  .copy-btn.copied{ background:#2f9e5e; }
+
+  footer-note{ display:block; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>💸 N빵 계산기</h1>
+  <div class="sub">총무는 최소부담, 일반회원은 공평하게 · 1,000원 단위 정산</div>
+
+  <div class="panel">
+    <div class="panel-label">💰 총 결제 금액</div>
+    <input type="text" inputmode="numeric" class="amount-input" id="totalInput" placeholder="0" value="">
+    <div class="amount-unit">원</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">🙋 총 인원 (총무 포함)</div>
+    <div class="stepper-row">
+      <button type="button" id="minusBtn">−</button>
+      <div class="people-val" id="peopleVal">4</div>
+      <button type="button" id="plusBtn">+</button>
+    </div>
+    <div class="people-sub">일반회원 <span id="regularCount">3</span>명 + 총무 1명</div>
+  </div>
+
+  <div class="panel">
+    <div class="toggle-row">
+      <span class="label">총무 최소부담 계산 사용</span>
+      <div class="switch on" id="treasurerSwitch"></div>
+    </div>
+    <div class="treasurer-note">
+      켜두면, 나누어 딱 떨어지지 않을 때만 일반회원은 1,000원 단위로 공평하게 내고 총무가 남은 차액(최소 금액 또는 특수한 경우 환급)을 부담합니다. 끄면 모두 같은 금액(반올림)으로 계산합니다.
+    </div>
+  </div>
+
+  <div class="result-panel" id="resultPanel">
+    <div class="result-title">정산 결과</div>
+    <div class="result-badge" id="resultBadge">금액을 입력해 주세요</div>
+    <div id="shareRows"></div>
+    <div class="verify-line" id="verifyLine"></div>
+  </div>
+
+  <div id="refundNoteWrap"></div>
+
+  <div class="panel">
+    <div class="panel-label">🏦 입금 계좌 정보</div>
+    <select id="bankSelect" class="bank-select">
+      <option value="">은행 선택</option>
+      <option value="KB국민은행">KB국민은행</option>
+      <option value="신한은행">신한은행</option>
+      <option value="우리은행">우리은행</option>
+      <option value="하나은행">하나은행</option>
+      <option value="NH농협은행">NH농협은행</option>
+      <option value="IBK기업은행">IBK기업은행</option>
+      <option value="새마을금고">새마을금고</option>
+      <option value="신협">신협</option>
+      <option value="우체국">우체국</option>
+      <option value="SC제일은행">SC제일은행</option>
+      <option value="카카오뱅크">카카오뱅크</option>
+      <option value="토스뱅크">토스뱅크</option>
+      <option value="케이뱅크">케이뱅크</option>
+      <option value="부산은행">부산은행</option>
+      <option value="대구은행(iM뱅크)">대구은행(iM뱅크)</option>
+      <option value="경남은행">경남은행</option>
+      <option value="광주은행">광주은행</option>
+      <option value="전북은행">전북은행</option>
+      <option value="제주은행">제주은행</option>
+    </select>
+    <div class="account-row">
+      <input type="text" inputmode="numeric" id="accountInput" class="account-input" placeholder="계좌번호 입력 (- 없이 숫자만도 OK)">
+      <button class="copy-btn" id="copyAccountBtn">정산 결과 + 계좌 복사</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var state = { total: 0, people: 4, treasurerMode: true };
+
+  function $(sel){ return document.querySelector(sel); }
+
+  function formatWon(n){
+    var sign = n < 0 ? '-' : '';
+    return sign + Math.abs(n).toLocaleString('ko-KR');
+  }
+
+  function parseAmount(str){
+    var n = parseInt(String(str).replace(/[^0-9]/g, ''), 10);
+    return isNaN(n) ? 0 : n;
+  }
+
+  // ---------- 입력 처리 ----------
+  var totalInput = $('#totalInput');
+  totalInput.addEventListener('input', function(){
+    var raw = parseAmount(this.value);
+    state.total = raw;
+    this.value = raw > 0 ? raw.toLocaleString('ko-KR') : '';
+    render();
+  });
+
+  $('#minusBtn').addEventListener('click', function(){
+    state.people = Math.max(2, state.people - 1);
+    render();
+  });
+  $('#plusBtn').addEventListener('click', function(){
+    state.people = Math.min(50, state.people + 1);
+    render();
+  });
+
+  $('#treasurerSwitch').addEventListener('click', function(){
+    state.treasurerMode = !state.treasurerMode;
+    this.classList.toggle('on', state.treasurerMode);
+    render();
+  });
+
+  // ---------- 계산 로직 ----------
+  function calculate(total, people, treasurerMode){
+    var n = people;
+    var regularCount = n - 1; // 총무 제외 인원
+
+    if(total <= 0){
+      return { valid:false };
+    }
+
+    var exact = total / n;
+    var isEven = (total % n === 0) && (exact % 1000 === 0);
+
+    // 총무 모드가 꺼져있거나, 딱 떨어지는 경우 -> 전원 동일 금액
+    if(!treasurerMode || isEven){
+      var evenShare;
+      if(isEven){
+        evenShare = exact;
+      } else {
+        evenShare = Math.round(exact / 1000) * 1000;
+        if(evenShare < 1000) evenShare = 1000;
+      }
+      return {
+        valid:true,
+        special:false,
+        exact:isEven,
+        regularCount: regularCount,
+        regularShare: evenShare,
+        treasurerShare: evenShare,
+        sumCollected: evenShare * n
+      };
+    }
+
+    // 딱 떨어지지 않음 -> 총무 최소부담 계산
+    var regularShare = Math.round(exact / 1000) * 1000;
+    if(regularShare < 1000) regularShare = 1000;
+
+    var treasurerShare;
+    if(regularCount <= 0){
+      treasurerShare = total; // 총무 혼자
+    } else {
+      treasurerShare = total - regularShare * regularCount;
+    }
+
+    return {
+      valid:true,
+      special:true,
+      exact:false,
+      regularCount: regularCount,
+      regularShare: regularShare,
+      treasurerShare: treasurerShare,
+      sumCollected: regularShare * regularCount + treasurerShare
+    };
+  }
+
+  // ---------- 렌더링 ----------
+  function render(){
+    $('#peopleVal').textContent = state.people;
+    $('#regularCount').textContent = Math.max(0, state.people - 1);
+
+    var result = calculate(state.total, state.people, state.treasurerMode);
+    var badge = $('#resultBadge');
+    var rows = $('#shareRows');
+    var verify = $('#verifyLine');
+    var refundWrap = $('#refundNoteWrap');
+    rows.innerHTML = '';
+    refundWrap.innerHTML = '';
+
+    if(!result.valid){
+      badge.className = 'result-badge';
+      badge.textContent = '금액을 입력해 주세요';
+      verify.textContent = '';
+      return;
+    }
+
+    if(!result.special){
+      badge.className = 'result-badge exact';
+      badge.textContent = result.exact ? '정확히 나누어떨어져요 · 전원 동일 부담' : '전원 동일 부담 (반올림 적용)';
+    } else {
+      badge.className = 'result-badge special';
+      badge.textContent = '딱 안 떨어져서 총무가 최소부담으로 조정했어요';
+    }
+
+    // 일반회원 행
+    if(result.regularCount > 0){
+      var row1 = document.createElement('div');
+      row1.className = 'share-row';
+      row1.innerHTML =
+        '<span class="who">일반회원 <span style="opacity:0.75;font-weight:600;">(1인당 · '+result.regularCount+'명)</span></span>' +
+        '<span class="amt">'+formatWon(result.regularShare)+'원</span>';
+      rows.appendChild(row1);
+    }
+
+    // 총무 행
+    var treasurerIsRefund = result.treasurerShare < 0;
+    var row2 = document.createElement('div');
+    row2.className = 'share-row';
+    row2.innerHTML =
+      '<span class="who">총무<span class="tag">'+(result.special ? '최소부담' : '동일부담')+'</span></span>' +
+      '<span class="amt'+(treasurerIsRefund ? ' refund' : '')+'">'+
+        (treasurerIsRefund ? '+'+formatWon(-result.treasurerShare)+'원 받음' : formatWon(result.treasurerShare)+'원')+
+      '</span>';
+    rows.appendChild(row2);
+
+    verify.textContent = '합계 확인: '+formatWon(result.sumCollected)+'원 / 입력 총액 '+formatWon(state.total)+'원';
+
+    if(!result.special){
+      var diff = result.sumCollected - state.total;
+      if(diff !== 0){
+        var fundNote = document.createElement('div');
+        fundNote.className = 'fund-note';
+        if(diff > 0){
+          fundNote.textContent = '💰 실제 걷는 금액이 총액보다 '+formatWon(diff)+'원 많은 것은 회비 기금으로 처리합니다.';
+        } else {
+          fundNote.textContent = '💰 실제 걷는 금액이 총액보다 '+formatWon(-diff)+'원 적은 것은 회비 기금에서 처리합니다.';
+        }
+        refundWrap.appendChild(fundNote);
+      }
+    }
+
+    if(treasurerIsRefund){
+      var note = document.createElement('div');
+      note.className = 'refund-note';
+      note.textContent = '⚠️ 총 금액이 인원수 대비 너무 적어서, 일반회원 몫을 최소 1,000원씩만 걷어도 총액을 넘어섭니다. 이 경우 총무가 차액을 도로 받는 것으로 계산했어요.';
+      refundWrap.appendChild(note);
+    }
+  }
+
+  function buildSummaryText(){
+    var result = calculate(state.total, state.people, state.treasurerMode);
+    if(!result.valid) return null;
+
+    var lines = [];
+    lines.push('📋 N빵 정산 결과');
+    lines.push('총 금액: ' + formatWon(state.total) + '원');
+    lines.push('인원: 총 ' + state.people + '명 (일반회원 ' + result.regularCount + '명 + 총무 1명)');
+    lines.push('');
+
+    if(result.regularCount > 0){
+      lines.push('· 일반회원 1인당: ' + formatWon(result.regularShare) + '원');
+    }
+    if(result.treasurerShare < 0){
+      lines.push('· 총무: ' + formatWon(-result.treasurerShare) + '원 받음');
+    } else {
+      lines.push('· 총무: ' + formatWon(result.treasurerShare) + '원 (' + (result.special ? '최소부담' : '동일부담') + ')');
+    }
+    lines.push('');
+
+    if(result.special){
+      lines.push('※ 총액이 인원수로 딱 안 나누어떨어져서, 일반회원은 1,000원 단위로 공평하게 내고 총무가 남은 차액을 최소부담으로 조정했습니다.');
+    } else {
+      var diff = result.sumCollected - state.total;
+      if(diff > 0){
+        lines.push('※ 실제 걷는 금액이 총액보다 ' + formatWon(diff) + '원 많은 것은 회비 기금으로 처리합니다.');
+      } else if(diff < 0){
+        lines.push('※ 실제 걷는 금액이 총액보다 ' + formatWon(-diff) + '원 적은 것은 회비 기금에서 처리합니다.');
+      } else {
+        lines.push('※ 정확히 나누어떨어져서 전원 동일 금액이며, 총무 별도 계산은 없습니다.');
+      }
+    }
+
+    var bank = $('#bankSelect').value;
+    var acc = $('#accountInput').value.trim();
+    if(bank && acc){
+      lines.push('');
+      lines.push('💳 입금 계좌: ' + bank + ' ' + acc + ' / 입금액: ' + formatWon(state.total) + '원');
+    }
+
+    return lines.join('\n');
+  }
+
+  function copyViaTextarea(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    // iOS Safari often fails to select/copy elements positioned far off-screen,
+    // so keep it inside the viewport but visually invisible instead.
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '0';
+    ta.style.width = '1px';
+    ta.style.height = '1px';
+    ta.style.padding = '0';
+    ta.style.border = 'none';
+    ta.style.outline = 'none';
+    ta.style.boxShadow = 'none';
+    ta.style.background = 'transparent';
+    ta.style.opacity = '0';
+    ta.style.fontSize = '16px'; // 16px 미만이면 iOS가 자동 줌을 시도할 수 있음
+    document.body.appendChild(ta);
+
+    var isIOS = /iP(hone|od|ad)/.test(navigator.userAgent || '') ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if(isIOS){
+      var range = document.createRange();
+      range.selectNodeContents(ta);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      ta.setSelectionRange(0, text.length);
+    } else {
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+    }
+
+    var ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+    if(window.getSelection){ window.getSelection().removeAllRanges(); }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  $('#copyAccountBtn').addEventListener('click', function(){
+    var text = buildSummaryText();
+    if(!text){
+      alert('먼저 총 금액을 입력해 주세요.');
+      return;
+    }
+    var btn = this;
+    function showCopied(){
+      btn.textContent = '복사됨!';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = '정산 결과 + 계좌 복사'; btn.classList.remove('copied'); }, 1600);
+    }
+
+    if(copyViaTextarea(text)){
+      showCopied();
+      return;
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(showCopied).catch(function(){
+        window.prompt('자동 복사가 지원되지 않아요. 아래 내용을 길게 눌러 직접 복사해 주세요:', text);
+      });
+    } else {
+      window.prompt('자동 복사가 지원되지 않아요. 아래 내용을 길게 눌러 직접 복사해 주세요:', text);
+    }
+  });
+
+
+  // ---------- 계좌 정보 저장/재사용 ----------
+  function saveAccountInfo(){
+    try{
+      localStorage.setItem('nbbang_bank', $('#bankSelect').value);
+      localStorage.setItem('nbbang_account', $('#accountInput').value);
+    }catch(e){ /* 저장소 접근 불가 시 무시 */ }
+  }
+  function loadAccountInfo(){
+    try{
+      var bank = localStorage.getItem('nbbang_bank');
+      var acc = localStorage.getItem('nbbang_account');
+      if(bank) $('#bankSelect').value = bank;
+      if(acc) $('#accountInput').value = acc;
+    }catch(e){ /* 저장소 접근 불가 시 무시 */ }
+  }
+  $('#bankSelect').addEventListener('change', saveAccountInfo);
+  $('#accountInput').addEventListener('input', saveAccountInfo);
+  loadAccountInfo();
+
+  render();
+})();
+</script>
+</body>
+</html>
