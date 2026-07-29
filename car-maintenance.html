@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#eef2ff">
+<title>내 차 정비/주유 이력 관리</title>
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-gradient: linear-gradient(140deg, #eef2ff 0%, #f8fafc 45%, #ecfeff 100%);
+    --card-bg: rgba(255, 255, 255, 0.62);
+    --card-border: rgba(255, 255, 255, 0.85);
+    --field-bg: rgba(255, 255, 255, 0.72);
+    --field-border: rgba(148, 163, 184, 0.28);
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --accent-primary: #6366f1;
+    --accent-secondary: #4f46e5;
+    --accent-glow: rgba(99, 102, 241, 0.18);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --font-main: 'Pretendard', -apple-system, sans-serif;
+    --font-accent: 'Outfit', sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  * {
+    transition: background-color .25s ease, border-color .25s ease,
+                color .25s ease, box-shadow .25s ease, transform .25s var(--ease);
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-main);
+    color: var(--text-primary);
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    position: relative;
+    overflow-x: hidden;
+    padding: 28px 16px 60px;
+  }
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    width: 46vmax; height: 46vmax;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .55;
+    z-index: 0;
+    pointer-events: none;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  body::before { background: radial-gradient(circle, #c7d2fe 0%, transparent 70%); top: -14vmax; left: -12vmax; }
+  body::after  { background: radial-gradient(circle, #a5f3fc 0%, transparent 70%); bottom: -16vmax; right: -12vmax; animation-delay: -7s; }
+  @keyframes float {
+    from { transform: translate3d(0,0,0) scale(1); }
+    to   { transform: translate3d(2vmax,3vmax,0) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, body::before, body::after {
+      animation: none !important;
+      transition-duration: .01ms !important;
+    }
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; position: relative; z-index: 1; }
+
+  header { margin-bottom: 20px; animation: rise .6s var(--ease) both; }
+  h1 {
+    margin: 0 0 4px;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .sub { color: var(--text-secondary); font-size: 13px; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px) scale(.985); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .card {
+    background: var(--card-bg);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, .10),
+                inset 0 1px 0 rgba(255, 255, 255, .75);
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+    animation: cardIn .45s var(--ease) both;
+  }
+  .card:nth-child(1) { animation-delay: .04s; }
+  .card:nth-child(2) { animation-delay: .08s; }
+  .card:nth-child(3) { animation-delay: .12s; }
+  .card:nth-child(n+4) { animation-delay: .16s; }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .card-label { font-size: 13px; font-weight: 700; color: var(--accent-secondary); margin-bottom: 12px; }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .row + .row { margin-top: 10px; }
+
+  input[type=text], input[type=number], input[type=date], select {
+    padding: 10px 12px;
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text-primary);
+    outline: none;
+    flex: 1;
+    min-width: 0;
+  }
+  input:focus, select:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px var(--accent-glow); }
+  select option { background: #fff; color: var(--text-primary); }
+  label.field-label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+  .field { flex: 1; min-width: 130px; }
+
+  button {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: #fff; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 26px var(--accent-glow); }
+  .btn-primary:active { transform: translateY(0) scale(.985); }
+  .btn-ghost { background: var(--field-bg); color: var(--text-primary); border: 1px solid var(--field-border); }
+  .btn-ghost:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
+  .btn-danger { background: rgba(239,68,68,0.12); color: var(--danger); }
+  .btn-danger:hover { background: rgba(239,68,68,0.22); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  button:disabled { opacity: .5; cursor: not-allowed; transform:none !important; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+  }
+  .status-badge.on { background: rgba(16,185,129,0.15); color: var(--success); }
+  .status-badge.off { background: rgba(100,116,139,0.15); color: var(--text-secondary); }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .stat { background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 14px; padding: 14px; }
+  .stat .k { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .stat .v { font-family: var(--font-accent); font-size: 20px; font-weight: 800; color: var(--text-primary); }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tab-btn {
+    flex: 1; background: var(--field-bg); border: 1px solid var(--field-border);
+    color: var(--text-secondary); padding: 10px; border-radius: 12px; font-weight: 700; font-size: 14px;
+  }
+  .tab-btn.active { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: #fff; border-color: transparent; }
+
+  .list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 4px; border-bottom: 1px solid var(--field-border);
+    gap: 10px;
+  }
+  .list-item:last-child { border-bottom: none; }
+  .li-main { font-size: 14px; font-weight: 700; }
+  .li-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .li-amt { font-family: var(--font-accent); font-weight: 800; font-size: 15px; white-space: nowrap; }
+  .li-actions { display: flex; gap: 6px; }
+  .empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 24px 0; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(15,23,42,0.35);
+    display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    width: 100%; max-width: 420px;
+    max-height: 88vh; display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px rgba(15,23,42,.25);
+    animation: rise .35s var(--ease) both;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px 6px; }
+  .modal-header h2 { font-size: 17px; margin: 0; font-weight: 800; }
+  .modal-close { background: transparent; color: var(--text-secondary); font-size: 18px; padding: 4px 8px; }
+  .modal-close:hover { color: var(--danger); }
+  .modal-body { padding: 12px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .modal-footer { padding: 14px 20px 20px; display: flex; gap: 10px; }
+  .modal-footer button { flex: 1; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+    background: rgba(15,23,42,0.92); color: #fff; padding: 12px 20px; border-radius: 12px;
+    font-size: 13px; font-weight: 600; z-index: 100; opacity: 0; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .hint { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🚗 내 차 정비/주유 이력</h1>
+    <div class="sub">정비·주유 기록을 관리하고, 연동 시 현대차 커넥티드카에서 주행거리를 자동으로 가져옵니다.</div>
+  </header>
+
+  <div class="card" id="vehicleCard">
+    <div class="card-label">차량 정보</div>
+    <div class="row">
+      <div class="field">
+        <label class="field-label" for="vName">차종</label>
+        <input type="text" id="vName" placeholder="예: 아반떼 CN7">
+      </div>
+      <div class="field">
+        <label class="field-label" for="vPlate">번호판</label>
+        <input type="text" id="vPlate" placeholder="예: 12가 3456">
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="linkCard">
+    <div class="card-label">현대차 커넥티드카 연동</div>
+    <div class="row" style="justify-content:space-between;">
+      <span class="status-badge off" id="linkStatus">● 연동 안 됨</span>
+      <div class="row" style="gap:8px;">
+        <button class="btn-ghost btn-sm" id="checkStatusBtn" type="button">상태 확인</button>
+        <button class="btn-primary btn-sm" id="connectBtn" type="button">🔗 연동하기</button>
+        <button class="btn-danger btn-sm" id="disconnectBtn" type="button" style="display:none;">연동 해제</button>
+      </div>
+    </div>
+    <div class="row" id="carSelectRow" style="display:none;">
+      <div class="field">
+        <label class="field-label" for="carSelect">차량 선택</label>
+        <select id="carSelect"></select>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:10px;">
+      연동에는 로컬 프록시 서버(hyundai-proxy)가 실행 중이어야 합니다. 꺼져 있어도 이 앱은 수동 입력으로 그대로 동작합니다.
+    </div>
+  </div>
+
+  <div class="card" id="summaryCard">
+    <div class="card-label">요약</div>
+    <div class="summary-grid">
+      <div class="stat"><div class="k">총 정비비</div><div class="v" id="sumMaint">0원</div></div>
+      <div class="stat"><div class="k">총 주유비</div><div class="v" id="sumFuel">0원</div></div>
+      <div class="stat"><div class="k">최신 주행거리</div><div class="v" id="sumOdo">-</div></div>
+      <div class="stat"><div class="k">평균 연비</div><div class="v" id="sumEfficiency">-</div></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabMaintBtn" type="button">🔧 정비 이력</button>
+    <button class="tab-btn" id="tabFuelBtn" type="button">⛽ 주유 이력</button>
+  </div>
+
+  <div class="card" id="maintPanel">
+    <div class="row" style="justify-content:space-between;">
+      <div class="card-label" style="margin:0;">정비 이력</div>
+      <button class="btn-primary btn-sm" id="addMaintBtn" type="button">+ 추가</button>
+    </div>
+    <div id="maintList"></div>
+  </div>
+
+  <div class="card" id="fuelPanel" style="display:none;">
+    <div class="row" style="justify-content:space-between;">
+      <div class="card-label" style="margin:0;">주유 이력</div>
+      <button class="btn-primary btn-sm" id="addFuelBtn" type="button">+ 추가</button>
+    </div>
+    <div id="fuelList"></div>
+  </div>
+</div>
+
+<!-- 정비 모달 -->
+<div class="modal-overlay" id="maintOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="maintModalTitle">정비 기록 추가</h2>
+      <button class="modal-close" id="maintCloseBtn" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label" for="mDate">날짜</label>
+        <input type="date" id="mDate">
+      </div>
+      <div class="field">
+        <label class="field-label" for="mShop">정비소</label>
+        <input type="text" id="mShop" placeholder="예: 현대 블루핸즈">
+      </div>
+      <div class="field">
+        <label class="field-label" for="mItem">정비 항목</label>
+        <input type="text" id="mItem" placeholder="예: 엔진오일 교환">
+      </div>
+      <div class="field">
+        <label class="field-label" for="mCost">비용 (원)</label>
+        <input type="number" id="mCost" min="0" placeholder="0">
+      </div>
+      <div class="row" style="gap:8px;">
+        <div class="field">
+          <label class="field-label" for="mOdo">주행거리 (km)</label>
+          <input type="number" id="mOdo" min="0" placeholder="0">
+        </div>
+        <button class="btn-ghost btn-sm" id="mSyncBtn" type="button" style="align-self:flex-end;">🔄 동기화</button>
+      </div>
+      <div class="field">
+        <label class="field-label" for="mMemo">메모</label>
+        <input type="text" id="mMemo" placeholder="선택 입력">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="maintCancelBtn" type="button">취소</button>
+      <button class="btn-primary" id="maintSaveBtn" type="button">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 주유 모달 -->
+<div class="modal-overlay" id="fuelOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="fuelModalTitle">주유 기록 추가</h2>
+      <button class="modal-close" id="fuelCloseBtn" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label" for="fDate">날짜</label>
+        <input type="date" id="fDate">
+      </div>
+      <div class="field">
+        <label class="field-label" for="fStation">주유소</label>
+        <input type="text" id="fStation" placeholder="예: GS칼텍스 ○○점">
+      </div>
+      <div class="row" style="gap:8px;">
+        <div class="field">
+          <label class="field-label" for="fLiters">주유량 (L)</label>
+          <input type="number" id="fLiters" min="0" step="0.01" placeholder="0">
+        </div>
+        <div class="field">
+          <label class="field-label" for="fUnitPrice">리터당 단가 (원)</label>
+          <input type="number" id="fUnitPrice" min="0" placeholder="0">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="fTotal">총액 (원, 자동계산)</label>
+        <input type="number" id="fTotal" min="0" placeholder="0">
+      </div>
+      <div class="row" style="gap:8px;">
+        <div class="field">
+          <label class="field-label" for="fOdo">주행거리 (km)</label>
+          <input type="number" id="fOdo" min="0" placeholder="0">
+        </div>
+        <button class="btn-ghost btn-sm" id="fSyncBtn" type="button" style="align-self:flex-end;">🔄 동기화</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" id="fuelCancelBtn" type="button">취소</button>
+      <button class="btn-primary" id="fuelSaveBtn" type="button">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PROXY_BASE = 'http://localhost:4000';
+const LS_VEHICLE = 'car_vehicle_v1';
+const LS_MAINT = 'car_maint_v1';
+const LS_FUEL = 'car_fuel_v1';
+const LS_CARID = 'car_bluelink_carid_v1';
+
+let vehicle = { name: '', plate: '' };
+let maint = [];
+let fuel = [];
+let selectedCarId = '';
+let editMaintId = null;
+let editFuelId = null;
+
+function $(sel) { return document.querySelector(sel); }
+
+function loadState() {
+  try { vehicle = JSON.parse(localStorage.getItem(LS_VEHICLE)) || vehicle; } catch (e) {}
+  try { maint = JSON.parse(localStorage.getItem(LS_MAINT)) || []; } catch (e) { maint = []; }
+  try { fuel = JSON.parse(localStorage.getItem(LS_FUEL)) || []; } catch (e) { fuel = []; }
+  try { selectedCarId = localStorage.getItem(LS_CARID) || ''; } catch (e) {}
+}
+function saveVehicle() { localStorage.setItem(LS_VEHICLE, JSON.stringify(vehicle)); }
+function saveMaint() { localStorage.setItem(LS_MAINT, JSON.stringify(maint)); }
+function saveFuel() { localStorage.setItem(LS_FUEL, JSON.stringify(fuel)); }
+
+function formatWon(n) { return (Number(n) || 0).toLocaleString('ko-KR') + '원'; }
+function formatKm(n) { return (Number(n) || 0).toLocaleString('ko-KR') + 'km'; }
+
+let toastTimer = null;
+function showToast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── 차량 정보 ──
+$('#vName').addEventListener('input', () => { vehicle.name = $('#vName').value; saveVehicle(); });
+$('#vPlate').addEventListener('input', () => { vehicle.plate = $('#vPlate').value; saveVehicle(); });
+
+function renderVehicle() {
+  $('#vName').value = vehicle.name || '';
+  $('#vPlate').value = vehicle.plate || '';
+}
+
+// ── 요약 ──
+function renderSummary() {
+  const totalMaint = maint.reduce((s, m) => s + (Number(m.cost) || 0), 0);
+  const totalFuel = fuel.reduce((s, f) => s + (Number(f.total) || 0), 0);
+  $('#sumMaint').textContent = formatWon(totalMaint);
+  $('#sumFuel').textContent = formatWon(totalFuel);
+
+  const allOdo = [...maint.map(m => m.odometer), ...fuel.map(f => f.odometer)]
+    .map(Number).filter(n => !isNaN(n) && n > 0);
+  $('#sumOdo').textContent = allOdo.length ? formatKm(Math.max(...allOdo)) : '-';
+
+  const fuelSorted = fuel.filter(f => Number(f.odometer) > 0).slice().sort((a, b) => a.odometer - b.odometer);
+  if (fuelSorted.length >= 2) {
+    const totalKm = fuelSorted[fuelSorted.length - 1].odometer - fuelSorted[0].odometer;
+    const totalLiters = fuelSorted.slice(1).reduce((s, f) => s + (Number(f.liters) || 0), 0);
+    const eff = totalLiters > 0 ? (totalKm / totalLiters) : 0;
+    $('#sumEfficiency').textContent = totalLiters > 0 ? eff.toFixed(1) + ' km/L' : '-';
+  } else {
+    $('#sumEfficiency').textContent = '-';
+  }
+}
+
+// ── 탭 ──
+$('#tabMaintBtn').addEventListener('click', () => switchTab('maint'));
+$('#tabFuelBtn').addEventListener('click', () => switchTab('fuel'));
+function switchTab(tab) {
+  $('#tabMaintBtn').classList.toggle('active', tab === 'maint');
+  $('#tabFuelBtn').classList.toggle('active', tab === 'fuel');
+  $('#maintPanel').style.display = tab === 'maint' ? '' : 'none';
+  $('#fuelPanel').style.display = tab === 'fuel' ? '' : 'none';
+}
+
+// ── 정비 목록 ──
+function renderMaintList() {
+  const box = $('#maintList');
+  if (!maint.length) { box.innerHTML = '<div class="empty">등록된 정비 기록이 없습니다.</div>'; return; }
+  const sorted = maint.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  box.innerHTML = sorted.map(m => `
+    <div class="list-item">
+      <div>
+        <div class="li-main">${escapeHtml(m.item || '정비')}</div>
+        <div class="li-sub">${escapeHtml(m.date || '')} · ${escapeHtml(m.shop || '-')} · ${formatKm(m.odometer)}</div>
+      </div>
+      <div class="row" style="gap:8px;">
+        <div class="li-amt">${formatWon(m.cost)}</div>
+        <div class="li-actions">
+          <button class="btn-ghost btn-sm" onclick="openMaintModal('${m.id}')">✏️</button>
+          <button class="btn-danger btn-sm" onclick="deleteMaint('${m.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+$('#addMaintBtn').addEventListener('click', () => openMaintModal(null));
+$('#maintCloseBtn').addEventListener('click', closeMaintModal);
+$('#maintCancelBtn').addEventListener('click', closeMaintModal);
+$('#maintOverlay').addEventListener('click', (e) => { if (e.target.id === 'maintOverlay') closeMaintModal(); });
+
+function openMaintModal(id) {
+  editMaintId = id;
+  const item = id ? maint.find(m => m.id === id) : null;
+  $('#maintModalTitle').textContent = item ? '정비 기록 수정' : '정비 기록 추가';
+  $('#mDate').value = item ? item.date : new Date().toISOString().slice(0, 10);
+  $('#mShop').value = item ? item.shop : '';
+  $('#mItem').value = item ? item.item : '';
+  $('#mCost').value = item ? item.cost : '';
+  $('#mOdo').value = item ? item.odometer : '';
+  $('#mMemo').value = item ? item.memo : '';
+  $('#maintOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMaintModal() {
+  $('#maintOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+$('#maintSaveBtn').addEventListener('click', () => {
+  const rec = {
+    id: editMaintId || ('m' + Date.now()),
+    date: $('#mDate').value,
+    shop: $('#mShop').value.trim(),
+    item: $('#mItem').value.trim(),
+    cost: Number($('#mCost').value) || 0,
+    odometer: Number($('#mOdo').value) || 0,
+    memo: $('#mMemo').value.trim()
+  };
+  if (!rec.item) { showToast('정비 항목을 입력해 주세요.'); return; }
+  if (editMaintId) {
+    maint = maint.map(m => m.id === editMaintId ? rec : m);
+  } else {
+    maint.push(rec);
+  }
+  saveMaint();
+  renderMaintList();
+  renderSummary();
+  closeMaintModal();
+  showToast('✅ 정비 기록이 저장되었습니다.');
+});
+function deleteMaint(id) {
+  if (!confirm('이 정비 기록을 삭제할까요?')) return;
+  maint = maint.filter(m => m.id !== id);
+  saveMaint();
+  renderMaintList();
+  renderSummary();
+  showToast('🗑 삭제되었습니다.');
+}
+
+// ── 주유 목록 ──
+function renderFuelList() {
+  const box = $('#fuelList');
+  if (!fuel.length) { box.innerHTML = '<div class="empty">등록된 주유 기록이 없습니다.</div>'; return; }
+  const sorted = fuel.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  box.innerHTML = sorted.map(f => `
+    <div class="list-item">
+      <div>
+        <div class="li-main">${escapeHtml(f.station || '주유')}</div>
+        <div class="li-sub">${escapeHtml(f.date || '')} · ${f.liters}L · ${formatKm(f.odometer)}</div>
+      </div>
+      <div class="row" style="gap:8px;">
+        <div class="li-amt">${formatWon(f.total)}</div>
+        <div class="li-actions">
+          <button class="btn-ghost btn-sm" onclick="openFuelModal('${f.id}')">✏️</button>
+          <button class="btn-danger btn-sm" onclick="deleteFuel('${f.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+$('#addFuelBtn').addEventListener('click', () => openFuelModal(null));
+$('#fuelCloseBtn').addEventListener('click', closeFuelModal);
+$('#fuelCancelBtn').addEventListener('click', closeFuelModal);
+$('#fuelOverlay').addEventListener('click', (e) => { if (e.target.id === 'fuelOverlay') closeFuelModal(); });
+
+function recalcFuelTotal() {
+  const liters = Number($('#fLiters').value) || 0;
+  const unit = Number($('#fUnitPrice').value) || 0;
+  if (liters && unit) $('#fTotal').value = Math.round(liters * unit);
+}
+$('#fLiters').addEventListener('input', recalcFuelTotal);
+$('#fUnitPrice').addEventListener('input', recalcFuelTotal);
+
+function openFuelModal(id) {
+  editFuelId = id;
+  const item = id ? fuel.find(f => f.id === id) : null;
+  $('#fuelModalTitle').textContent = item ? '주유 기록 수정' : '주유 기록 추가';
+  $('#fDate').value = item ? item.date : new Date().toISOString().slice(0, 10);
+  $('#fStation').value = item ? item.station : '';
+  $('#fLiters').value = item ? item.liters : '';
+  $('#fUnitPrice').value = item ? item.unitPrice : '';
+  $('#fTotal').value = item ? item.total : '';
+  $('#fOdo').value = item ? item.odometer : '';
+  $('#fuelOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeFuelModal() {
+  $('#fuelOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+$('#fuelSaveBtn').addEventListener('click', () => {
+  const rec = {
+    id: editFuelId || ('f' + Date.now()),
+    date: $('#fDate').value,
+    station: $('#fStation').value.trim(),
+    liters: Number($('#fLiters').value) || 0,
+    unitPrice: Number($('#fUnitPrice').value) || 0,
+    total: Number($('#fTotal').value) || 0,
+    odometer: Number($('#fOdo').value) || 0
+  };
+  if (!rec.liters) { showToast('주유량을 입력해 주세요.'); return; }
+  if (editFuelId) {
+    fuel = fuel.map(f => f.id === editFuelId ? rec : f);
+  } else {
+    fuel.push(rec);
+  }
+  saveFuel();
+  renderFuelList();
+  renderSummary();
+  closeFuelModal();
+  showToast('✅ 주유 기록이 저장되었습니다.');
+});
+function deleteFuel(id) {
+  if (!confirm('이 주유 기록을 삭제할까요?')) return;
+  fuel = fuel.filter(f => f.id !== id);
+  saveFuel();
+  renderFuelList();
+  renderSummary();
+  showToast('🗑 삭제되었습니다.');
+}
+
+// ── 현대차 커넥티드카 연동 (로컬 프록시 경유) ──
+async function fetchWithTimeout(url, opts = {}, ms = 4000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function setLinkUi(connected) {
+  const badge = $('#linkStatus');
+  badge.textContent = connected ? '● 연동됨' : '● 연동 안 됨';
+  badge.className = 'status-badge ' + (connected ? 'on' : 'off');
+  $('#connectBtn').style.display = connected ? 'none' : '';
+  $('#disconnectBtn').style.display = connected ? '' : 'none';
+  $('#carSelectRow').style.display = connected ? '' : 'none';
+}
+
+async function checkLinkStatus(silent) {
+  try {
+    const res = await fetchWithTimeout(`${PROXY_BASE}/api/status`);
+    const data = await res.json();
+    setLinkUi(!!data.connected);
+    if (data.connected) await loadCarList();
+    return !!data.connected;
+  } catch (e) {
+    setLinkUi(false);
+    if (!silent) showToast('⚠️ 로컬 프록시 서버(hyundai-proxy)에 연결할 수 없습니다.');
+    return false;
+  }
+}
+
+async function loadCarList() {
+  try {
+    const res = await fetchWithTimeout(`${PROXY_BASE}/api/vehicle/list`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const cars = data.cars || data.carList || data.resData || (Array.isArray(data) ? data : []);
+    const select = $('#carSelect');
+    select.innerHTML = '';
+    (Array.isArray(cars) ? cars : []).forEach(c => {
+      const id = c.carId || c.id || c.carid;
+      const name = c.carName || c.name || c.nickname || id;
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+    if (selectedCarId) select.value = selectedCarId;
+    if (!select.value && select.options.length) select.value = select.options[0].value;
+    selectedCarId = select.value || '';
+    localStorage.setItem(LS_CARID, selectedCarId);
+  } catch (e) { /* 목록 조회 실패 시 무시 - 수동 동기화 버튼에서 다시 에러 안내 */ }
+}
+$('#carSelect').addEventListener('change', () => {
+  selectedCarId = $('#carSelect').value;
+  localStorage.setItem(LS_CARID, selectedCarId);
+});
+
+$('#connectBtn').addEventListener('click', () => {
+  const win = window.open(`${PROXY_BASE}/auth/start`, 'hyundaiAuth', 'width=480,height=640');
+  if (!win) { showToast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해 주세요.'); return; }
+  const poll = setInterval(async () => {
+    if (win.closed) {
+      clearInterval(poll);
+      checkLinkStatus(true);
+      return;
+    }
+    const ok = await checkLinkStatus(true);
+    if (ok) { clearInterval(poll); win.close(); showToast('✅ 현대차 계정이 연동되었습니다.'); }
+  }, 2000);
+});
+$('#disconnectBtn').addEventListener('click', async () => {
+  try {
+    await fetchWithTimeout(`${PROXY_BASE}/api/disconnect`, { method: 'POST' });
+  } catch (e) {}
+  setLinkUi(false);
+  showToast('연동이 해제되었습니다.');
+});
+$('#checkStatusBtn').addEventListener('click', () => checkLinkStatus(false));
+
+async function syncOdometer(targetInputId) {
+  if (!selectedCarId) { showToast('먼저 차량 연동 후 차량을 선택해 주세요.'); return; }
+  try {
+    const res = await fetchWithTimeout(`${PROXY_BASE}/api/vehicle/odometer?carId=${encodeURIComponent(selectedCarId)}`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const km = data.odometer ?? data.value ?? data.resData?.odometer;
+    if (km == null) throw new Error();
+    $(targetInputId).value = Math.round(Number(km));
+    showToast('🔄 주행거리를 가져왔습니다.');
+  } catch (e) {
+    showToast('⚠️ 주행거리 동기화 실패 - 수동으로 입력해 주세요.');
+  }
+}
+$('#mSyncBtn').addEventListener('click', () => syncOdometer('#mOdo'));
+$('#fSyncBtn').addEventListener('click', () => syncOdometer('#fOdo'));
+
+// ── 초기화 ──
+loadState();
+renderVehicle();
+renderMaintList();
+renderFuelList();
+renderSummary();
+checkLinkStatus(true);
+</script>
+</body>
+</html>
