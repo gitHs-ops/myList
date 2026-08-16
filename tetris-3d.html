@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#eef2ff">
+<title>3D 테트리스</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-gradient: linear-gradient(140deg, #eef2ff 0%, #f8fafc 45%, #ecfeff 100%);
+  --card-bg: rgba(255, 255, 255, 0.62);
+  --card-border: rgba(255, 255, 255, 0.85);
+  --field-bg: rgba(255, 255, 255, 0.72);
+  --field-border: rgba(148, 163, 184, 0.28);
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --accent-primary: #6366f1;
+  --accent-secondary: #4f46e5;
+  --accent-glow: rgba(99, 102, 241, 0.18);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --font-main: 'Pretendard', -apple-system, sans-serif;
+  --font-accent: 'Outfit', sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-main);
+  color: var(--text-primary);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  position: relative;
+  overflow-x: hidden;
+  padding: 28px 16px 100px;
+}
+body::before, body::after {
+  content: '';
+  position: fixed;
+  width: 46vmax; height: 46vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: .55;
+  z-index: 0;
+  pointer-events: none;
+  animation: float 14s ease-in-out infinite alternate;
+}
+body::before { background: radial-gradient(circle, #c7d2fe 0%, transparent 70%); top: -14vmax; left: -12vmax; }
+body::after  { background: radial-gradient(circle, #a5f3fc 0%, transparent 70%); bottom: -16vmax; right: -12vmax; animation-delay: -7s; }
+@keyframes float {
+  from { transform: translate3d(0,0,0) scale(1); }
+  to   { transform: translate3d(2vmax,3vmax,0) scale(1.08); }
+}
+* {
+  transition: background-color .25s ease, border-color .25s ease,
+              color .25s ease, box-shadow .25s ease, transform .25s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, body::before, body::after {
+    animation: none !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+.wrap { max-width: 1080px; margin: 0 auto; position: relative; z-index: 1; }
+
+.topbar { margin-bottom: 20px; animation: rise .6s var(--ease) both; }
+.topbar h1 {
+  font-size: 1.7rem; font-weight: 800; letter-spacing: -0.3px; margin: 0 0 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar p { margin: 0; color: var(--text-secondary); font-size: .93rem; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+
+.stage { display: flex; gap: 20px; align-items: flex-start; }
+.canvas-card, .panel { animation: rise .6s var(--ease) both; }
+.panel { animation-delay: .06s; }
+
+.canvas-card {
+  flex: 1 1 560px;
+  position: relative;
+  aspect-ratio: 4 / 5;
+  max-height: 74vh;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--card-bg);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, .10), inset 0 1px 0 rgba(255,255,255,.75);
+  user-select: none;
+}
+.canvas-card canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.canvas-card canvas:active { cursor: grabbing; }
+
+.drag-hint {
+  position: absolute; left: 14px; bottom: 14px; z-index: 2;
+  font-size: .75rem; color: var(--text-secondary);
+  background: var(--field-bg); backdrop-filter: blur(8px);
+  border: 1px solid var(--field-border);
+  padding: 6px 10px; border-radius: 999px;
+  pointer-events: none;
+}
+
+.hud-top {
+  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 2;
+  display: flex; gap: 8px; pointer-events: none;
+}
+.hud-chip {
+  background: var(--field-bg); backdrop-filter: blur(8px);
+  border: 1px solid var(--field-border); border-radius: 12px;
+  padding: 6px 12px; font-size: .8rem; color: var(--text-secondary);
+  display: flex; gap: 6px; align-items: baseline;
+}
+.hud-chip b { font-family: var(--font-accent); font-size: 1rem; color: var(--text-primary); font-weight: 600; }
+
+.overlay {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  text-align: center; padding: 24px;
+  background: rgba(238, 242, 255, .78);
+  backdrop-filter: blur(14px);
+}
+.overlay.hidden { display: none; }
+.overlay h2 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.3px; }
+.overlay p { margin: 0; color: var(--text-secondary); font-size: .92rem; max-width: 320px; line-height: 1.6; }
+.overlay .score-big { font-family: var(--font-accent); font-size: 2.2rem; font-weight: 800; color: var(--accent-primary); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: #fff; border: none; border-radius: 14px; padding: 13px 30px;
+  font-family: var(--font-main); font-weight: 800; font-size: .98rem; cursor: pointer;
+  box-shadow: 0 10px 24px var(--accent-glow);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(99,102,241,.38); }
+.btn-primary:active { transform: translateY(0) scale(.985); }
+
+.btn-secondary {
+  background: var(--field-bg); border: 1px solid var(--field-border); color: var(--text-primary);
+  border-radius: 12px; padding: 10px 16px; font-family: var(--font-main); font-weight: 700; font-size: .88rem;
+  cursor: pointer; backdrop-filter: blur(6px); flex: 1;
+}
+.btn-secondary:hover { transform: translateY(-2px); }
+.btn-secondary:active { transform: translateY(0) scale(.985); }
+
+.panel {
+  flex: 0 0 280px; display: flex; flex-direction: column; gap: 14px;
+}
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, .10), inset 0 1px 0 rgba(255,255,255,.75);
+  padding: 16px 18px;
+}
+.card h3 { margin: 0 0 12px; font-size: .82rem; font-weight: 700; color: var(--text-secondary); letter-spacing: .2px; }
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-tile { background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 12px; padding: 10px 12px; }
+.stat-tile .label { display: block; font-size: .74rem; color: var(--text-secondary); margin-bottom: 2px; }
+.stat-tile .value { font-family: var(--font-accent); font-size: 1.35rem; font-weight: 600; color: var(--accent-primary); }
+
+.next-grid { display: grid; gap: 4px; width: fit-content; margin: 0 auto; }
+.np-cell { width: 22px; height: 22px; border-radius: 5px; background: rgba(148,163,184,.15); }
+
+.key-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.key-list li { display: flex; justify-content: space-between; align-items: center; font-size: .82rem; color: var(--text-secondary); }
+.key-list kbd {
+  font-family: var(--font-accent); background: var(--field-bg); border: 1px solid var(--field-border);
+  border-radius: 6px; padding: 2px 7px; font-size: .76rem; color: var(--text-primary); font-weight: 600;
+}
+
+.action-row { display: flex; gap: 10px; }
+
+.touch-controls {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; justify-content: center; align-items: center; gap: 22px; flex-wrap: wrap;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--card-bg); backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border-top: 1px solid var(--card-border);
+  box-shadow: 0 -10px 30px rgba(15,23,42,.08);
+}
+.tc-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tc-row { display: flex; gap: 4px; }
+.tc-label { font-size: .68rem; color: var(--text-secondary); margin-bottom: 2px; }
+.tc-btn {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--field-bg); border: 1px solid var(--field-border);
+  font-size: 1.1rem; font-family: var(--font-main); font-weight: 700; color: var(--text-primary);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.tc-btn:active { transform: scale(.92); background: var(--accent-glow); }
+.tc-btn.wide { width: 96px; font-size: .82rem; gap: 4px; }
+
+#toast {
+  position: fixed; top: 20px; left: 50%; transform: translate(-50%, -14px);
+  background: var(--card-bg); backdrop-filter: blur(18px);
+  border: 1px solid var(--card-border); border-radius: 14px;
+  padding: 12px 22px; font-weight: 700; font-size: .9rem; color: var(--text-primary);
+  box-shadow: 0 14px 32px rgba(15,23,42,.14);
+  opacity: 0; pointer-events: none; z-index: 50;
+  transition: opacity .25s var(--ease), transform .25s var(--ease);
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 900px) {
+  body { padding: 20px 12px 130px; }
+  .stage { flex-direction: column; }
+  .panel { flex: 1 1 auto; width: 100%; }
+  .canvas-card { aspect-ratio: 3 / 4; max-height: 56vh; }
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  .touch-controls { gap: 14px; }
+  .tc-btn { width: 40px; height: 40px; font-size: 1rem; }
+}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <h1>🧊 3D 테트리스</h1>
+    <p>다섯 칸 우물 속으로 블록이 떨어집니다. 화면을 드래그해 시점을 돌리고, 가로 한 층을 가득 채워 라인을 지우세요.</p>
+  </div>
+
+  <div class="stage">
+    <div class="canvas-card" id="canvasCard">
+      <canvas id="gameCanvas"></canvas>
+      <div class="hud-top">
+        <div class="hud-chip">점수 <b id="scoreChip">0</b></div>
+        <div class="hud-chip">레벨 <b id="levelChip">1</b></div>
+      </div>
+      <div class="drag-hint">🖱️ 드래그: 시점 회전 · 스크롤: 확대/축소</div>
+
+      <div class="overlay" id="startOverlay">
+        <h2>🧊 3D 테트리스</h2>
+        <p>블록이 5×5 우물 아래로 떨어집니다. 방향키로 이동, Q/E·W/S·A/D로 세 축을 회전시켜 빈틈없이 층을 채우세요.</p>
+        <button class="btn-primary" id="startBtn">시작하기</button>
+      </div>
+
+      <div class="overlay hidden" id="pauseOverlay">
+        <h2>⏸ 일시정지</h2>
+        <p>언제든 이어서 진행할 수 있어요.</p>
+        <button class="btn-primary" id="resumeBtn">계속하기</button>
+      </div>
+
+      <div class="overlay hidden" id="gameoverOverlay">
+        <h2>게임 오버</h2>
+        <div class="score-big" id="finalScore">0</div>
+        <p id="bestNote">최고 점수: 0</p>
+        <button class="btn-primary" id="restartBtn">다시 시작</button>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="card">
+        <h3>기록</h3>
+        <div class="stat-grid">
+          <div class="stat-tile"><span class="label">점수</span><span class="value" id="scoreVal">0</span></div>
+          <div class="stat-tile"><span class="label">레벨</span><span class="value" id="levelVal">1</span></div>
+          <div class="stat-tile"><span class="label">라인</span><span class="value" id="linesVal">0</span></div>
+          <div class="stat-tile"><span class="label">최고</span><span class="value" id="bestVal">0</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>다음 블록</h3>
+        <div class="next-grid" id="nextGrid"></div>
+      </div>
+
+      <div class="card">
+        <h3>조작법</h3>
+        <ul class="key-list">
+          <li>이동 <span><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd></span></li>
+          <li>Y축 회전 <span><kbd>Q</kbd><kbd>E</kbd></span></li>
+          <li>X축 회전 <span><kbd>W</kbd><kbd>S</kbd></span></li>
+          <li>Z축 회전 <span><kbd>A</kbd><kbd>D</kbd></span></li>
+          <li>하드 드롭 <span><kbd>Space</kbd></span></li>
+          <li>소프트 드롭 <span><kbd>Shift</kbd></span></li>
+          <li>일시정지 <span><kbd>P</kbd></span></li>
+        </ul>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-secondary" id="pauseBtn">⏸ 일시정지</button>
+        <button class="btn-secondary" id="restartBtn2">🔄 재시작</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="touch-controls">
+  <div class="tc-group">
+    <span class="tc-label">이동</span>
+    <button class="tc-btn" data-act="moveZ-">▲</button>
+    <div class="tc-row">
+      <button class="tc-btn" data-act="moveX-">◀</button>
+      <button class="tc-btn" data-act="moveX+">▶</button>
+    </div>
+    <button class="tc-btn" data-act="moveZ+">▼</button>
+  </div>
+  <div class="tc-group">
+    <span class="tc-label">회전</span>
+    <div class="tc-row">
+      <button class="tc-btn" data-act="rotY">Y↻</button>
+      <button class="tc-btn" data-act="rotX">X↻</button>
+      <button class="tc-btn" data-act="rotZ">Z↻</button>
+    </div>
+  </div>
+  <div class="tc-group">
+    <span class="tc-label">&nbsp;</span>
+    <button class="tc-btn wide" data-act="drop">⬇ 낙하</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+// ───────────────────────── 상수 / 상태 ─────────────────────────
+const W = 5, D = 5, H = 14;
+const BEST_KEY = 'tetris3d_best';
+
+const PIECES = {
+  I: { color: 0x22d3ee, cells: [[0,0,0],[1,0,0],[2,0,0],[3,0,0]] },
+  O: { color: 0xfacc15, cells: [[0,0,0],[1,0,0],[0,1,0],[1,1,0]] },
+  T: { color: 0xa855f7, cells: [[0,0,0],[1,0,0],[2,0,0],[1,1,0]] },
+  S: { color: 0x4ade80, cells: [[1,0,0],[2,0,0],[0,1,0],[1,1,0]] },
+  Z: { color: 0xf87171, cells: [[0,0,0],[1,0,0],[1,1,0],[2,1,0]] },
+  J: { color: 0x3b82f6, cells: [[0,0,0],[0,1,0],[1,1,0],[2,1,0]] },
+  L: { color: 0xfb923c, cells: [[2,0,0],[0,1,0],[1,1,0],[2,1,0]] },
+};
+const TYPES = Object.keys(PIECES);
+
+let grid, bag = [], current = null, nextType = null;
+let score = 0, level = 1, lines = 0;
+let dropTimer = 0, dropInterval = 800, softDrop = false;
+let state = 'ready'; // ready | playing | paused | gameover
+let lastTime = 0;
+
+// ───────────────────────── 유틸 ─────────────────────────
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function nextFromBag(){ if(!bag.length) bag = shuffle([...TYPES]); return bag.pop(); }
+function worldX(x){ return x - (W-1)/2; }
+function worldZ(z){ return z - (D-1)/2; }
+function worldY(y){ return y; }
+
+function rotateCell([x,y,z], axis, dir){
+  if (axis === 'y') return dir === 1 ? [z,y,-x] : [-z,y,x];
+  if (axis === 'x') return dir === 1 ? [x,-z,y] : [x,z,-y];
+  return dir === 1 ? [-y,x,z] : [y,-x,z];
+}
+
+function initGrid(){
+  grid = Array.from({length:W}, () => Array.from({length:H}, () => Array(D).fill(null)));
+}
+
+function collides(cells, pos){
+  for (const [dx,dy,dz] of cells) {
+    const x = pos.x+dx, y = pos.y+dy, z = pos.z+dz;
+    if (x < 0 || x >= W || z < 0 || z >= D || y < 0) return true;
+    if (y < H && grid[x][y][z]) return true;
+  }
+  return false;
+}
+
+// ───────────────────────── 토스트 ─────────────────────────
+let toastQueue = [], toastBusy = false;
+function showToast(msg){ toastQueue.push(msg); if(!toastBusy) processToast(); }
+function processToast(){
+  if (!toastQueue.length) { toastBusy = false; return; }
+  toastBusy = true;
+  const el = document.getElementById('toast');
+  el.textContent = toastQueue.shift();
+  el.classList.add('show');
+  setTimeout(() => { el.classList.remove('show'); setTimeout(processToast, 250); }, 1300);
+}
+
+// ───────────────────────── Three.js 씬 ─────────────────────────
+const canvasCard = document.getElementById('canvasCard');
+const canvas = document.getElementById('gameCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+const orbit = { theta: Math.PI/4, phi: 1.02, radius: 15 };
+const target = new THREE.Vector3(0, H*0.32, 0);
+
+function updateCameraFromOrbit(){
+  const { theta, phi, radius } = orbit;
+  camera.position.set(
+    target.x + radius*Math.sin(phi)*Math.sin(theta),
+    target.y + radius*Math.cos(phi),
+    target.z + radius*Math.sin(phi)*Math.cos(theta)
+  );
+  camera.lookAt(target);
+}
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+keyLight.position.set(6, 10, 6);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.shadow.camera.left = -8; keyLight.shadow.camera.right = 8;
+keyLight.shadow.camera.top = 8; keyLight.shadow.camera.bottom = -8;
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0xaab8ff, 0.35);
+fillLight.position.set(-6, 4, -6);
+scene.add(fillLight);
+
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(W+3, D+3),
+  new THREE.MeshStandardMaterial({ color: 0xe4e9ff, roughness: 0.95 })
+);
+floor.rotation.x = -Math.PI/2;
+floor.position.set(0, -0.5, 0);
+floor.receiveShadow = true;
+scene.add(floor);
+
+const gridHelper = new THREE.GridHelper(Math.max(W,D)+3, Math.max(W,D)+3, 0x6366f1, 0xc7d2fe);
+gridHelper.position.set(0, -0.49, 0);
+scene.add(gridHelper);
+
+const wellGeo = new THREE.BoxGeometry(W, H, D);
+const wellEdges = new THREE.LineSegments(
+  new THREE.EdgesGeometry(wellGeo),
+  new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.5 })
+);
+wellEdges.position.set(0, (H-1)/2, 0);
+scene.add(wellEdges);
+
+const wellWalls = new THREE.Mesh(
+  wellGeo,
+  new THREE.MeshBasicMaterial({ color: 0x8890ff, transparent: true, opacity: 0.05, side: THREE.BackSide })
+);
+wellWalls.position.copy(wellEdges.position);
+scene.add(wellWalls);
+
+const cubeGeo = new THREE.BoxGeometry(0.92, 0.92, 0.92);
+const activeGroup = new THREE.Group();
+const ghostGroup = new THREE.Group();
+const lockedGroup = new THREE.Group();
+scene.add(activeGroup, ghostGroup, lockedGroup);
+
+const matCache = {};
+function materialFor(color){
+  if (!matCache[color]) matCache[color] = new THREE.MeshStandardMaterial({ color, metalness: 0.2, roughness: 0.45 });
+  return matCache[color];
+}
+
+function rebuildLockedMeshes(){
+  while (lockedGroup.children.length) lockedGroup.remove(lockedGroup.children[0]);
+  for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) for (let z = 0; z < D; z++) {
+    const color = grid[x][y][z];
+    if (!color) continue;
+    const mesh = new THREE.Mesh(cubeGeo, materialFor(color));
+    mesh.position.set(worldX(x), worldY(y), worldZ(z));
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    lockedGroup.add(mesh);
+  }
+}
+
+function computeGhostY(){
+  let y = current.pos.y;
+  while (!collides(current.cells, { x: current.pos.x, y: y-1, z: current.pos.z })) y--;
+  return y;
+}
+
+function syncActiveMeshes(rebuild){
+  if (rebuild) {
+    while (activeGroup.children.length) activeGroup.remove(activeGroup.children[0]);
+    while (ghostGroup.children.length) ghostGroup.remove(ghostGroup.children[0]);
+    const activeMat = new THREE.MeshStandardMaterial({
+      color: current.color, metalness: 0.25, roughness: 0.3,
+      emissive: current.color, emissiveIntensity: 0.18
+    });
+    const ghostMat = new THREE.MeshBasicMaterial({ color: current.color, transparent: true, opacity: 0.16 });
+    current.cells.forEach(() => {
+      const am = new THREE.Mesh(cubeGeo, activeMat); am.castShadow = true; activeGroup.add(am);
+      ghostGroup.add(new THREE.Mesh(cubeGeo, ghostMat));
+    });
+  }
+  const ghostY = computeGhostY();
+  current.cells.forEach(([dx,dy,dz], i) => {
+    const x = current.pos.x+dx, z = current.pos.z+dz;
+    activeGroup.children[i].position.set(worldX(x), worldY(current.pos.y+dy), worldZ(z));
+    ghostGroup.children[i].position.set(worldX(x), worldY(ghostY+dy), worldZ(z));
+  });
+}
+
+// ───────────────────────── 게임 로직 ─────────────────────────
+function spawnPiece(){
+  const type = nextType || nextFromBag();
+  nextType = nextFromBag();
+  updateNextPreview(nextType);
+
+  const tmpl = PIECES[type];
+  current = {
+    type, color: tmpl.color,
+    cells: tmpl.cells.map(c => c.slice()),
+    pos: { x: 1, y: H-3, z: Math.floor(D/2) }
+  };
+  if (collides(current.cells, current.pos)) { syncActiveMeshes(true); gameOver(); return; }
+  syncActiveMeshes(true);
+}
+
+function tryMove(dx, dy, dz){
+  const npos = { x: current.pos.x+dx, y: current.pos.y+dy, z: current.pos.z+dz };
+  if (collides(current.cells, npos)) return false;
+  current.pos = npos;
+  syncActiveMeshes(false);
+  return true;
+}
+
+const ROT_KICKS = [[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,-1,0],[0,-2,0],[1,0,1],[-1,0,-1]];
+function tryRotate(axis, dir){
+  const rotated = current.cells.map(c => rotateCell(c, axis, dir));
+  for (const [kx,ky,kz] of ROT_KICKS) {
+    const npos = { x: current.pos.x+kx, y: current.pos.y+ky, z: current.pos.z+kz };
+    if (!collides(rotated, npos)) {
+      current.cells = rotated; current.pos = npos;
+      syncActiveMeshes(false);
+      return true;
+    }
+  }
+  return false;
+}
+
+function clearLines(){
+  let cleared = 0;
+  for (let y = 0; y < H; y++) {
+    let full = true;
+    outer: for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) if (!grid[x][y][z]) { full = false; break outer; }
+    if (full) {
+      cleared++;
+      for (let yy = y; yy < H-1; yy++) for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) grid[x][yy][z] = grid[x][yy+1][z];
+      for (let x = 0; x < W; x++) for (let z = 0; z < D; z++) grid[x][H-1][z] = null;
+      y--;
+    }
+  }
+  return cleared;
+}
+
+function applyScore(cleared){
+  const base = [0,100,300,600,1000][Math.min(cleared,4)];
+  score += base * level;
+  lines += cleared;
+  const newLevel = Math.floor(lines/5) + 1;
+  if (newLevel !== level) {
+    level = newLevel;
+    dropInterval = Math.max(150, 850 - (level-1)*70);
+    showToast(`⬆️ 레벨 ${level}!`);
+  }
+  const labels = {1:'1',2:'2',3:'3',4:'4+'};
+  showToast(`🎉 ${labels[Math.min(cleared,4)]}라인 클리어!`);
+}
+
+function lockPiece(){
+  let overflow = false;
+  for (const [dx,dy,dz] of current.cells) {
+    const x = current.pos.x+dx, y = current.pos.y+dy, z = current.pos.z+dz;
+    if (y >= H) { overflow = true; continue; }
+    if (y >= 0 && x >= 0 && x < W && z >= 0 && z < D) grid[x][y][z] = current.color;
+  }
+  rebuildLockedMeshes();
+  if (overflow) { gameOver(); return; }
+
+  const cleared = clearLines();
+  if (cleared > 0) { applyScore(cleared); rebuildLockedMeshes(); }
+  updateHud();
+  spawnPiece();
+}
+
+function gravityTick(){ if (!tryMove(0,-1,0)) lockPiece(); }
+
+function hardDrop(){
+  if (state !== 'playing') return;
+  let dist = 0;
+  while (tryMove(0,-1,0)) dist++;
+  score += dist * 2 * level;
+  lockPiece();
+}
+
+function getBest(){ return parseInt(localStorage.getItem(BEST_KEY) || '0', 10); }
+
+function gameOver(){
+  state = 'gameover';
+  const best = getBest();
+  const isNewBest = score > best;
+  if (isNewBest) localStorage.setItem(BEST_KEY, String(score));
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('bestNote').textContent = isNewBest ? '🏆 최고 점수 갱신!' : `최고 점수: ${Math.max(best,score)}`;
+  document.getElementById('bestVal').textContent = getBest();
+  document.getElementById('gameoverOverlay').classList.remove('hidden');
+}
+
+function updateHud(){
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('levelVal').textContent = level;
+  document.getElementById('linesVal').textContent = lines;
+  document.getElementById('bestVal').textContent = getBest();
+  document.getElementById('scoreChip').textContent = score;
+  document.getElementById('levelChip').textContent = level;
+}
+
+function updateNextPreview(type){
+  const tmpl = PIECES[type];
+  const cells = tmpl.cells;
+  const maxX = Math.max(...cells.map(c => c[0]));
+  const maxY = Math.max(...cells.map(c => c[1]));
+  const filled = new Set(cells.map(c => c[0]+','+c[1]));
+  const wrap = document.getElementById('nextGrid');
+  wrap.innerHTML = '';
+  wrap.style.gridTemplateColumns = `repeat(${maxX+1}, 22px)`;
+  for (let y = maxY; y >= 0; y--) {
+    for (let x = 0; x <= maxX; x++) {
+      const div = document.createElement('div');
+      div.className = 'np-cell';
+      if (filled.has(x+','+y)) div.style.background = '#' + tmpl.color.toString(16).padStart(6,'0');
+      wrap.appendChild(div);
+    }
+  }
+}
+
+// ───────────────────────── 상태 전환 ─────────────────────────
+function resetGame(){
+  initGrid();
+  score = 0; level = 1; lines = 0; dropInterval = 800; dropTimer = 0; softDrop = false;
+  bag = []; nextType = nextFromBag();
+  rebuildLockedMeshes();
+  spawnPiece();
+  updateHud();
+}
+
+function startGame(){
+  resetGame();
+  state = 'playing';
+  document.getElementById('startOverlay').classList.add('hidden');
+  document.getElementById('gameoverOverlay').classList.add('hidden');
+  document.getElementById('pauseOverlay').classList.add('hidden');
+}
+
+function togglePause(){
+  if (state === 'playing') { state = 'paused'; document.getElementById('pauseOverlay').classList.remove('hidden'); }
+  else if (state === 'paused') { state = 'playing'; document.getElementById('pauseOverlay').classList.add('hidden'); }
+}
+
+// ───────────────────────── 입력 ─────────────────────────
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') e.preventDefault();
+  if (state !== 'playing') return;
+  switch (e.key.toLowerCase()) {
+    case 'arrowleft': tryMove(-1,0,0); break;
+    case 'arrowright': tryMove(1,0,0); break;
+    case 'arrowup': tryMove(0,0,-1); break;
+    case 'arrowdown': tryMove(0,0,1); break;
+    case ' ': hardDrop(); break;
+    case 'shift': softDrop = true; break;
+    case 'q': tryRotate('y',-1); break;
+    case 'e': tryRotate('y',1); break;
+    case 'w': tryRotate('x',1); break;
+    case 's': tryRotate('x',-1); break;
+    case 'a': tryRotate('z',-1); break;
+    case 'd': tryRotate('z',1); break;
+    case 'p': togglePause(); break;
+  }
+});
+window.addEventListener('keyup', (e) => { if (e.key === 'Shift') softDrop = false; });
+
+document.querySelectorAll('.touch-controls [data-act]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    if (state !== 'playing') return;
+    switch (btn.dataset.act) {
+      case 'moveX-': tryMove(-1,0,0); break;
+      case 'moveX+': tryMove(1,0,0); break;
+      case 'moveZ-': tryMove(0,0,-1); break;
+      case 'moveZ+': tryMove(0,0,1); break;
+      case 'rotY': tryRotate('y',1); break;
+      case 'rotX': tryRotate('x',1); break;
+      case 'rotZ': tryRotate('z',1); break;
+      case 'drop': hardDrop(); break;
+    }
+  });
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn2').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('resumeBtn').addEventListener('click', togglePause);
+window.addEventListener('blur', () => { if (state === 'playing') togglePause(); });
+
+// 시점 드래그 (마우스 + 터치 공용)
+let dragging = false, lastPX = 0, lastPY = 0;
+canvas.addEventListener('pointerdown', (e) => { dragging = true; lastPX = e.clientX; lastPY = e.clientY; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - lastPX, dy = e.clientY - lastPY;
+  lastPX = e.clientX; lastPY = e.clientY;
+  orbit.theta -= dx * 0.006;
+  orbit.phi = Math.min(Math.PI*0.85, Math.max(Math.PI*0.12, orbit.phi - dy*0.006));
+});
+window.addEventListener('pointerup', () => { dragging = false; });
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  orbit.radius = Math.min(24, Math.max(7, orbit.radius + e.deltaY*0.01));
+}, { passive: false });
+
+// ───────────────────────── 리사이즈 ─────────────────────────
+function onResize(){
+  const w = canvasCard.clientWidth, h = canvasCard.clientHeight;
+  if (!w || !h) return;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+}
+window.addEventListener('resize', onResize);
+new ResizeObserver(onResize).observe(canvasCard);
+
+// ───────────────────────── 메인 루프 ─────────────────────────
+function animate(time){
+  requestAnimationFrame(animate);
+  const dt = time - lastTime; lastTime = time;
+
+  if (state === 'playing') {
+    dropTimer += dt;
+    const interval = softDrop ? Math.min(60, dropInterval/6) : dropInterval;
+    if (dropTimer > interval) { dropTimer = 0; gravityTick(); }
+  } else if (state === 'ready' && !dragging) {
+    orbit.theta += dt * 0.00012;
+  }
+
+  updateCameraFromOrbit();
+  renderer.render(scene, camera);
+}
+
+// ───────────────────────── 초기화 ─────────────────────────
+initGrid();
+rebuildLockedMeshes();
+document.getElementById('bestVal').textContent = getBest();
+onResize();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
