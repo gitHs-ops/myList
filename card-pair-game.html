@@ -248,17 +248,53 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.2</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.3</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
       <div class="choice-row">
         <button class="choice-btn active" data-group="mode" data-value="solo">혼자 하기 (vs 앱)</button>
-        <button class="choice-btn" data-group="mode" data-value="multi">같이 하기 (멀티)</button>
+        <button class="choice-btn" data-group="mode" data-value="multi">같이 하기 (한 기기)</button>
+        <button class="choice-btn" data-group="mode" data-value="online">🌐 온라인 대전 (2인)</button>
       </div>
     </div>
 
-    <div class="card-panel">
+    <div class="card-panel hidden" id="onlinePanel">
+      <div class="panel-title">🌐 온라인 대전</div>
+      <div class="choice-row">
+        <button class="choice-btn active" data-group="onlineTab" data-value="create">방 만들기</button>
+        <button class="choice-btn" data-group="onlineTab" data-value="join">참가하기</button>
+      </div>
+
+      <div id="onlineCreateTab">
+        <div class="minute-input show" style="margin-top:12px;">
+          <span style="font-size:13px;">내 닉네임</span>
+          <input type="text" id="hostNickInput" placeholder="호스트" maxlength="8" style="flex:1; min-width:0;">
+        </div>
+        <button class="primary-btn" id="createRoomBtn" style="margin-top:10px;">방 만들기</button>
+        <div class="hidden" id="roomInfoBox" style="margin-top:14px; text-align:center;">
+          <div style="font-size:12px; color:#7a8b8a;">아래 코드를 상대방에게 알려주세요</div>
+          <div id="roomCodeDisplay" style="font-size:30px; font-weight:900; letter-spacing:4px; color:var(--teal-deep); margin:8px 0;">-----</div>
+          <button class="ghost-btn" id="copyLinkBtn" style="color:var(--teal-deep); border-color:var(--teal-deep); background:#f6faf9;">초대 링크 복사</button>
+          <div id="onlineStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep);">상대방을 기다리는 중...</div>
+        </div>
+      </div>
+
+      <div class="hidden" id="onlineJoinTab">
+        <div class="minute-input show" style="margin-top:12px;">
+          <span style="font-size:13px;">내 닉네임</span>
+          <input type="text" id="guestNickInput" placeholder="참가자" maxlength="8" style="flex:1; min-width:0;">
+        </div>
+        <div class="minute-input show" style="margin-top:10px;">
+          <span style="font-size:13px;">방 코드</span>
+          <input type="text" id="roomCodeInput" placeholder="5자리 코드" maxlength="5" style="flex:1; min-width:0; text-transform:uppercase;">
+        </div>
+        <button class="primary-btn" id="joinRoomBtn" style="margin-top:10px;">참가하기</button>
+        <div id="joinStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep); text-align:center;"></div>
+      </div>
+    </div>
+
+    <div class="card-panel" id="themePanel">
       <div class="panel-title">🎨 그림 패턴</div>
       <div class="choice-row">
         <button class="choice-btn active" data-group="theme" data-value="hwatu">🎴 화투</button>
@@ -278,7 +314,7 @@
       </div>
     </div>
 
-    <div class="card-panel">
+    <div class="card-panel" id="sizePanel">
       <div class="panel-title">🀄 카드 수</div>
       <div class="choice-row">
         <button class="choice-btn active" data-group="size" data-value="12">쉬움 · 6쌍 (12장)</button>
@@ -286,7 +322,7 @@
       </div>
     </div>
 
-    <div class="card-panel">
+    <div class="card-panel" id="timerPanel">
       <div class="panel-title">⏱ 제한 시간</div>
       <div class="timer-toggle">
         <span style="font-size:14px; font-weight:600;">시간 제한 사용</span>
@@ -315,12 +351,12 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.2</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.3</span></button>
   </div>
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver1.2</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver1.3</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -330,6 +366,7 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
 <script>
 (function(){
   "use strict";
@@ -403,7 +440,7 @@
 
   // ---------- 상태 ----------
   var state = {
-    mode: 'solo',        // solo | multi
+    mode: 'solo',        // solo | multi | online
     theme: 'hwatu',        // hwatu | animal | vehicle | food
     playerCount: 2,       // multi 인원 (2~4)
     cardCount: 12,        // 12 | 24
@@ -519,13 +556,36 @@
   }
 
   // ---------- 설정 화면 ----------
+  function updateSetupVisibility(){
+    var isOnline = state.mode === 'online';
+    var hideForGuest = isOnline && net.active && !net.isHost;
+    $('#playerCountPanel').classList.toggle('hidden', state.mode !== 'multi');
+    $('#onlinePanel').classList.toggle('hidden', !isOnline);
+    $('#themePanel').classList.toggle('hidden', hideForGuest);
+    $('#sizePanel').classList.toggle('hidden', hideForGuest);
+    $('#timerPanel').classList.toggle('hidden', hideForGuest);
+    $('#startBtn').classList.toggle('hidden', isOnline && !(net.isHost && net.active));
+  }
+
+  function selectMode(value){
+    $all('.choice-btn[data-group="mode"]').forEach(function(b){ b.classList.toggle('active', b.dataset.value === value); });
+    if(state.mode === 'online' && value !== 'online') leaveOnline(true);
+    state.mode = value;
+    updateSetupVisibility();
+  }
+
   $all('.choice-btn[data-group="mode"]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      $all('.choice-btn[data-group="mode"]').forEach(function(b){ b.classList.remove('active'); });
-      btn.classList.add('active');
-      state.mode = btn.dataset.value;
-      $('#playerCountPanel').classList.toggle('hidden', state.mode !== 'multi');
-    });
+    btn.addEventListener('click', function(){ selectMode(btn.dataset.value); });
+  });
+
+  function selectOnlineTab(value){
+    $all('.choice-btn[data-group="onlineTab"]').forEach(function(b){ b.classList.toggle('active', b.dataset.value === value); });
+    $('#onlineCreateTab').classList.toggle('hidden', value !== 'create');
+    $('#onlineJoinTab').classList.toggle('hidden', value !== 'join');
+  }
+
+  $all('.choice-btn[data-group="onlineTab"]').forEach(function(btn){
+    btn.addEventListener('click', function(){ selectOnlineTab(btn.dataset.value); });
   });
 
   $all('.choice-btn[data-group="theme"]').forEach(function(btn){
@@ -569,15 +629,331 @@
   $('#startBtn').addEventListener('click', function(){ ensureAudio(); startGame(); });
   $('#quitBtn').addEventListener('click', function(){
     stopTimer();
+    if(state.mode === 'online' && net.peer) leaveOnline(false);
     showScreen('setupScreen');
+    updateSetupVisibility();
   });
-  $('#playAgainBtn').addEventListener('click', function(){ startGame(); });
-  $('#toSetupBtn').addEventListener('click', function(){ showScreen('setupScreen'); });
+  $('#playAgainBtn').addEventListener('click', function(){
+    if(state.mode === 'online' && !net.isHost) return;
+    startGame();
+  });
+  $('#toSetupBtn').addEventListener('click', function(){
+    stopTimer();
+    if(state.mode === 'online' && net.peer) leaveOnline(false);
+    showScreen('setupScreen');
+    updateSetupVisibility();
+  });
 
   function showScreen(id){
     $all('.screen').forEach(function(s){ s.classList.remove('active'); });
     $('#'+id).classList.add('active');
   }
+
+  // ---------- 온라인 대전 (PeerJS) ----------
+  var ROOM_PREFIX = 'hwatu2p-';
+  var CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // 혼동되는 0/O/1/I/L 제외
+
+  var net = {
+    peer: null,
+    conn: null,
+    isHost: false,
+    myIndex: 0,        // 0=호스트, 1=참가자
+    active: false,       // 상대와 데이터 채널이 열린 상태
+    roomCode: null,
+    pendingNick: null,
+    guestNick: null
+  };
+
+  function genRoomCode(){
+    var s = '';
+    for(var i=0;i<5;i++) s += CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];
+    return s;
+  }
+
+  function resetNet(){
+    if(net.conn){ try{ net.conn.close(); }catch(e){} }
+    if(net.peer){ try{ net.peer.destroy(); }catch(e){} }
+    net.peer = null; net.conn = null; net.isHost = false; net.myIndex = 0;
+    net.active = false; net.roomCode = null; net.pendingNick = null; net.guestNick = null;
+  }
+
+  function sendNet(obj){
+    if(net.conn && net.conn.open) net.conn.send(obj);
+  }
+
+  function resetOnlineUI(){
+    $('#createRoomBtn').disabled = false;
+    $('#joinRoomBtn').disabled = false;
+    $('#roomInfoBox').classList.add('hidden');
+    $('#onlineStatusMsg').textContent = '';
+    $('#joinStatusMsg').textContent = '';
+    $('#roomCodeDisplay').textContent = '-----';
+  }
+
+  function leaveOnline(silent){
+    if(net.peer) sendNet({type:'bye'});
+    resetNet();
+    resetOnlineUI();
+    if(!silent) updateSetupVisibility();
+  }
+
+  function setupConnHandlers(conn, onOpenCb){
+    conn.on('open', function(){
+      net.conn = conn;
+      if(onOpenCb) onOpenCb();
+    });
+    conn.on('data', handleNetMessage);
+    conn.on('close', handleNetClose);
+    conn.on('error', function(err){ console.error('conn error', err); });
+  }
+
+  function createRoom(){
+    var nickname = ($('#hostNickInput').value || '').trim().slice(0,8) || '호스트';
+    net.pendingNick = nickname;
+    $('#createRoomBtn').disabled = true;
+    $('#onlineStatusMsg').textContent = '';
+    tryCreatePeer(0);
+  }
+
+  function tryCreatePeer(attempt){
+    if(attempt >= 5){
+      $('#createRoomBtn').disabled = false;
+      alert('방 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    var code = genRoomCode();
+    var p = new Peer(ROOM_PREFIX + code);
+    p.on('open', function(){
+      net.peer = p;
+      net.isHost = true;
+      net.myIndex = 0;
+      net.roomCode = code;
+      $('#roomCodeDisplay').textContent = code;
+      $('#roomInfoBox').classList.remove('hidden');
+      $('#onlineStatusMsg').textContent = '상대방을 기다리는 중...';
+      p.on('connection', function(conn){
+        if(net.conn){ conn.close(); return; }
+        setupConnHandlers(conn, function(){
+          net.active = true;
+          $('#onlineStatusMsg').textContent = '✅ 연결되었습니다! 아래에서 옵션을 정하고 게임을 시작하세요.';
+          updateSetupVisibility();
+        });
+      });
+    });
+    p.on('error', function(err){
+      if(err.type === 'unavailable-id'){
+        p.destroy();
+        tryCreatePeer(attempt+1);
+      } else {
+        console.error('peer error', err);
+        $('#createRoomBtn').disabled = false;
+        $('#onlineStatusMsg').textContent = '연결 오류가 발생했습니다. 다시 시도해주세요.';
+      }
+    });
+  }
+
+  function joinRoom(){
+    var code = ($('#roomCodeInput').value || '').trim().toUpperCase();
+    if(code.length !== 5){
+      $('#joinStatusMsg').textContent = '5자리 코드를 정확히 입력해주세요.';
+      return;
+    }
+    var nickname = ($('#guestNickInput').value || '').trim().slice(0,8) || '참가자';
+    net.pendingNick = nickname;
+    $('#joinRoomBtn').disabled = true;
+    $('#joinStatusMsg').textContent = '연결하는 중...';
+
+    var p = new Peer();
+    var settled = false;
+    p.on('open', function(){
+      net.peer = p;
+      net.isHost = false;
+      net.myIndex = 1;
+      var conn = p.connect(ROOM_PREFIX + code, {reliable:true});
+      var timeoutId = setTimeout(function(){
+        if(settled) return;
+        settled = true;
+        $('#joinStatusMsg').textContent = '연결 시간이 초과되었습니다. 코드를 확인해주세요.';
+        $('#joinRoomBtn').disabled = false;
+        resetNet();
+      }, 12000);
+      setupConnHandlers(conn, function(){
+        if(settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        net.active = true;
+        net.roomCode = code;
+        sendNet({type:'hello', nickname: net.pendingNick});
+        $('#joinStatusMsg').textContent = '✅ 연결되었습니다! 호스트가 게임을 시작하기를 기다리는 중...';
+        updateSetupVisibility();
+      });
+      conn.on('error', function(){
+        if(settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        $('#joinStatusMsg').textContent = '연결에 실패했습니다. 코드를 확인해주세요.';
+        $('#joinRoomBtn').disabled = false;
+        resetNet();
+      });
+    });
+    p.on('error', function(err){
+      if(settled) return;
+      settled = true;
+      $('#joinStatusMsg').textContent = '연결 오류가 발생했습니다: 코드를 확인해주세요.';
+      $('#joinRoomBtn').disabled = false;
+    });
+  }
+
+  $('#createRoomBtn').addEventListener('click', function(){ ensureAudio(); createRoom(); });
+  $('#joinRoomBtn').addEventListener('click', function(){ ensureAudio(); joinRoom(); });
+  $('#copyLinkBtn').addEventListener('click', function(){
+    var link = location.href.split('?')[0] + '?room=' + net.roomCode;
+    var btn = $('#copyLinkBtn');
+    var restore = function(){ btn.textContent = '초대 링크 복사'; };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(function(){
+        btn.textContent = '복사됨!';
+        setTimeout(restore, 1500);
+      }).catch(function(){
+        btn.textContent = '복사 실패 (코드를 직접 알려주세요)';
+        setTimeout(restore, 2000);
+      });
+    } else {
+      btn.textContent = '복사 실패 (코드를 직접 알려주세요)';
+      setTimeout(restore, 2000);
+    }
+  });
+
+  function handleNetMessage(msg){
+    if(!msg || !msg.type) return;
+    switch(msg.type){
+      case 'hello': net.guestNick = msg.nickname; break;
+      case 'flip': handleGuestFlip(msg.idx); break;
+      case 'start': applyRemoteStart(msg.payload); break;
+      case 'sync': applyRemoteSync(msg.payload); break;
+      case 'end': state.players = msg.payload.players; endGame(msg.payload.reason); break;
+      case 'bye': handleNetClose(); break;
+    }
+  }
+
+  function handleNetClose(){
+    if(!net.peer) return;
+    resetNet();
+    resetOnlineUI();
+    stopTimer();
+    alert('상대방과의 연결이 끊어졌습니다.');
+    showScreen('setupScreen');
+    updateSetupVisibility();
+  }
+
+  function handleGuestFlip(idx){
+    if(!(net.active && net.isHost)) return;
+    if(state.lock) return;
+    if(state.currentTurn !== 1) return;
+    tryFlip(idx);
+  }
+
+  function syncState(flashMsg){
+    if(!(net.active && net.isHost)) return;
+    sendNet({type:'sync', payload:{
+      cards: state.cards,
+      players: state.players,
+      currentTurn: state.currentTurn,
+      flipped: state.flipped,
+      matchesLeft: state.matchesLeft,
+      lock: state.lock,
+      timerOn: state.timerOn,
+      secondsLeft: state.secondsLeft,
+      flashMsg: flashMsg || null
+    }});
+  }
+
+  function refreshBoardClasses(){
+    state.cards.forEach(function(c, idx){
+      var el = cardEl(idx);
+      if(!el) return;
+      el.classList.toggle('matched', !!c.matched);
+      el.classList.toggle('flipped', !!c.matched || state.flipped.indexOf(idx) !== -1);
+    });
+  }
+
+  function restartGuestCosmeticTimer(){
+    stopTimer();
+    state.timerId = setInterval(function(){
+      if(state.secondsLeft > 0){ state.secondsLeft--; updateTimerBadge(); }
+    }, 1000);
+  }
+
+  function applyRemoteStart(payload){
+    state.theme = payload.theme;
+    state.cardCount = payload.cardCount;
+    state.cards = payload.cards;
+    state.players = payload.players;
+    state.currentTurn = payload.currentTurn;
+    state.flipped = [];
+    state.lock = false;
+    state.matchesLeft = payload.matchesLeft;
+    state.timerOn = payload.timerOn;
+    state.minutes = payload.minutes;
+    state.secondsLeft = payload.secondsLeft;
+
+    renderPlayers();
+    renderBoard();
+    if(state.timerOn){
+      $('#timerBadge').classList.remove('hidden');
+      updateTimerBadge();
+      restartGuestCosmeticTimer();
+    } else {
+      $('#timerBadge').classList.add('hidden');
+      stopTimer();
+    }
+    setTurnMsg();
+    showScreen('gameScreen');
+  }
+
+  function applyRemoteSync(payload){
+    var prevFlippedCount = state.flipped.length;
+    var prevMatchesLeft = state.matchesLeft;
+    var newlyFlippedIdx = payload.flipped.filter(function(i){ return state.flipped.indexOf(i) === -1; });
+
+    state.cards = payload.cards;
+    state.players = payload.players;
+    state.currentTurn = payload.currentTurn;
+    state.flipped = payload.flipped;
+    state.matchesLeft = payload.matchesLeft;
+    state.lock = payload.lock;
+    state.timerOn = payload.timerOn;
+    state.secondsLeft = payload.secondsLeft;
+
+    if(newlyFlippedIdx.length > 0){
+      playClickSound();
+    } else if(prevFlippedCount === 2 && payload.flipped.length === 0){
+      if(payload.matchesLeft < prevMatchesLeft){ playMatchSound(); } else { playMissSound(); }
+    }
+
+    renderPlayers();
+    refreshBoardClasses();
+    if(state.timerOn){
+      $('#timerBadge').classList.remove('hidden');
+      updateTimerBadge();
+    } else {
+      $('#timerBadge').classList.add('hidden');
+    }
+    setTurnMsg(payload.flashMsg || null);
+  }
+
+  // ---------- 초대 링크 처리 ----------
+  (function initFromQuery(){
+    try{
+      var params = new URLSearchParams(location.search);
+      var room = params.get('room');
+      if(room && room.length === 5){
+        selectMode('online');
+        selectOnlineTab('join');
+        $('#roomCodeInput').value = room.toUpperCase();
+      }
+    }catch(e){}
+  })();
 
   // ---------- 게임 시작 ----------
   function startGame(){
@@ -586,6 +962,9 @@
     if(state.mode === 'solo'){
       state.players.push({name:'나', score:0, isAI:false});
       state.players.push({name:'앱', score:0, isAI:true});
+    } else if(state.mode === 'online'){
+      state.players.push({name: net.pendingNick || '호스트', score:0, isAI:false});
+      state.players.push({name: net.guestNick || '참가자', score:0, isAI:false});
     } else {
       for(var i=0;i<state.playerCount;i++){
         state.players.push({name:'참가자 '+(i+1), score:0, isAI:false});
@@ -629,11 +1008,25 @@
         updateTimerBadge();
         if(state.secondsLeft <= 0){
           stopTimer();
-          endGame('시간 종료');
+          finishGame('시간 종료');
         }
       }, 1000);
     } else {
       $('#timerBadge').classList.add('hidden');
+    }
+
+    if(net.active && net.isHost){
+      sendNet({type:'start', payload:{
+        theme: state.theme,
+        cardCount: state.cardCount,
+        cards: state.cards,
+        players: state.players,
+        currentTurn: state.currentTurn,
+        matchesLeft: state.matchesLeft,
+        timerOn: state.timerOn,
+        minutes: state.minutes,
+        secondsLeft: state.secondsLeft
+      }});
     }
   }
 
@@ -703,6 +1096,10 @@
       $('#turnMsg').textContent = msg;
     } else if(p.isAI){
       $('#turnMsg').textContent = '🤖 앱이 카드를 고르는 중...';
+    } else if(state.mode === 'online'){
+      $('#turnMsg').textContent = (state.currentTurn === net.myIndex)
+        ? '내 차례입니다'
+        : (p.name+'님 차례입니다');
     } else {
       $('#turnMsg').textContent = state.mode === 'multi'
         ? (p.name+'님 차례입니다')
@@ -717,6 +1114,14 @@
     if(state.lock) return;
     var p = state.players[state.currentTurn];
     if(p.isAI) return; // AI 턴에는 사람이 클릭 못함
+    if(state.mode === 'online'){
+      if(!net.active) return;
+      if(state.currentTurn !== net.myIndex) return; // 내 차례가 아님
+      if(!net.isHost){
+        sendNet({type:'flip', idx:idx});
+        return; // 호스트의 동기화 응답을 기다림
+      }
+    }
     tryFlip(idx);
   }
 
@@ -735,6 +1140,7 @@
       state.lock = true;
       setTimeout(resolveFlip, 700);
     }
+    syncState();
   }
 
   function rememberForAI(idx){
@@ -763,10 +1169,12 @@
 
       if(state.matchesLeft <= 0){
         stopTimer();
-        setTimeout(function(){ endGame('카드 소진'); }, 500);
+        syncState();
+        setTimeout(function(){ finishGame('카드 소진'); }, 500);
         return;
       }
       setTurnMsg('짝을 맞췄어요! 한 번 더 진행합니다');
+      syncState('짝을 맞췄어요! 한 번 더 진행합니다');
       nextAuto();
     } else {
       playMissSound();
@@ -777,6 +1185,7 @@
       state.currentTurn = (state.currentTurn + 1) % state.players.length;
       renderPlayers();
       setTurnMsg();
+      syncState();
       nextAuto();
     }
   }
@@ -834,6 +1243,13 @@
   }
 
   // ---------- 게임 종료 ----------
+  function finishGame(reason){
+    if(net.active && net.isHost){
+      sendNet({type:'end', payload:{players: state.players, reason: reason}});
+    }
+    endGame(reason);
+  }
+
   function endGame(reason){
     stopTimer();
     var maxScore = Math.max.apply(null, state.players.map(function(p){return p.score;}));
@@ -849,6 +1265,8 @@
       $('#winnerName').textContent = (w.isAI ? '🤖 ' : '🎉 ') + w.name + ' 우승!';
       if(state.mode === 'solo'){
         outcome = w.isAI ? 'lose' : 'win';
+      } else if(state.mode === 'online'){
+        outcome = (w === state.players[net.myIndex]) ? 'win' : 'lose';
       } else {
         outcome = 'win';
       }
@@ -864,6 +1282,14 @@
       row.innerHTML = '<span><span class="medal">'+medal+'</span>'+p.name+(p.isAI?' 🤖':'')+'</span><span>'+p.score+'쌍</span>';
       table.appendChild(row);
     });
+
+    if(state.mode === 'online'){
+      $('#playAgainBtn').classList.toggle('hidden', !net.isHost);
+      $('#toSetupBtn').textContent = net.isHost ? '처음으로' : '나가기';
+    } else {
+      $('#playAgainBtn').classList.remove('hidden');
+      $('#toSetupBtn').textContent = '처음으로';
+    }
 
     triggerResultEffect(outcome);
     showScreen('resultScreen');
