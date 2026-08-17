@@ -301,7 +301,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver2.1</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver2.2</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -408,7 +408,7 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver2.1</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver2.2</span></button>
   </div>
 
   <!-- ============ 카드 미리보기 모달 ============ -->
@@ -422,7 +422,7 @@
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver2.1</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver2.2</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -1027,14 +1027,9 @@
   }
 
   // ---------- 채팅 ----------
-  var chatOpenedOnce = false;
   function showChatWidget(show){
     $('#chatWidget').classList.toggle('hidden', !show);
-    if(show){
-      // 연결되면 처음 한 번 대화창을 자동으로 열어 눈에 띄게 (이후엔 사용자가 여닫음)
-      if(!chatOpenedOnce){ chatOpenedOnce = true; $('#chatBox').classList.remove('hidden'); }
-    } else {
-      chatOpenedOnce = false;
+    if(!show){
       $('#chatBox').classList.add('hidden');
       $('#chatLog').innerHTML = '';
       $('#chatBadge').classList.add('hidden');
@@ -1533,7 +1528,7 @@
     if(state.mode === 'online'){
       $('#playAgainBtn').classList.toggle('hidden', !net.isHost);
       $('#rematchOptBtn').classList.toggle('hidden', !net.isHost);
-      $('#toSetupBtn').textContent = net.isHost ? '처음으로' : '나가기';
+      $('#toSetupBtn').textContent = '게임 종료 (연결 끊김)';
     } else {
       $('#playAgainBtn').classList.remove('hidden');
       $('#rematchOptBtn').classList.add('hidden');
