@@ -217,6 +217,14 @@
   }
   .vp-bar .stat { color: var(--text-secondary); }
   .vp-bar .stat b { color: var(--text-primary); font-family: var(--font-accent); }
+  .vp-right { display: flex; align-items: center; gap: 10px; }
+  .dim-btn {
+    font-family: var(--font-main); font-weight: 700; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .dim-btn:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
+  .dim-btn.on { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: #fff; border-color: transparent; }
 
   .status {
     margin-top: 12px;
@@ -307,7 +315,10 @@
     <div class="card viewport-card">
       <div class="vp-bar">
         <span class="stat">벽 <b id="wallCount">0</b>개 · 크기 <b id="dims">—</b></span>
-        <span class="stat" style="font-size:11.5px">드래그 회전 · 휠 확대 · 우클릭 이동</span>
+        <div class="vp-right">
+          <button id="dimToggle" class="dim-btn">치수 표시</button>
+          <span class="stat" style="font-size:11.5px">드래그 회전 · 휠 확대 · 우클릭 이동</span>
+        </div>
       </div>
       <canvas id="viewport"></canvas>
     </div>
@@ -387,8 +398,42 @@ scene.add(grid);
 let modelGroup = new THREE.Group();
 scene.add(modelGroup);
 
+let dimGroup = new THREE.Group();
+dimGroup.visible = false;
+scene.add(dimGroup);
+let showDims = false;
+
 const wallMat = new THREE.MeshStandardMaterial({ color: 0xdfe6f2, roughness: 0.85, metalness: 0.02 });
 const edgeMat = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.35 });
+
+// 치수 라벨 스프라이트 (항상 카메라를 향함, 벽 위로 렌더)
+function makeLabel(text, heightWorld) {
+  const fs = 64, pad = 18;
+  const cvs = document.createElement('canvas');
+  let ctx = cvs.getContext('2d');
+  ctx.font = `bold ${fs}px sans-serif`;
+  const tw = ctx.measureText(text).width;
+  cvs.width = Math.ceil(tw + pad * 2);
+  cvs.height = fs + pad * 2;
+  ctx = cvs.getContext('2d');
+  ctx.font = `bold ${fs}px sans-serif`;
+  ctx.fillStyle = 'rgba(79,70,229,0.94)';
+  const r = 22;
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(0, 0, cvs.width, cvs.height, r); ctx.fill(); }
+  else ctx.fillRect(0, 0, cvs.width, cvs.height);
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, cvs.width / 2, cvs.height / 2 + 2);
+
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sp = new THREE.Sprite(mat);
+  sp.renderOrder = 999;
+  sp.scale.set(heightWorld * (cvs.width / cvs.height), heightWorld, 1);
+  return sp;
+}
 
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -416,6 +461,7 @@ function buildModel(data) {
   const walls = Array.isArray(data.walls) ? data.walls : [];
 
   const bbox = new THREE.Box3();
+  const labels = [];
   let built = 0;
 
   for (const w of walls) {
@@ -439,6 +485,7 @@ function buildModel(data) {
 
     bbox.expandByPoint(new THREE.Vector3(x1, 0, z1));
     bbox.expandByPoint(new THREE.Vector3(x2, H, z2));
+    labels.push({ x: (x1 + x2) / 2, z: (z1 + z2) / 2, len });
     built++;
   }
 
@@ -456,6 +503,12 @@ function buildModel(data) {
 
   scene.add(modelGroup);
 
+  // rebuild dimension labels
+  scene.remove(dimGroup);
+  dimGroup = new THREE.Group();
+  dimGroup.visible = showDims;
+  scene.add(dimGroup);
+
   // recenter grid + camera
   document.getElementById('wallCount').textContent = built;
   if (built) {
@@ -464,6 +517,14 @@ function buildModel(data) {
     document.getElementById('dims').textContent =
       `${Math.round(size.x)} × ${Math.round(size.z)} mm`;
     grid.position.set(center.x, 0, center.z);
+
+    const labelH = Math.min(1200, Math.max(220, Math.max(size.x, size.z) / 16));
+    for (const l of labels) {
+      const sp = makeLabel(String(Math.round(l.len)), labelH);
+      sp.position.set(l.x, H + labelH, l.z);
+      dimGroup.add(sp);
+    }
+
     const r = Math.max(size.x, size.z, H) * 1.4;
     controls.target.copy(new THREE.Vector3(center.x, H / 2, center.z));
     camera.position.set(center.x + r, H + r * 0.9, center.z + r);
@@ -583,6 +644,15 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
   }
+});
+
+/* ---------- dimension toggle ---------- */
+const dimToggle = document.getElementById('dimToggle');
+dimToggle.addEventListener('click', () => {
+  showDims = !showDims;
+  dimGroup.visible = showDims;
+  dimToggle.classList.toggle('on', showDims);
+  dimToggle.textContent = showDims ? '치수 숨김' : '치수 표시';
 });
 
 /* ---------- boot ---------- */
