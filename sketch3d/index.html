@@ -164,8 +164,18 @@
     font-size: 13px;
   }
   .drop:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
-  .drop.has { padding: 8px; }
-  .drop img { max-width: 100%; max-height: 200px; border-radius: 10px; display: block; margin: 0 auto; }
+  .drop.has { padding: 10px; }
+  .thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .thumb { position: relative; border-radius: 10px; overflow: hidden; background: #fff; border: 1px solid var(--field-border); aspect-ratio: 1; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .rm {
+    position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: none; cursor: pointer;
+    background: rgba(15,23,42,.62); color: #fff;
+    font-size: 13px; line-height: 20px; text-align: center; padding: 0;
+  }
+  .thumb .rm:hover { background: var(--danger); }
 
   .btn {
     font-family: var(--font-main);
@@ -248,10 +258,10 @@
       <div class="card">
         <h2><span class="step">1</span> 스케치 업로드</h2>
         <div id="drop" class="drop">
-          <div id="dropText">이미지를 끌어놓거나 클릭해서 선택</div>
-          <img id="preview" alt="" style="display:none" />
+          <div id="dropText">이미지를 끌어놓거나 클릭해서 선택 (여러 장 가능)</div>
+          <div id="thumbs" class="thumbs"></div>
         </div>
-        <input id="fileInput" type="file" accept="image/*" style="display:none" />
+        <input id="fileInput" type="file" accept="image/*" multiple style="display:none" />
 
         <div class="num-row" style="margin-top:14px">
           <div>
@@ -495,32 +505,46 @@ document.querySelectorAll('[data-sample]').forEach(b => {
   b.addEventListener('click', () => loadIntoBoxAndBuild(SAMPLES[b.dataset.sample]));
 });
 
-/* ---------- upload ---------- */
+/* ---------- upload (multi-image) ---------- */
 const drop = document.getElementById('drop');
 const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
+const thumbs = document.getElementById('thumbs');
 const dropText = document.getElementById('dropText');
-let imageDataUrl = null;
+let images = [];  // array of base64 data URLs
 
 drop.addEventListener('click', () => fileInput.click());
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--accent-primary)'; });
 drop.addEventListener('dragleave', () => { drop.style.borderColor = ''; });
 drop.addEventListener('drop', e => {
   e.preventDefault(); drop.style.borderColor = '';
-  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  handleFiles(e.dataTransfer.files);
 });
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
 
-function handleFile(file) {
-  const r = new FileReader();
-  r.onload = () => {
-    imageDataUrl = r.result;
-    preview.src = imageDataUrl;
-    preview.style.display = 'block';
-    dropText.style.display = 'none';
-    drop.classList.add('has');
-  };
-  r.readAsDataURL(file);
+function handleFiles(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('image/'));
+  files.forEach(file => {
+    const r = new FileReader();
+    r.onload = () => { images.push(r.result); renderThumbs(); };
+    r.readAsDataURL(file);
+  });
+}
+
+function renderThumbs() {
+  thumbs.innerHTML = '';
+  images.forEach((src, i) => {
+    const el = document.createElement('div');
+    el.className = 'thumb';
+    el.innerHTML = `<img src="${src}" alt="스케치 ${i + 1}"/><button class="rm" title="제거">×</button>`;
+    el.querySelector('.rm').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      images.splice(i, 1);
+      renderThumbs();
+    });
+    thumbs.appendChild(el);
+  });
+  if (images.length) { dropText.style.display = 'none'; drop.classList.add('has'); }
+  else { dropText.style.display = 'block'; drop.classList.remove('has'); }
 }
 
 /* ---------- backend URL ---------- */
@@ -530,20 +554,20 @@ apiUrlInput.addEventListener('change', () => localStorage.setItem('sketch3d_api'
 
 /* ---------- extract via backend ---------- */
 document.getElementById('btnExtract').addEventListener('click', async () => {
-  if (!imageDataUrl) { status('먼저 스케치 이미지를 업로드하세요.', 'err'); return; }
+  if (!images.length) { status('먼저 스케치 이미지를 업로드하세요.', 'err'); return; }
   const url = apiUrlInput.value.trim();
   if (!url) { status('백엔드 설정에서 Extract API URL을 입력하세요.', 'err'); return; }
 
   const btn = document.getElementById('btnExtract');
   btn.disabled = true;
-  status('비전 API가 스케치를 분석 중입니다… (수 초 소요)', 'info', true);
+  status(`비전 API가 스케치 ${images.length}장을 분석 중입니다… (수 초 소요)`, 'info', true);
 
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        image: imageDataUrl,
+        images: images,
         wallHeight: Number(document.getElementById('wallHeight').value) || 2700,
         wallThickness: Number(document.getElementById('wallThickness').value) || 200
       })

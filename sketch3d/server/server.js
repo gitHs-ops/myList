@@ -49,15 +49,23 @@ const SYSTEM = `당신은 건축 손그림 스케치를 벽 중심선 좌표로 
 
 app.post('/api/extract', async (req, res) => {
   try {
-    const { image, wallHeight = 2700, wallThickness = 200 } = req.body || {};
-    if (!image || typeof image !== 'string') {
-      return res.status(400).json({ error: 'image (base64 data URL) is required' });
+    const { image, images, wallHeight = 2700, wallThickness = 200 } = req.body || {};
+    // 단일(image) / 다중(images) 모두 허용
+    const list = Array.isArray(images) && images.length ? images : (image ? [image] : []);
+    if (!list.length) {
+      return res.status(400).json({ error: 'image(s) (base64 data URL) required' });
     }
 
-    const m = image.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s);
-    if (!m) return res.status(400).json({ error: 'image must be a base64 data URL' });
-    const mediaType = m[1];
-    const data = m[2];
+    const imageBlocks = [];
+    for (const src of list) {
+      const m = typeof src === 'string' && src.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s);
+      if (!m) return res.status(400).json({ error: 'each image must be a base64 data URL' });
+      imageBlocks.push({ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } });
+    }
+
+    const multiNote = list.length > 1
+      ? `스케치 ${list.length}장이 제공됩니다. 같은 건물을 다른 각도/층/치수메모로 그린 것으로 보고, 모든 장을 종합해 하나의 평면(벽 집합)으로 합치세요. `
+      : '';
 
     const response = await client.messages.create({
       model: MODEL,
@@ -67,10 +75,11 @@ app.post('/api/extract', async (req, res) => {
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data } },
+          ...imageBlocks,
           {
             type: 'text',
-            text: `이 손그림 스케치에서 벽 선분을 추출해 JSON으로 반환하세요. `
+            text: multiNote
+                + `이 손그림 스케치에서 벽 선분을 추출해 JSON으로 반환하세요. `
                 + `기본 벽 높이 ${wallHeight}mm, 기본 벽 두께 ${wallThickness}mm 를 wallHeight/wallThickness 에 사용하세요.`
           }
         ]
