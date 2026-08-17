@@ -72,7 +72,17 @@
     padding: 28px 22px 60px;
   }
 
-  header.hero { margin-bottom: 22px; animation: rise .6s var(--ease) both; }
+  header.hero { position: relative; margin-bottom: 22px; animation: rise .6s var(--ease) both; }
+  .desc-toggle {
+    position: absolute; top: 2px; right: 0;
+    font-family: var(--font-main); font-weight: 700; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
+    border-radius: 999px; padding: 5px 12px;
+  }
+  .desc-toggle:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
+  body.desc-off .hint,
+  body.desc-off .hero-sub,
+  body.desc-off .note { display: none; }
   header.hero h1 {
     margin: 0;
     font-size: clamp(24px, 4vw, 34px);
@@ -275,8 +285,9 @@
 
 <div class="wrap">
   <header class="hero">
+    <button id="descToggle" class="desc-toggle">설명 숨기기</button>
     <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입</h1>
-    <p>치수가 적힌 손그림 스케치를 올리면 벽체를 3D로 세워줍니다. 비전 API 없이도 아래 <b>샘플/JSON</b>으로 파이프라인을 바로 확인할 수 있습니다.</p>
+    <p class="hero-sub">치수가 적힌 손그림 스케치를 올리면 벽체를 3D로 세워줍니다. 비전 API 없이도 아래 <b>샘플/JSON</b>으로 파이프라인을 바로 확인할 수 있습니다.</p>
   </header>
 
   <div class="grid">
@@ -303,8 +314,8 @@
 
         <button id="btnExtract" class="btn" style="margin-top:14px">비전 API로 벽 인식 → 3D</button>
 
-        <details class="adv" id="advBackend">
-          <summary><span class="tgl-label">백엔드 설정 표시</span></summary>
+        <details class="adv">
+          <summary>백엔드 설정</summary>
           <label class="fld">Extract API URL</label>
           <input id="apiUrl" type="text" placeholder="http://localhost:8787/api/extract" />
           <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·4번(샘플/JSON)은 동작합니다.</p>
@@ -314,7 +325,7 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">2</span> 대화로 수정 <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 필요)</span></h2>
+        <h2><span class="step">2</span> 대화로 수정 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 필요)</span></h2>
         <div id="chatLog" class="chat-log">
           <div class="chat-empty">현재 3D 모델을 말로 고칩니다. 우측 화면을 보며 조정하세요.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”</div>
         </div>
@@ -325,7 +336,7 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">3</span> 샘플로 테스트 <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
+        <h2><span class="step">3</span> 샘플로 테스트 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
         <div class="btn-row">
           <button class="btn ghost" data-sample="room">단일 객실</button>
           <button class="btn ghost" data-sample="two">투룸 + 복도</button>
@@ -900,10 +911,11 @@ sunTime.addEventListener('input', () => {
   updateSun();
 });
 
-/* ---------- 백엔드 설정 표시/접기 라벨 ---------- */
-const advBackend = document.getElementById('advBackend');
-advBackend.addEventListener('toggle', () => {
-  advBackend.querySelector('.tgl-label').textContent = advBackend.open ? '백엔드 설정 접기' : '백엔드 설정 표시';
+/* ---------- 설명문 표시/숨기기 ---------- */
+const descToggle = document.getElementById('descToggle');
+descToggle.addEventListener('click', () => {
+  const off = document.body.classList.toggle('desc-off');
+  descToggle.textContent = off ? '설명 보기' : '설명 숨기기';
 });
 
 /* ---------- boot ---------- */
