@@ -198,7 +198,8 @@
     border: 1px solid var(--field-border);
   }
   .btn.ghost:hover { box-shadow: 0 8px 18px rgba(15,23,42,.08); }
-  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .btn-row .btn { flex: 1 1 40%; }
 
   .viewport-card { padding: 0; overflow: hidden; }
   #viewport {
@@ -323,6 +324,7 @@
           <button class="btn ghost" data-sample="room">단일 객실</button>
           <button class="btn ghost" data-sample="two">투룸 + 복도</button>
           <button class="btn ghost" data-sample="L">L자 스튜디오</button>
+          <button class="btn ghost" data-sample="win">창·문 개구부</button>
         </div>
       </div>
 
@@ -330,7 +332,7 @@
         <h2><span class="step">4</span> 벽 좌표 JSON</h2>
         <textarea id="jsonBox" spellcheck="false" placeholder='{ "unit":"mm", "wallHeight":2700, "wallThickness":200, "walls":[{"start":[0,0],"end":[5000,0]}] }'></textarea>
         <button id="btnBuild" class="btn" style="margin-top:12px">이 JSON으로 3D 생성</button>
-        <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.</p>
+        <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.<br>벽 옵션: <code>height</code> 벽높이 · <code>thickness</code> 두께 · <code>sill</code> 소벽(개구부 하단) · <code>lintel</code> 인방(개구부 상단). 개구부높이 = height − sill − lintel.</p>
       </div>
     </div>
 
@@ -393,6 +395,15 @@ const SAMPLES = {
       { start: [2500, 5000], end: [0, 5000] },
       { start: [0, 5000], end: [0, 0] }
     ]
+  },
+  win: {
+    unit: "mm", wallHeight: 2700, wallThickness: 200,
+    walls: [
+      { start: [0, 0], end: [4000, 0], sill: 900, lintel: 600 },   // 앞: 창 (소벽900·개구부1200·인방600)
+      { start: [4000, 0], end: [4000, 3000] },
+      { start: [4000, 3000], end: [0, 3000] },
+      { start: [0, 3000], end: [0, 0], sill: 0, lintel: 600 }       // 왼쪽: 문 (개구부2100·인방600)
+    ]
   }
 };
 
@@ -430,7 +441,7 @@ const wallMat = new THREE.MeshStandardMaterial({ color: 0xdfe6f2, roughness: 0.8
 const edgeMat = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.35 });
 
 // 치수 라벨 스프라이트 (항상 카메라를 향함, 벽 위로 렌더)
-function makeLabel(text, heightWorld) {
+function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
   const fs = 64, pad = 18;
   const cvs = document.createElement('canvas');
   let ctx = cvs.getContext('2d');
@@ -440,7 +451,7 @@ function makeLabel(text, heightWorld) {
   cvs.height = fs + pad * 2;
   ctx = cvs.getContext('2d');
   ctx.font = `bold ${fs}px sans-serif`;
-  ctx.fillStyle = 'rgba(79,70,229,0.94)';
+  ctx.fillStyle = color;
   const r = 22;
   if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(0, 0, cvs.width, cvs.height, r); ctx.fill(); }
   else ctx.fillRect(0, 0, cvs.width, cvs.height);
@@ -484,8 +495,24 @@ function buildModel(data) {
   const walls = Array.isArray(data.walls) ? data.walls : [];
 
   const bbox = new THREE.Box3();
-  const labels = [];
+  const labels = [];   // 길이 라벨 {x,z,len,top}
+  const hLabels = [];  // 높이 라벨 {x,z,nx,nz,thick,items:[{y,text}]}
   let built = 0;
+
+  // 한 벽의 수직 구간(yb~yt) 박스 생성
+  function addSeg(midX, midZ, len, thick, angle, yb, yt) {
+    const h = yt - yb;
+    if (h <= 0) return;
+    const geo = new THREE.BoxGeometry(len + thick, h, thick);
+    const mesh = new THREE.Mesh(geo, wallMat);
+    mesh.position.set(midX, (yb + yt) / 2, midZ);
+    mesh.rotation.y = angle;
+    modelGroup.add(mesh);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat);
+    edges.position.copy(mesh.position);
+    edges.rotation.copy(mesh.rotation);
+    modelGroup.add(edges);
+  }
 
   for (const w of walls) {
     const s = w.start, e = w.end;
@@ -495,20 +522,33 @@ function buildModel(data) {
     const len = Math.hypot(dx, dz);
     if (len < 1) continue;
 
-    const geo = new THREE.BoxGeometry(len + T, H, (w.thickness || T));
-    const mesh = new THREE.Mesh(geo, wallMat);
-    mesh.position.set((x1 + x2) / 2, H / 2, (z1 + z2) / 2);
-    mesh.rotation.y = -Math.atan2(dz, dx);
-    modelGroup.add(mesh);
+    const midX = (x1 + x2) / 2, midZ = (z1 + z2) / 2;
+    const angle = -Math.atan2(dz, dx);
+    const thick = Number(w.thickness) || T;
+    const wh = Number(w.height) || H;
+    const sill = Math.max(0, Number(w.sill) || 0);
+    const lintel = Math.max(0, Number(w.lintel) || 0);
+    const openBottom = sill, openTop = wh - lintel;
+    const hasOpening = (sill > 0 || lintel > 0) && (openTop - openBottom) > 1;
 
-    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat);
-    edges.position.copy(mesh.position);
-    edges.rotation.copy(mesh.rotation);
-    modelGroup.add(edges);
+    if (hasOpening) {
+      if (sill > 0) addSeg(midX, midZ, len, thick, angle, 0, sill);        // 소벽
+      if (lintel > 0) addSeg(midX, midZ, len, thick, angle, openTop, wh);  // 인방
+    } else {
+      addSeg(midX, midZ, len, thick, angle, 0, wh);                        // 솔리드
+    }
 
     bbox.expandByPoint(new THREE.Vector3(x1, 0, z1));
-    bbox.expandByPoint(new THREE.Vector3(x2, H, z2));
-    labels.push({ x: (x1 + x2) / 2, z: (z1 + z2) / 2, len });
+    bbox.expandByPoint(new THREE.Vector3(x2, wh, z2));
+    labels.push({ x: midX, z: midZ, len, top: wh });
+
+    if (hasOpening) {
+      const items = [];
+      if (sill > 0) items.push({ y: sill / 2, text: '소벽 ' + Math.round(sill) });
+      items.push({ y: (openBottom + openTop) / 2, text: '개구부 ' + Math.round(openTop - openBottom) });
+      if (lintel > 0) items.push({ y: (openTop + wh) / 2, text: '인방 ' + Math.round(lintel) });
+      hLabels.push({ x: midX, z: midZ, nx: -dz / len, nz: dx / len, thick, items });
+    }
     built++;
   }
 
@@ -542,10 +582,23 @@ function buildModel(data) {
     grid.position.set(center.x, 0, center.z);
 
     const labelH = Math.min(1200, Math.max(220, Math.max(size.x, size.z) / 16));
+    // 길이 라벨 (벽 위)
     for (const l of labels) {
       const sp = makeLabel(String(Math.round(l.len)), labelH);
-      sp.position.set(l.x, H + labelH, l.z);
+      sp.position.set(l.x, l.top + labelH, l.z);
       dimGroup.add(sp);
+    }
+    // 높이 라벨 (개구부 있는 벽 옆, 소벽/개구부/인방 수치)
+    for (const hl of hLabels) {
+      const dot = hl.nx * (hl.x - center.x) + hl.nz * (hl.z - center.z);
+      const sgn = dot >= 0 ? 1 : -1;
+      const off = hl.thick / 2 + labelH * 1.1 + 120;
+      const px = hl.x + hl.nx * off * sgn, pz = hl.z + hl.nz * off * sgn;
+      for (const it of hl.items) {
+        const sp = makeLabel(it.text, labelH * 0.78, 'rgba(8,145,178,0.94)');
+        sp.position.set(px, it.y, pz);
+        dimGroup.add(sp);
+      }
     }
 
     const r = Math.max(size.x, size.z, H) * 1.4;
