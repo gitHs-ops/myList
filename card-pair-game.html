@@ -301,7 +301,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver2.0</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver2.1</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -408,7 +408,7 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver2.0</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver2.1</span></button>
   </div>
 
   <!-- ============ 카드 미리보기 모달 ============ -->
@@ -422,11 +422,12 @@
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver2.0</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver2.1</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
     <button class="primary-btn" id="playAgainBtn" style="margin-bottom:10px;">다시 하기</button>
+    <button class="ghost-btn hidden" id="rematchOptBtn" style="margin-bottom:10px;">⚙️ 옵션 바꿔서 다시</button>
     <button class="ghost-btn" id="toSetupBtn">처음으로</button>
   </div>
 
@@ -645,7 +646,8 @@
     // 참가자 = 온라인이면서 (참가 화면이거나, 접속된 비호스트)
     var isGuest = isOnline && (joinView || (net.active && !net.isHost));
     $('#playerCountPanel').classList.toggle('hidden', state.mode !== 'multi');
-    $('#onlinePanel').classList.toggle('hidden', !isOnline);
+    // 접속 완료되면 방 만들기/참가 폼은 숨김(옵션 변경 재입장 화면을 깔끔하게)
+    $('#onlinePanel').classList.toggle('hidden', !isOnline || net.active);
     // 그림 패턴: 참가자는 선택 잠금(미리보기는 가능), 카드수·제한시간은 숨김
     $('#themePanel').classList.toggle('hidden', false);
     $('#themeChoices').classList.toggle('locked', isGuest);
@@ -729,6 +731,24 @@
     if(state.mode === 'online' && !net.isHost) return;
     startGame();
   });
+  $('#rematchOptBtn').addEventListener('click', function(){
+    if(!(state.mode === 'online' && net.isHost && net.active)) return;
+    // 접속 유지한 채 옵션만 바꿔 재시작 (참가자는 대기 화면)
+    sendNet({type:'hostSetup'});
+    showScreen('setupScreen');
+    updateSetupVisibility();
+  });
+  // 참가자: 호스트가 다음 판 옵션을 정하는 동안 대기
+  function onHostRematchSetup(){
+    stopTimer();
+    showScreen('resultScreen');
+    $('#winnerName').textContent = '⏳ 대기 중';
+    $('#winnerSub').textContent = '호스트가 다음 판 옵션을 정하는 중이에요...';
+    $('#scoreTable').innerHTML = '';
+    $('#playAgainBtn').classList.add('hidden');
+    $('#rematchOptBtn').classList.add('hidden');
+    $('#toSetupBtn').textContent = '나가기';
+  }
   $('#toSetupBtn').addEventListener('click', function(){
     stopTimer();
     if(state.mode === 'online' && net.peer) leaveOnline(false);
@@ -971,7 +991,12 @@
   function handleNetMessage(msg){
     if(!msg || !msg.type) return;
     switch(msg.type){
-      case 'hello': net.guestNick = msg.nickname; break;
+      case 'hello':
+        net.guestNick = msg.nickname;
+        // 참가자 접속 완료 → 호스트는 '게임 시작' 누르지 않아도 자동 입장
+        if(net.isHost && net.active && $('#setupScreen').classList.contains('active')) startGame();
+        break;
+      case 'hostSetup': onHostRematchSetup(); break;
       case 'flip': handleGuestFlip(msg.idx); break;
       case 'start': applyRemoteStart(msg.payload); break;
       case 'sync': applyRemoteSync(msg.payload); break;
@@ -1507,9 +1532,11 @@
 
     if(state.mode === 'online'){
       $('#playAgainBtn').classList.toggle('hidden', !net.isHost);
+      $('#rematchOptBtn').classList.toggle('hidden', !net.isHost);
       $('#toSetupBtn').textContent = net.isHost ? '처음으로' : '나가기';
     } else {
       $('#playAgainBtn').classList.remove('hidden');
+      $('#rematchOptBtn').classList.add('hidden');
       $('#toSetupBtn').textContent = '처음으로';
     }
 
