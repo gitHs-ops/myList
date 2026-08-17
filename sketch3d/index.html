@@ -300,14 +300,25 @@
           <summary>백엔드 설정</summary>
           <label class="fld">Extract API URL</label>
           <input id="apiUrl" type="text" placeholder="http://localhost:8787/api/extract" />
-          <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 2·3번은 동작합니다.</p>
+          <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·4번(샘플/JSON)은 동작합니다.</p>
         </details>
 
         <div id="status" class="status"></div>
       </div>
 
       <div class="card">
-        <h2><span class="step">2</span> 샘플로 테스트 <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
+        <h2><span class="step">2</span> 대화로 수정 <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 필요)</span></h2>
+        <div id="chatLog" class="chat-log">
+          <div class="chat-empty">현재 3D 모델을 말로 고칩니다. 우측 화면을 보며 조정하세요.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”</div>
+        </div>
+        <div class="chat-row">
+          <input id="chatInput" type="text" placeholder="수정 지시를 입력…" />
+          <button id="chatSend" class="btn" style="width:auto;padding:11px 16px">보내기</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">3</span> 샘플로 테스트 <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
         <div class="btn-row">
           <button class="btn ghost" data-sample="room">단일 객실</button>
           <button class="btn ghost" data-sample="two">투룸 + 복도</button>
@@ -316,21 +327,10 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">3</span> 벽 좌표 JSON</h2>
+        <h2><span class="step">4</span> 벽 좌표 JSON</h2>
         <textarea id="jsonBox" spellcheck="false" placeholder='{ "unit":"mm", "wallHeight":2700, "wallThickness":200, "walls":[{"start":[0,0],"end":[5000,0]}] }'></textarea>
         <button id="btnBuild" class="btn" style="margin-top:12px">이 JSON으로 3D 생성</button>
         <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.</p>
-      </div>
-
-      <div class="card">
-        <h2><span class="step">4</span> 대화로 수정 <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 필요)</span></h2>
-        <div id="chatLog" class="chat-log">
-          <div class="chat-empty">현재 3D 모델을 말로 고칩니다.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”</div>
-        </div>
-        <div class="chat-row">
-          <input id="chatInput" type="text" placeholder="수정 지시를 입력…" />
-          <button id="chatSend" class="btn" style="width:auto;padding:11px 16px">보내기</button>
-        </div>
       </div>
     </div>
 
