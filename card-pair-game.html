@@ -971,7 +971,7 @@
 
   // ---------- 카카오톡 공유 (썸네일 미리보기 카드) ----------
   var KAKAO_JS_KEY = '89c8ed7faccc8c1bb206c826555a181a';   // Kakao JavaScript 키 (도메인 제한형 클라이언트 키)
-  var SHARE_IMAGE_URL = 'https://giths-ops.github.io/myList/%ED%99%94%ED%88%AC%EC%A7%9D%EB%A7%9E%EC%B6%94%EA%B8%B0/share-thumb.png'; // ← 카톡 썸네일(공개 URL, 200x200 이상)
+  var SHARE_IMAGE_URL = 'https://giths-ops.github.io/myList/share-thumb.png'; // ← 카톡 썸네일(공개 URL, 200x200 이상)
   function ensureKakao(){
     try{ if(KAKAO_JS_KEY && window.Kakao && !Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY); }catch(e){}
     return !!(window.Kakao && window.Kakao.isInitialized && Kakao.isInitialized() && Kakao.Share);
