@@ -234,6 +234,56 @@
   .score-row.win{ color:var(--teal-deep); }
   .score-row .medal{ margin-right:6px; }
 
+  /* ---------- 온라인 채팅 ---------- */
+  #chatWidget{ position:fixed; right:14px; bottom:14px; z-index:600; }
+  .chat-toggle{
+    width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
+    background:var(--teal-deep); color:#fff; font-size:24px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.28); position:relative;
+  }
+  .chat-badge{
+    position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; padding:0 5px;
+    border-radius:10px; background:#e5484d; color:#fff; font-size:12px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .chat-box{
+    position:absolute; right:0; bottom:66px; width:280px; max-width:78vw;
+    background:var(--paper); border-radius:16px; box-shadow:0 8px 28px rgba(0,0,0,0.32);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .chat-head{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--teal-deep); color:#fff; padding:10px 14px; font-weight:800; font-size:14px;
+  }
+  .chat-close{ background:none; border:none; color:#fff; font-size:22px; line-height:1; cursor:pointer; padding:0 2px; }
+  .chat-log{ height:230px; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+  .chat-msg{ max-width:82%; padding:7px 10px; border-radius:12px; background:#eef4f3; align-self:flex-start; }
+  .chat-msg.mine{ align-self:flex-end; background:var(--teal-light); }
+  .chat-msg .chat-name{ display:block; font-size:10px; font-weight:800; color:var(--teal-deep); margin-bottom:2px; }
+  .chat-msg .chat-text{ font-size:13px; color:var(--ink); word-break:break-word; white-space:pre-wrap; }
+  .chat-input-row{ display:flex; gap:6px; padding:8px; border-top:1px solid #eee; }
+  .chat-input-row input{ flex:1; min-width:0; border:1px solid #d8e2e0; border-radius:10px; padding:8px 10px; font-size:13px; }
+  .chat-send{ border:none; border-radius:10px; background:var(--teal-deep); color:#fff; font-weight:800; padding:0 12px; cursor:pointer; }
+
+  /* ---------- 카드 미리보기 모달 ---------- */
+  .pv-modal{ position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:700; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .pv-panel{ position:relative; background:var(--paper); border-radius:18px; padding:18px 16px; width:100%; max-width:440px; max-height:84vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.4); }
+  .pv-x{ position:absolute; top:8px; right:10px; width:34px; height:34px; border-radius:50%; border:none; background:#eef4f3; color:var(--teal-deep); font-size:22px; font-weight:900; cursor:pointer; line-height:1; }
+  .pv-title{ font-size:16px; font-weight:900; color:var(--teal-deep); text-align:center; margin:2px 30px 14px; }
+  .pv-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+  .pv-pair{ background:#f6faf9; border:1px solid #e3efee; border-radius:12px; padding:8px; }
+  .pv-pair-name{ text-align:center; font-size:13px; font-weight:900; color:var(--teal-deep); margin-bottom:6px; }
+  .pv-pair-tiles{ display:flex; gap:6px; }
+  .pv-pair-tiles .pv-tile{ flex:1; }
+  .pv-tile{ aspect-ratio:3/4; border-radius:10px; background:var(--paper); border:2px solid var(--month-color, var(--gold)); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+  .pv-tile img{ width:100%; height:100%; object-fit:cover; }
+  .pv-tile .pv-emoji{ font-size:34px; line-height:1; }
+  .pv-tile.mahjong{ background:var(--month-color); }
+  .pv-tile.mahjong .pv-emoji{ color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.35); }
+  .pv-name{ position:absolute; bottom:0; left:0; right:0; text-align:center; font-size:9px; font-weight:700; color:var(--ink); background:rgba(255,255,255,0.78); padding:1px 0; }
+
+  .kakao-btn{ background:#FEE500 !important; color:#191600 !important; border:none !important; }
+
   .hidden{ display:none !important; }
 
   .ver-inline{
@@ -248,7 +298,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.3</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.6</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -256,41 +306,6 @@
         <button class="choice-btn active" data-group="mode" data-value="solo">혼자 하기 (vs 앱)</button>
         <button class="choice-btn" data-group="mode" data-value="multi">같이 하기 (한 기기)</button>
         <button class="choice-btn" data-group="mode" data-value="online">🌐 온라인 대전 (2인)</button>
-      </div>
-    </div>
-
-    <div class="card-panel hidden" id="onlinePanel">
-      <div class="panel-title">🌐 온라인 대전</div>
-      <div class="choice-row">
-        <button class="choice-btn active" data-group="onlineTab" data-value="create">방 만들기</button>
-        <button class="choice-btn" data-group="onlineTab" data-value="join">참가하기</button>
-      </div>
-
-      <div id="onlineCreateTab">
-        <div class="minute-input show" style="margin-top:12px;">
-          <span style="font-size:13px;">내 닉네임</span>
-          <input type="text" id="hostNickInput" placeholder="호스트" maxlength="8" style="flex:1; min-width:0;">
-        </div>
-        <button class="primary-btn" id="createRoomBtn" style="margin-top:10px;">방 만들기</button>
-        <div class="hidden" id="roomInfoBox" style="margin-top:14px; text-align:center;">
-          <div style="font-size:12px; color:#7a8b8a;">아래 코드를 상대방에게 알려주세요</div>
-          <div id="roomCodeDisplay" style="font-size:30px; font-weight:900; letter-spacing:4px; color:var(--teal-deep); margin:8px 0;">-----</div>
-          <button class="ghost-btn" id="copyLinkBtn" style="color:var(--teal-deep); border-color:var(--teal-deep); background:#f6faf9;">초대 링크 복사</button>
-          <div id="onlineStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep);">상대방을 기다리는 중...</div>
-        </div>
-      </div>
-
-      <div class="hidden" id="onlineJoinTab">
-        <div class="minute-input show" style="margin-top:12px;">
-          <span style="font-size:13px;">내 닉네임</span>
-          <input type="text" id="guestNickInput" placeholder="참가자" maxlength="8" style="flex:1; min-width:0;">
-        </div>
-        <div class="minute-input show" style="margin-top:10px;">
-          <span style="font-size:13px;">방 코드</span>
-          <input type="text" id="roomCodeInput" placeholder="5자리 코드" maxlength="5" style="flex:1; min-width:0; text-transform:uppercase;">
-        </div>
-        <button class="primary-btn" id="joinRoomBtn" style="margin-top:10px;">참가하기</button>
-        <div id="joinStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep); text-align:center;"></div>
       </div>
     </div>
 
@@ -303,6 +318,7 @@
         <button class="choice-btn" data-group="theme" data-value="food">🍕 음식</button>
         <button class="choice-btn" data-group="theme" data-value="mahjong">🀄 마작</button>
       </div>
+      <button class="ghost-btn" id="previewBtn" style="margin-top:12px; color:var(--teal-deep); border-color:var(--teal-deep);">🔍 카드 미리보기 (24장)</button>
     </div>
 
     <div class="card-panel hidden" id="playerCountPanel">
@@ -338,6 +354,43 @@
       </div>
     </div>
 
+    <div class="card-panel hidden" id="onlinePanel">
+      <div class="panel-title">🌐 온라인 대전</div>
+      <div class="choice-row">
+        <button class="choice-btn active" data-group="onlineTab" data-value="create">방 만들기</button>
+        <button class="choice-btn" data-group="onlineTab" data-value="join">참가하기</button>
+      </div>
+
+      <div id="onlineCreateTab">
+        <div class="minute-input show" style="margin-top:12px;">
+          <span style="font-size:13px;">내 닉네임</span>
+          <input type="text" id="hostNickInput" placeholder="호스트" maxlength="8" style="flex:1; min-width:0;">
+        </div>
+        <button class="primary-btn" id="createRoomBtn" style="margin-top:10px;">방 만들기</button>
+        <div class="hidden" id="roomInfoBox" style="margin-top:14px; text-align:center;">
+          <div style="font-size:12px; color:#7a8b8a;">아래 코드를 상대방에게 알려주세요</div>
+          <div id="roomCodeDisplay" style="font-size:30px; font-weight:900; letter-spacing:4px; color:var(--teal-deep); margin:8px 0;">-----</div>
+          <button class="primary-btn kakao-btn hidden" id="kakaoShareBtn" style="margin-top:4px;">💬 카카오톡으로 공유</button>
+          <button class="primary-btn" id="shareLinkBtn" style="margin-top:8px;">🔗 초대 링크 공유 (카톡·문자)</button>
+          <button class="ghost-btn" id="copyLinkBtn" style="margin-top:8px; color:var(--teal-deep); border-color:var(--teal-deep); background:#f6faf9;">초대 링크 복사</button>
+          <div id="onlineStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep);">상대방을 기다리는 중...</div>
+        </div>
+      </div>
+
+      <div class="hidden" id="onlineJoinTab">
+        <div class="minute-input show" style="margin-top:12px;">
+          <span style="font-size:13px;">내 닉네임</span>
+          <input type="text" id="guestNickInput" placeholder="참가자" maxlength="8" style="flex:1; min-width:0;">
+        </div>
+        <div class="minute-input show" style="margin-top:10px;">
+          <span style="font-size:13px;">방 코드</span>
+          <input type="text" id="roomCodeInput" placeholder="5자리 코드" maxlength="5" style="flex:1; min-width:0; text-transform:uppercase;">
+        </div>
+        <button class="primary-btn" id="joinRoomBtn" style="margin-top:10px;">참가하기</button>
+        <div id="joinStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep); text-align:center;"></div>
+      </div>
+    </div>
+
     <button class="primary-btn" id="startBtn">게임 시작</button>
   </div>
 
@@ -351,12 +404,37 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.3</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.6</span></button>
+  </div>
+
+  <!-- ============ 카드 미리보기 모달 ============ -->
+  <div id="previewModal" class="pv-modal hidden">
+    <div class="pv-panel">
+      <button id="previewClose" class="pv-x" aria-label="닫기">×</button>
+      <div class="pv-title" id="previewTitle">미리보기</div>
+      <div class="pv-grid" id="previewGrid"></div>
+    </div>
+  </div>
+
+  <!-- ============ 온라인 채팅 위젯 ============ -->
+  <div id="chatWidget" class="hidden">
+    <div id="chatBox" class="chat-box hidden">
+      <div class="chat-head">
+        <span>💬 대화</span>
+        <button id="chatClose" class="chat-close" aria-label="닫기">×</button>
+      </div>
+      <div id="chatLog" class="chat-log"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="메시지 입력..." maxlength="200">
+        <button id="chatSend" class="chat-send">전송</button>
+      </div>
+    </div>
+    <button id="chatToggle" class="chat-toggle">💬<span id="chatBadge" class="chat-badge hidden">0</span></button>
   </div>
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver1.3</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver1.6</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -367,6 +445,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"></script>
 <script>
 (function(){
   "use strict";
@@ -675,6 +754,7 @@
     if(net.peer){ try{ net.peer.destroy(); }catch(e){} }
     net.peer = null; net.conn = null; net.isHost = false; net.myIndex = 0;
     net.active = false; net.roomCode = null; net.pendingNick = null; net.guestNick = null;
+    showChatWidget(false);
   }
 
   function sendNet(obj){
@@ -730,12 +810,14 @@
       net.roomCode = code;
       $('#roomCodeDisplay').textContent = code;
       $('#roomInfoBox').classList.remove('hidden');
+      $('#kakaoShareBtn').classList.toggle('hidden', !KAKAO_JS_KEY);
       $('#onlineStatusMsg').textContent = '상대방을 기다리는 중...';
       p.on('connection', function(conn){
         if(net.conn){ conn.close(); return; }
         setupConnHandlers(conn, function(){
           net.active = true;
           $('#onlineStatusMsg').textContent = '✅ 연결되었습니다! 아래에서 옵션을 정하고 게임을 시작하세요.';
+          showChatWidget(true);
           updateSetupVisibility();
         });
       });
@@ -785,6 +867,7 @@
         net.roomCode = code;
         sendNet({type:'hello', nickname: net.pendingNick});
         $('#joinStatusMsg').textContent = '✅ 연결되었습니다! 호스트가 게임을 시작하기를 기다리는 중...';
+        showChatWidget(true);
         updateSetupVisibility();
       });
       conn.on('error', function(){
@@ -824,6 +907,91 @@
     }
   });
 
+  function inviteLink(){ return location.href.split('?')[0] + '?room=' + net.roomCode; }
+
+  $('#shareLinkBtn').addEventListener('click', function(){
+    var link = inviteLink();
+    var text = '🎴 카드 짝맞추기 온라인 대전에 초대합니다!\n방 코드: ' + net.roomCode + '\n' + link;
+    if(navigator.share){
+      navigator.share({ title: '카드 짝맞추기 초대', text: text, url: link }).catch(function(){});
+    } else {
+      // PC 등 공유 미지원: 클립보드 복사 폴백
+      var btn = $('#shareLinkBtn');
+      var restore = function(){ btn.textContent = '🔗 초대 링크 공유 (카톡·문자)'; };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){
+          btn.textContent = '초대 메시지 복사됨! 붙여넣어 전달하세요';
+          setTimeout(restore, 2200);
+        }).catch(function(){ btn.textContent = '복사 실패 (코드를 직접 알려주세요)'; setTimeout(restore, 2200); });
+      } else {
+        btn.textContent = '복사 실패 (코드를 직접 알려주세요)'; setTimeout(restore, 2200);
+      }
+    }
+  });
+
+  // ---------- 카드 미리보기 ----------
+  function pvTile(it, src, emoji, caption){
+    var t = document.createElement('div');
+    t.className = 'pv-tile' + (state.theme === 'mahjong' ? ' mahjong' : '');
+    t.style.setProperty('--month-color', it.color);
+    if(src){
+      var img = document.createElement('img'); img.src = src; img.alt = it.name; img.draggable = false;
+      t.appendChild(img);
+    } else {
+      var e = document.createElement('div'); e.className = 'pv-emoji';
+      if(it.filter) e.style.filter = it.filter;
+      e.textContent = emoji; t.appendChild(e);
+    }
+    var nm = document.createElement('div'); nm.className = 'pv-name'; nm.textContent = caption;
+    t.appendChild(nm);
+    return t;
+  }
+  function buildPreviewTiles(){
+    var def = THEMES[state.theme];
+    var grid = $('#previewGrid');
+    grid.innerHTML = '';
+    $('#previewTitle').textContent = def.label + ' 카드 미리보기 (24장)';
+    def.items.forEach(function(it){
+      var pair = document.createElement('div'); pair.className = 'pv-pair';
+      var name = document.createElement('div'); name.className = 'pv-pair-name'; name.textContent = it.name;
+      var tiles = document.createElement('div'); tiles.className = 'pv-pair-tiles';
+      if(def.isImage){
+        tiles.appendChild(pvTile(it, it.imgA, null, '이미지1'));
+        tiles.appendChild(pvTile(it, it.imgB, null, '이미지2'));
+      } else {
+        tiles.appendChild(pvTile(it, null, it.emoji, '이미지1'));
+        tiles.appendChild(pvTile(it, null, it.emoji, '이미지2'));
+      }
+      pair.appendChild(name); pair.appendChild(tiles); grid.appendChild(pair);
+    });
+  }
+  $('#previewBtn').addEventListener('click', function(){ buildPreviewTiles(); $('#previewModal').classList.remove('hidden'); });
+  $('#previewClose').addEventListener('click', function(){ $('#previewModal').classList.add('hidden'); });
+  $('#previewModal').addEventListener('click', function(e){ if(e.target === this) this.classList.add('hidden'); });
+
+  // ---------- 카카오톡 공유 (썸네일 미리보기 카드) ----------
+  var KAKAO_JS_KEY = '89c8ed7faccc8c1bb206c826555a181a';   // Kakao JavaScript 키 (도메인 제한형 클라이언트 키)
+  var SHARE_IMAGE_URL = 'https://giths-ops.github.io/myList/%ED%99%94%ED%88%AC%EC%A7%9D%EB%A7%9E%EC%B6%94%EA%B8%B0/share-thumb.png'; // ← 카톡 썸네일(공개 URL, 200x200 이상)
+  function ensureKakao(){
+    try{ if(KAKAO_JS_KEY && window.Kakao && !Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY); }catch(e){}
+    return !!(window.Kakao && window.Kakao.isInitialized && Kakao.isInitialized() && Kakao.Share);
+  }
+  ensureKakao();
+  $('#kakaoShareBtn').addEventListener('click', function(){
+    if(!ensureKakao()){ alert('카카오 SDK를 불러오지 못했습니다.\n새로고침 후 다시 시도해주세요.'); return; }
+    var link = inviteLink();
+    Kakao.Share.sendDefault({
+      objectType: 'feed',
+      content: {
+        title: '🎴 카드 짝맞추기 초대',
+        description: '방 코드 ' + net.roomCode + ' · 눌러서 바로 입장하세요!',
+        imageUrl: SHARE_IMAGE_URL,
+        link: { mobileWebUrl: link, webUrl: link }
+      },
+      buttons: [{ title: '게임 입장', link: { mobileWebUrl: link, webUrl: link } }]
+    });
+  });
+
   function handleNetMessage(msg){
     if(!msg || !msg.type) return;
     switch(msg.type){
@@ -832,9 +1000,60 @@
       case 'start': applyRemoteStart(msg.payload); break;
       case 'sync': applyRemoteSync(msg.payload); break;
       case 'end': state.players = msg.payload.players; endGame(msg.payload.reason); break;
+      case 'chat': appendChat(msg.nickname, msg.text, false); break;
       case 'bye': handleNetClose(); break;
     }
   }
+
+  // ---------- 채팅 ----------
+  function showChatWidget(show){
+    $('#chatWidget').classList.toggle('hidden', !show);
+    if(!show){
+      $('#chatBox').classList.add('hidden');
+      $('#chatLog').innerHTML = '';
+      $('#chatBadge').classList.add('hidden');
+      $('#chatBadge').textContent = '0';
+    }
+  }
+  function appendChat(name, text, mine){
+    if(!text) return;
+    var log = $('#chatLog');
+    var row = document.createElement('div');
+    row.className = 'chat-msg' + (mine ? ' mine' : '');
+    var nameEl = document.createElement('span'); nameEl.className = 'chat-name';
+    nameEl.textContent = mine ? '나' : (name || '상대');
+    var textEl = document.createElement('span'); textEl.className = 'chat-text';
+    textEl.textContent = text;
+    row.appendChild(nameEl); row.appendChild(textEl);
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+    if(!mine && $('#chatBox').classList.contains('hidden')){
+      var badge = $('#chatBadge');
+      badge.textContent = String((parseInt(badge.textContent,10)||0) + 1);
+      badge.classList.remove('hidden');
+    }
+  }
+  function sendChat(){
+    var inp = $('#chatInput');
+    var text = (inp.value || '').trim();
+    if(!text || !net.active) return;
+    sendNet({type:'chat', nickname: net.pendingNick, text: text});
+    appendChat(net.pendingNick, text, true);
+    inp.value = '';
+    inp.focus();
+  }
+  $('#chatToggle').addEventListener('click', function(){
+    var box = $('#chatBox');
+    box.classList.toggle('hidden');
+    if(!box.classList.contains('hidden')){
+      $('#chatBadge').classList.add('hidden');
+      $('#chatBadge').textContent = '0';
+      $('#chatInput').focus();
+    }
+  });
+  $('#chatClose').addEventListener('click', function(){ $('#chatBox').classList.add('hidden'); });
+  $('#chatSend').addEventListener('click', sendChat);
+  $('#chatInput').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); sendChat(); } });
 
   function handleNetClose(){
     if(!net.peer) return;
