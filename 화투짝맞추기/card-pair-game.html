@@ -265,6 +265,21 @@
   .chat-input-row input{ flex:1; min-width:0; border:1px solid #d8e2e0; border-radius:10px; padding:8px 10px; font-size:13px; }
   .chat-send{ border:none; border-radius:10px; background:var(--teal-deep); color:#fff; font-weight:800; padding:0 12px; cursor:pointer; }
 
+  /* ---------- 카드 미리보기 모달 ---------- */
+  .pv-modal{ position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:700; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .pv-panel{ position:relative; background:var(--paper); border-radius:18px; padding:18px 16px; width:100%; max-width:440px; max-height:84vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.4); }
+  .pv-x{ position:absolute; top:8px; right:10px; width:34px; height:34px; border-radius:50%; border:none; background:#eef4f3; color:var(--teal-deep); font-size:22px; font-weight:900; cursor:pointer; line-height:1; }
+  .pv-title{ font-size:16px; font-weight:900; color:var(--teal-deep); text-align:center; margin:2px 30px 14px; }
+  .pv-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+  .pv-tile{ aspect-ratio:3/4; border-radius:10px; background:var(--paper); border:2px solid var(--month-color, var(--gold)); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+  .pv-tile img{ width:100%; height:100%; object-fit:cover; }
+  .pv-tile .pv-emoji{ font-size:34px; line-height:1; }
+  .pv-tile.mahjong{ background:var(--month-color); }
+  .pv-tile.mahjong .pv-emoji{ color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.35); }
+  .pv-name{ position:absolute; bottom:0; left:0; right:0; text-align:center; font-size:9px; font-weight:700; color:var(--ink); background:rgba(255,255,255,0.78); padding:1px 0; }
+
+  .kakao-btn{ background:#FEE500 !important; color:#191600 !important; border:none !important; }
+
   .hidden{ display:none !important; }
 
   .ver-inline{
@@ -279,7 +294,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.4</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.5</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -299,6 +314,7 @@
         <button class="choice-btn" data-group="theme" data-value="food">🍕 음식</button>
         <button class="choice-btn" data-group="theme" data-value="mahjong">🀄 마작</button>
       </div>
+      <button class="ghost-btn" id="previewBtn" style="margin-top:12px; color:var(--teal-deep); border-color:var(--teal-deep);">🔍 카드 미리보기 (24장)</button>
     </div>
 
     <div class="card-panel hidden" id="playerCountPanel">
@@ -350,7 +366,8 @@
         <div class="hidden" id="roomInfoBox" style="margin-top:14px; text-align:center;">
           <div style="font-size:12px; color:#7a8b8a;">아래 코드를 상대방에게 알려주세요</div>
           <div id="roomCodeDisplay" style="font-size:30px; font-weight:900; letter-spacing:4px; color:var(--teal-deep); margin:8px 0;">-----</div>
-          <button class="primary-btn" id="shareLinkBtn" style="margin-top:4px;">🔗 초대 링크 공유 (카톡·문자)</button>
+          <button class="primary-btn kakao-btn hidden" id="kakaoShareBtn" style="margin-top:4px;">💬 카카오톡으로 공유</button>
+          <button class="primary-btn" id="shareLinkBtn" style="margin-top:8px;">🔗 초대 링크 공유 (카톡·문자)</button>
           <button class="ghost-btn" id="copyLinkBtn" style="margin-top:8px; color:var(--teal-deep); border-color:var(--teal-deep); background:#f6faf9;">초대 링크 복사</button>
           <div id="onlineStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep);">상대방을 기다리는 중...</div>
         </div>
@@ -383,7 +400,16 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.4</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.5</span></button>
+  </div>
+
+  <!-- ============ 카드 미리보기 모달 ============ -->
+  <div id="previewModal" class="pv-modal hidden">
+    <div class="pv-panel">
+      <button id="previewClose" class="pv-x" aria-label="닫기">×</button>
+      <div class="pv-title" id="previewTitle">미리보기</div>
+      <div class="pv-grid" id="previewGrid"></div>
+    </div>
   </div>
 
   <!-- ============ 온라인 채팅 위젯 ============ -->
@@ -404,7 +430,7 @@
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver1.4</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver1.5</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -415,6 +441,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"></script>
 <script>
 (function(){
   "use strict";
@@ -779,6 +806,7 @@
       net.roomCode = code;
       $('#roomCodeDisplay').textContent = code;
       $('#roomInfoBox').classList.remove('hidden');
+      $('#kakaoShareBtn').classList.toggle('hidden', !kakaoReady());
       $('#onlineStatusMsg').textContent = '상대방을 기다리는 중...';
       p.on('connection', function(conn){
         if(net.conn){ conn.close(); return; }
@@ -895,6 +923,64 @@
         btn.textContent = '복사 실패 (코드를 직접 알려주세요)'; setTimeout(restore, 2200);
       }
     }
+  });
+
+  // ---------- 카드 미리보기 ----------
+  function pvTile(it, src, emoji){
+    var t = document.createElement('div');
+    t.className = 'pv-tile' + (state.theme === 'mahjong' ? ' mahjong' : '');
+    t.style.setProperty('--month-color', it.color);
+    if(src){
+      var img = document.createElement('img'); img.src = src; img.alt = it.name; img.draggable = false;
+      t.appendChild(img);
+    } else {
+      var e = document.createElement('div'); e.className = 'pv-emoji';
+      if(it.filter) e.style.filter = it.filter;
+      e.textContent = emoji; t.appendChild(e);
+    }
+    var nm = document.createElement('div'); nm.className = 'pv-name'; nm.textContent = it.name;
+    t.appendChild(nm);
+    return t;
+  }
+  function buildPreviewTiles(){
+    var def = THEMES[state.theme];
+    var grid = $('#previewGrid');
+    grid.innerHTML = '';
+    $('#previewTitle').textContent = def.label + ' 카드 미리보기 (24장)';
+    def.items.forEach(function(it){
+      if(def.isImage){
+        grid.appendChild(pvTile(it, it.imgA, null));
+        grid.appendChild(pvTile(it, it.imgB, null));
+      } else {
+        grid.appendChild(pvTile(it, null, it.emoji));
+        grid.appendChild(pvTile(it, null, it.emoji));
+      }
+    });
+  }
+  $('#previewBtn').addEventListener('click', function(){ buildPreviewTiles(); $('#previewModal').classList.remove('hidden'); });
+  $('#previewClose').addEventListener('click', function(){ $('#previewModal').classList.add('hidden'); });
+  $('#previewModal').addEventListener('click', function(e){ if(e.target === this) this.classList.add('hidden'); });
+
+  // ---------- 카카오톡 공유 (썸네일 미리보기 카드) ----------
+  var KAKAO_JS_KEY = '';   // ← Kakao Developers > 내 애플리케이션 > 앱 키 > JavaScript 키 입력
+  var SHARE_IMAGE_URL = 'https://giths-ops.github.io/myList/%ED%99%94%ED%88%AC%EC%A7%9D%EB%A7%9E%EC%B6%94%EA%B8%B0/share-thumb.png'; // ← 카톡 썸네일(공개 URL, 200x200 이상)
+  (function initKakao(){
+    try{ if(KAKAO_JS_KEY && window.Kakao && !Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY); }catch(e){}
+  })();
+  function kakaoReady(){ return !!(KAKAO_JS_KEY && window.Kakao && Kakao.isInitialized() && Kakao.Share); }
+  $('#kakaoShareBtn').addEventListener('click', function(){
+    if(!kakaoReady()){ alert('카카오 공유 설정이 필요합니다.\n(JavaScript 키 입력 + 도메인 등록 후 사용 가능)'); return; }
+    var link = inviteLink();
+    Kakao.Share.sendDefault({
+      objectType: 'feed',
+      content: {
+        title: '🎴 카드 짝맞추기 초대',
+        description: '방 코드 ' + net.roomCode + ' · 눌러서 바로 입장하세요!',
+        imageUrl: SHARE_IMAGE_URL,
+        link: { mobileWebUrl: link, webUrl: link }
+      },
+      buttons: [{ title: '게임 입장', link: { mobileWebUrl: link, webUrl: link } }]
+    });
   });
 
   function handleNetMessage(msg){
