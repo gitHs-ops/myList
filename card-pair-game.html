@@ -298,7 +298,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.6</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.7</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -371,8 +371,6 @@
           <div style="font-size:12px; color:#7a8b8a;">아래 코드를 상대방에게 알려주세요</div>
           <div id="roomCodeDisplay" style="font-size:30px; font-weight:900; letter-spacing:4px; color:var(--teal-deep); margin:8px 0;">-----</div>
           <button class="primary-btn kakao-btn hidden" id="kakaoShareBtn" style="margin-top:4px;">💬 카카오톡으로 공유</button>
-          <button class="primary-btn" id="shareLinkBtn" style="margin-top:8px;">🔗 초대 링크 공유 (카톡·문자)</button>
-          <button class="ghost-btn" id="copyLinkBtn" style="margin-top:8px; color:var(--teal-deep); border-color:var(--teal-deep); background:#f6faf9;">초대 링크 복사</button>
           <div id="onlineStatusMsg" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--teal-deep);">상대방을 기다리는 중...</div>
         </div>
       </div>
@@ -404,7 +402,7 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.6</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.7</span></button>
   </div>
 
   <!-- ============ 카드 미리보기 모달 ============ -->
@@ -434,7 +432,7 @@
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver1.6</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver1.7</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -816,7 +814,7 @@
         if(net.conn){ conn.close(); return; }
         setupConnHandlers(conn, function(){
           net.active = true;
-          $('#onlineStatusMsg').textContent = '✅ 연결되었습니다! 아래에서 옵션을 정하고 게임을 시작하세요.';
+          $('#onlineStatusMsg').textContent = '✅ 연결되었습니다! 위에서 옵션을 정하고 게임을 시작하세요.';
           showChatWidget(true);
           updateSetupVisibility();
         });
@@ -889,45 +887,7 @@
 
   $('#createRoomBtn').addEventListener('click', function(){ ensureAudio(); createRoom(); });
   $('#joinRoomBtn').addEventListener('click', function(){ ensureAudio(); joinRoom(); });
-  $('#copyLinkBtn').addEventListener('click', function(){
-    var link = location.href.split('?')[0] + '?room=' + net.roomCode;
-    var btn = $('#copyLinkBtn');
-    var restore = function(){ btn.textContent = '초대 링크 복사'; };
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(link).then(function(){
-        btn.textContent = '복사됨!';
-        setTimeout(restore, 1500);
-      }).catch(function(){
-        btn.textContent = '복사 실패 (코드를 직접 알려주세요)';
-        setTimeout(restore, 2000);
-      });
-    } else {
-      btn.textContent = '복사 실패 (코드를 직접 알려주세요)';
-      setTimeout(restore, 2000);
-    }
-  });
-
   function inviteLink(){ return location.href.split('?')[0] + '?room=' + net.roomCode; }
-
-  $('#shareLinkBtn').addEventListener('click', function(){
-    var link = inviteLink();
-    var text = '🎴 카드 짝맞추기 온라인 대전에 초대합니다!\n방 코드: ' + net.roomCode + '\n' + link;
-    if(navigator.share){
-      navigator.share({ title: '카드 짝맞추기 초대', text: text, url: link }).catch(function(){});
-    } else {
-      // PC 등 공유 미지원: 클립보드 복사 폴백
-      var btn = $('#shareLinkBtn');
-      var restore = function(){ btn.textContent = '🔗 초대 링크 공유 (카톡·문자)'; };
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(text).then(function(){
-          btn.textContent = '초대 메시지 복사됨! 붙여넣어 전달하세요';
-          setTimeout(restore, 2200);
-        }).catch(function(){ btn.textContent = '복사 실패 (코드를 직접 알려주세요)'; setTimeout(restore, 2200); });
-      } else {
-        btn.textContent = '복사 실패 (코드를 직접 알려주세요)'; setTimeout(restore, 2200);
-      }
-    }
-  });
 
   // ---------- 카드 미리보기 ----------
   function pvTile(it, src, emoji, caption){
