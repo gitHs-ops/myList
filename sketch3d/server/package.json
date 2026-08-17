@@ -1,0 +1,19 @@
+{
+  "name": "sketch3d-extract-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "손그림 스케치 → 벽 좌표 JSON (Claude Vision)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

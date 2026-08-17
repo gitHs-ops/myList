@@ -1,0 +1,566 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light" />
+<meta name="theme-color" content="#eef2ff" />
+<title>손그림 → 3D</title>
+
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg-gradient: linear-gradient(140deg, #eef2ff 0%, #f8fafc 45%, #ecfeff 100%);
+    --card-bg: rgba(255, 255, 255, 0.62);
+    --card-border: rgba(255, 255, 255, 0.85);
+    --field-bg: rgba(255, 255, 255, 0.72);
+    --field-border: rgba(148, 163, 184, 0.28);
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --accent-primary: #6366f1;
+    --accent-secondary: #4f46e5;
+    --accent-glow: rgba(99, 102, 241, 0.18);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --font-main: 'Pretendard', -apple-system, sans-serif;
+    --font-accent: 'Outfit', sans-serif;
+    color-scheme: light;
+  }
+
+  * {
+    box-sizing: border-box;
+    transition: background-color .25s ease, border-color .25s ease,
+      color .25s ease, box-shadow .25s ease, transform .25s var(--ease);
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-main);
+    color: var(--text-primary);
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    position: relative;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    width: 46vmax; height: 46vmax;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .5;
+    z-index: 0;
+    pointer-events: none;
+    animation: float 14s ease-in-out infinite alternate;
+  }
+  body::before { background: radial-gradient(circle, #c7d2fe 0%, transparent 70%); top: -14vmax; left: -12vmax; }
+  body::after  { background: radial-gradient(circle, #a5f3fc 0%, transparent 70%); bottom: -16vmax; right: -12vmax; animation-delay: -7s; }
+  @keyframes float {
+    from { transform: translate3d(0,0,0) scale(1); }
+    to   { transform: translate3d(2vmax,3vmax,0) scale(1.08); }
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 28px 22px 60px;
+  }
+
+  header.hero { margin-bottom: 22px; animation: rise .6s var(--ease) both; }
+  header.hero h1 {
+    margin: 0;
+    font-size: clamp(24px, 4vw, 34px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  header.hero .accent {
+    background: linear-gradient(120deg, var(--accent-primary), #06b6d4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header.hero p { margin: 6px 0 0; color: var(--text-secondary); font-size: 14px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card-bg);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, .10), inset 0 1px 0 rgba(255, 255, 255, .75);
+    padding: 20px;
+    animation: rise .6s var(--ease) both;
+  }
+  .card + .card { margin-top: 16px; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px) scale(.985); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .step {
+    font-family: var(--font-accent);
+    font-weight: 800;
+    font-size: 12px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    width: 22px; height: 22px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    flex: 0 0 auto;
+  }
+
+  label.fld { display: block; font-size: 12px; color: var(--text-secondary); margin: 12px 0 5px; font-weight: 600; }
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    font-family: var(--font-main);
+    font-size: 13px;
+    color: var(--text-primary);
+    background: var(--field-bg);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--field-border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  textarea { resize: vertical; min-height: 120px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 1.5; }
+  .num-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .drop {
+    margin-top: 4px;
+    border: 1.5px dashed var(--field-border);
+    border-radius: 16px;
+    background: var(--field-bg);
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+  .drop:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
+  .drop.has { padding: 8px; }
+  .drop img { max-width: 100%; max-height: 200px; border-radius: 10px; display: block; margin: 0 auto; }
+
+  .btn {
+    font-family: var(--font-main);
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    border-radius: 12px;
+    padding: 11px 14px;
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    width: 100%;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(99,102,241,.38); }
+  .btn:active { transform: translateY(0) scale(.985); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn.ghost {
+    background: var(--field-bg);
+    color: var(--accent-secondary);
+    border: 1px solid var(--field-border);
+  }
+  .btn.ghost:hover { box-shadow: 0 8px 18px rgba(15,23,42,.08); }
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+
+  .viewport-card { padding: 0; overflow: hidden; }
+  #viewport {
+    width: 100%;
+    height: 620px;
+    display: block;
+    background: linear-gradient(180deg, #f8fbff, #eef2f8);
+  }
+  @media (max-width: 900px) { #viewport { height: 440px; } }
+
+  .vp-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(148,163,184,.2);
+    font-size: 13px;
+  }
+  .vp-bar .stat { color: var(--text-secondary); }
+  .vp-bar .stat b { color: var(--text-primary); font-family: var(--font-accent); }
+
+  .status {
+    margin-top: 12px;
+    font-size: 12.5px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    display: none;
+    line-height: 1.5;
+  }
+  .status.show { display: block; }
+  .status.info { background: rgba(99,102,241,.10); color: var(--accent-secondary); }
+  .status.err  { background: rgba(239,68,68,.10); color: var(--danger); }
+  .status.ok   { background: rgba(16,185,129,.10); color: #047857; }
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(99,102,241,.3); border-top-color: var(--accent-primary);
+    border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -1px; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  details.adv { margin-top: 14px; }
+  details.adv summary { cursor: pointer; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .hint { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, body::before, body::after { animation: none !important; transition-duration: .01ms !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입</h1>
+    <p>치수가 적힌 손그림 스케치를 올리면 벽체를 3D로 세워줍니다. 비전 API 없이도 아래 <b>샘플/JSON</b>으로 파이프라인을 바로 확인할 수 있습니다.</p>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: controls -->
+    <div>
+      <div class="card">
+        <h2><span class="step">1</span> 스케치 업로드</h2>
+        <div id="drop" class="drop">
+          <div id="dropText">이미지를 끌어놓거나 클릭해서 선택</div>
+          <img id="preview" alt="" style="display:none" />
+        </div>
+        <input id="fileInput" type="file" accept="image/*" style="display:none" />
+
+        <div class="num-row" style="margin-top:14px">
+          <div>
+            <label class="fld">벽 높이 (mm)</label>
+            <input id="wallHeight" type="number" value="2700" />
+          </div>
+          <div>
+            <label class="fld">벽 두께 (mm)</label>
+            <input id="wallThickness" type="number" value="200" />
+          </div>
+        </div>
+
+        <button id="btnExtract" class="btn" style="margin-top:14px">비전 API로 벽 인식 → 3D</button>
+
+        <details class="adv">
+          <summary>백엔드 설정</summary>
+          <label class="fld">Extract API URL</label>
+          <input id="apiUrl" type="text" placeholder="http://localhost:8787/api/extract" />
+          <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 2·3번은 동작합니다.</p>
+        </details>
+
+        <div id="status" class="status"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">2</span> 샘플로 테스트 <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
+        <div class="btn-row">
+          <button class="btn ghost" data-sample="room">단일 객실</button>
+          <button class="btn ghost" data-sample="two">투룸 + 복도</button>
+          <button class="btn ghost" data-sample="L">L자 스튜디오</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">3</span> 벽 좌표 JSON</h2>
+        <textarea id="jsonBox" spellcheck="false" placeholder='{ "unit":"mm", "wallHeight":2700, "wallThickness":200, "walls":[{"start":[0,0],"end":[5000,0]}] }'></textarea>
+        <button id="btnBuild" class="btn" style="margin-top:12px">이 JSON으로 3D 생성</button>
+        <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.</p>
+      </div>
+    </div>
+
+    <!-- RIGHT: 3D -->
+    <div class="card viewport-card">
+      <div class="vp-bar">
+        <span class="stat">벽 <b id="wallCount">0</b>개 · 크기 <b id="dims">—</b></span>
+        <span class="stat" style="font-size:11.5px">드래그 회전 · 휠 확대 · 우클릭 이동</span>
+      </div>
+      <canvas id="viewport"></canvas>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ---------- samples ---------- */
+const SAMPLES = {
+  room: {
+    unit: "mm", wallHeight: 2700, wallThickness: 200,
+    walls: [
+      { start: [0, 0], end: [4200, 0] },
+      { start: [4200, 0], end: [4200, 3600] },
+      { start: [4200, 3600], end: [0, 3600] },
+      { start: [0, 3600], end: [0, 0] }
+    ]
+  },
+  two: {
+    unit: "mm", wallHeight: 2700, wallThickness: 200,
+    walls: [
+      { start: [0, 0], end: [7000, 0] },
+      { start: [7000, 0], end: [7000, 4000] },
+      { start: [7000, 4000], end: [0, 4000] },
+      { start: [0, 4000], end: [0, 0] },
+      { start: [3200, 0], end: [3200, 4000] },
+      { start: [3200, 2400], end: [7000, 2400] }
+    ]
+  },
+  L: {
+    unit: "mm", wallHeight: 2700, wallThickness: 200,
+    walls: [
+      { start: [0, 0], end: [5000, 0] },
+      { start: [5000, 0], end: [5000, 2500] },
+      { start: [5000, 2500], end: [2500, 2500] },
+      { start: [2500, 2500], end: [2500, 5000] },
+      { start: [2500, 5000], end: [0, 5000] },
+      { start: [0, 5000], end: [0, 0] }
+    ]
+  }
+};
+
+/* ---------- three.js scene ---------- */
+const canvas = document.getElementById('viewport');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf1f5fb);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb9c4d6, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(4000, 8000, 5000);
+scene.add(sun);
+
+const grid = new THREE.GridHelper(40000, 40, 0xc7d2fe, 0xe2e8f0);
+grid.position.y = 0;
+scene.add(grid);
+
+let modelGroup = new THREE.Group();
+scene.add(modelGroup);
+
+const wallMat = new THREE.MeshStandardMaterial({ color: 0xdfe6f2, roughness: 0.85, metalness: 0.02 });
+const edgeMat = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.35 });
+
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== w || canvas.height !== h) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+function tick() {
+  resize();
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+
+/* ---------- build ---------- */
+function buildModel(data) {
+  scene.remove(modelGroup);
+  modelGroup = new THREE.Group();
+
+  const H = Number(data.wallHeight) || 2700;
+  const T = Number(data.wallThickness) || 200;
+  const walls = Array.isArray(data.walls) ? data.walls : [];
+
+  const bbox = new THREE.Box3();
+  let built = 0;
+
+  for (const w of walls) {
+    const s = w.start, e = w.end;
+    if (!Array.isArray(s) || !Array.isArray(e)) continue;
+    const x1 = s[0], z1 = s[1], x2 = e[0], z2 = e[1];
+    const dx = x2 - x1, dz = z2 - z1;
+    const len = Math.hypot(dx, dz);
+    if (len < 1) continue;
+
+    const geo = new THREE.BoxGeometry(len + T, H, (w.thickness || T));
+    const mesh = new THREE.Mesh(geo, wallMat);
+    mesh.position.set((x1 + x2) / 2, H / 2, (z1 + z2) / 2);
+    mesh.rotation.y = -Math.atan2(dz, dx);
+    modelGroup.add(mesh);
+
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat);
+    edges.position.copy(mesh.position);
+    edges.rotation.copy(mesh.rotation);
+    modelGroup.add(edges);
+
+    bbox.expandByPoint(new THREE.Vector3(x1, 0, z1));
+    bbox.expandByPoint(new THREE.Vector3(x2, H, z2));
+    built++;
+  }
+
+  // floor slab
+  if (built) {
+    const size = new THREE.Vector3(); bbox.getSize(size);
+    const center = new THREE.Vector3(); bbox.getCenter(center);
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(size.x + T * 2, 60, size.z + T * 2),
+      new THREE.MeshStandardMaterial({ color: 0xeef2f8, roughness: 1 })
+    );
+    floor.position.set(center.x, -30, center.z);
+    modelGroup.add(floor);
+  }
+
+  scene.add(modelGroup);
+
+  // recenter grid + camera
+  document.getElementById('wallCount').textContent = built;
+  if (built) {
+    const size = new THREE.Vector3(); bbox.getSize(size);
+    const center = new THREE.Vector3(); bbox.getCenter(center);
+    document.getElementById('dims').textContent =
+      `${Math.round(size.x)} × ${Math.round(size.z)} mm`;
+    grid.position.set(center.x, 0, center.z);
+    const r = Math.max(size.x, size.z, H) * 1.4;
+    controls.target.copy(new THREE.Vector3(center.x, H / 2, center.z));
+    camera.position.set(center.x + r, H + r * 0.9, center.z + r);
+    camera.near = r / 100; camera.far = r * 50; camera.updateProjectionMatrix();
+  } else {
+    document.getElementById('dims').textContent = '—';
+  }
+  return built;
+}
+
+/* ---------- status ---------- */
+const statusEl = document.getElementById('status');
+function status(msg, kind = 'info', spin = false) {
+  statusEl.className = 'status show ' + kind;
+  statusEl.innerHTML = (spin ? '<span class="spinner"></span>' : '') + msg;
+}
+function clearStatus() { statusEl.className = 'status'; }
+
+/* ---------- JSON build ---------- */
+const jsonBox = document.getElementById('jsonBox');
+function loadIntoBoxAndBuild(data) {
+  jsonBox.value = JSON.stringify(data, null, 2);
+  const n = buildModel(data);
+  status(`${n}개 벽을 세웠습니다.`, 'ok');
+}
+
+document.getElementById('btnBuild').addEventListener('click', () => {
+  try {
+    const data = JSON.parse(jsonBox.value);
+    const n = buildModel(data);
+    if (n === 0) status('벽이 없습니다. walls 배열을 확인하세요.', 'err');
+    else status(`${n}개 벽을 세웠습니다.`, 'ok');
+  } catch (e) {
+    status('JSON 파싱 오류: ' + e.message, 'err');
+  }
+});
+
+document.querySelectorAll('[data-sample]').forEach(b => {
+  b.addEventListener('click', () => loadIntoBoxAndBuild(SAMPLES[b.dataset.sample]));
+});
+
+/* ---------- upload ---------- */
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+const dropText = document.getElementById('dropText');
+let imageDataUrl = null;
+
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--accent-primary)'; });
+drop.addEventListener('dragleave', () => { drop.style.borderColor = ''; });
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.style.borderColor = '';
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+function handleFile(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    imageDataUrl = r.result;
+    preview.src = imageDataUrl;
+    preview.style.display = 'block';
+    dropText.style.display = 'none';
+    drop.classList.add('has');
+  };
+  r.readAsDataURL(file);
+}
+
+/* ---------- backend URL ---------- */
+const apiUrlInput = document.getElementById('apiUrl');
+apiUrlInput.value = localStorage.getItem('sketch3d_api') || 'http://localhost:8787/api/extract';
+apiUrlInput.addEventListener('change', () => localStorage.setItem('sketch3d_api', apiUrlInput.value.trim()));
+
+/* ---------- extract via backend ---------- */
+document.getElementById('btnExtract').addEventListener('click', async () => {
+  if (!imageDataUrl) { status('먼저 스케치 이미지를 업로드하세요.', 'err'); return; }
+  const url = apiUrlInput.value.trim();
+  if (!url) { status('백엔드 설정에서 Extract API URL을 입력하세요.', 'err'); return; }
+
+  const btn = document.getElementById('btnExtract');
+  btn.disabled = true;
+  status('비전 API가 스케치를 분석 중입니다… (수 초 소요)', 'info', true);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: imageDataUrl,
+        wallHeight: Number(document.getElementById('wallHeight').value) || 2700,
+        wallThickness: Number(document.getElementById('wallThickness').value) || 200
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
+    const data = await res.json();
+    const n = buildModel(data);
+    jsonBox.value = JSON.stringify(data, null, 2);
+    if (n === 0) status('벽을 찾지 못했습니다. 치수가 보이는 더 선명한 사진으로 다시 시도하세요.', 'err');
+    else status(`인식 완료 — ${n}개 벽. ${data.notes ? '메모: ' + data.notes : ''}`, 'ok');
+  } catch (e) {
+    status('요청 실패: ' + e.message + '<br>백엔드가 실행 중인지, URL이 맞는지 확인하세요.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------- boot ---------- */
+loadIntoBoxAndBuild(SAMPLES.room);
+</script>

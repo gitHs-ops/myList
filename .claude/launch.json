@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8934"],
       "port": 8934
+    },
+    {
+      "name": "sketch3d",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8900", "--directory", "sketch3d"],
+      "port": 8900
     }
   ]
 }

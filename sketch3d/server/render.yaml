@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: sketch3d-extract-api
+    runtime: node
+    rootDir: sketch3d/server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VISION_MODEL
+        value: claude-opus-5
