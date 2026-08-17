@@ -270,7 +270,11 @@
   .pv-panel{ position:relative; background:var(--paper); border-radius:18px; padding:18px 16px; width:100%; max-width:440px; max-height:84vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.4); }
   .pv-x{ position:absolute; top:8px; right:10px; width:34px; height:34px; border-radius:50%; border:none; background:#eef4f3; color:var(--teal-deep); font-size:22px; font-weight:900; cursor:pointer; line-height:1; }
   .pv-title{ font-size:16px; font-weight:900; color:var(--teal-deep); text-align:center; margin:2px 30px 14px; }
-  .pv-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+  .pv-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+  .pv-pair{ background:#f6faf9; border:1px solid #e3efee; border-radius:12px; padding:8px; }
+  .pv-pair-name{ text-align:center; font-size:13px; font-weight:900; color:var(--teal-deep); margin-bottom:6px; }
+  .pv-pair-tiles{ display:flex; gap:6px; }
+  .pv-pair-tiles .pv-tile{ flex:1; }
   .pv-tile{ aspect-ratio:3/4; border-radius:10px; background:var(--paper); border:2px solid var(--month-color, var(--gold)); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
   .pv-tile img{ width:100%; height:100%; object-fit:cover; }
   .pv-tile .pv-emoji{ font-size:34px; line-height:1; }
@@ -926,7 +930,7 @@
   });
 
   // ---------- 카드 미리보기 ----------
-  function pvTile(it, src, emoji){
+  function pvTile(it, src, emoji, caption){
     var t = document.createElement('div');
     t.className = 'pv-tile' + (state.theme === 'mahjong' ? ' mahjong' : '');
     t.style.setProperty('--month-color', it.color);
@@ -938,7 +942,7 @@
       if(it.filter) e.style.filter = it.filter;
       e.textContent = emoji; t.appendChild(e);
     }
-    var nm = document.createElement('div'); nm.className = 'pv-name'; nm.textContent = it.name;
+    var nm = document.createElement('div'); nm.className = 'pv-name'; nm.textContent = caption;
     t.appendChild(nm);
     return t;
   }
@@ -948,13 +952,17 @@
     grid.innerHTML = '';
     $('#previewTitle').textContent = def.label + ' 카드 미리보기 (24장)';
     def.items.forEach(function(it){
+      var pair = document.createElement('div'); pair.className = 'pv-pair';
+      var name = document.createElement('div'); name.className = 'pv-pair-name'; name.textContent = it.name;
+      var tiles = document.createElement('div'); tiles.className = 'pv-pair-tiles';
       if(def.isImage){
-        grid.appendChild(pvTile(it, it.imgA, null));
-        grid.appendChild(pvTile(it, it.imgB, null));
+        tiles.appendChild(pvTile(it, it.imgA, null, '이미지1'));
+        tiles.appendChild(pvTile(it, it.imgB, null, '이미지2'));
       } else {
-        grid.appendChild(pvTile(it, null, it.emoji));
-        grid.appendChild(pvTile(it, null, it.emoji));
+        tiles.appendChild(pvTile(it, null, it.emoji, '이미지1'));
+        tiles.appendChild(pvTile(it, null, it.emoji, '이미지2'));
       }
+      pair.appendChild(name); pair.appendChild(tiles); grid.appendChild(pair);
     });
   }
   $('#previewBtn').addEventListener('click', function(){ buildPreviewTiles(); $('#previewModal').classList.remove('hidden'); });
