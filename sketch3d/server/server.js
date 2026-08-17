@@ -1,4 +1,5 @@
 // sketch3d — Extract API: 손그림 스케치 → 벽 좌표 JSON (Claude Vision)
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import Anthropic from '@anthropic-ai/sdk';
