@@ -25,6 +25,17 @@ const WALL_SCHEMA = {
     wallHeight: { type: 'number' },
     wallThickness: { type: 'number' },
     north: { type: 'string', enum: ['up', 'down', 'left', 'right'] },  // 도면에서 북쪽 방향
+    roof: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type'],
+      properties: {
+        type: { type: 'string', enum: ['none', 'flat', 'gable'] },
+        pitch: { type: 'number' },      // 물매(경사, °) — gable
+        overhang: { type: 'number' },   // 처마 내밀기(mm)
+        ridge: { type: 'string', enum: ['x', 'y'] }  // 박공 능선 방향
+      }
+    },
     walls: {
       type: 'array',
       items: {
@@ -58,6 +69,7 @@ const SYSTEM = `당신은 건축 손그림 스케치를 벽 중심선 좌표로 
   · 개구부 높이 = height - sill - lintel 이 됩니다. 치수가 없으면 통상값(창: sill 900, 개구부 1200, lintel 600 / 문: sill 0, 개구부 2100)으로 추정하고 notes에 적습니다.
 - 개구부가 없는 벽은 sill/lintel을 넣지 않습니다(솔리드 벽).
 - north: 도면에서 북쪽이 어느 방향인지 = 'up'(위,+y) | 'down' | 'left' | 'right'. 스케치에 방위표(N 화살표 등)가 있으면 반영하고, 없으면 'up'으로 둡니다.
+- roof: 지붕 정보(옵션). { type: 'flat'|'gable'|'none', pitch: 물매(°, 박공), overhang: 처마내밀기(mm), ridge: 'x'|'y'(박공 능선 방향) }. 스케치에 지붕/단면이 보이면 반영하고, 없으면 생략합니다.
 - 확신이 낮거나 추정한 내용은 notes에 한국어로 간단히 남깁니다.`;
 
 app.post('/api/extract', async (req, res) => {
@@ -119,6 +131,7 @@ const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국�
 - "왼쪽/오른쪽/위쪽/아래쪽 벽"은 현재 좌표상의 위치로 식별합니다. 벽 추가/삭제/이동/길이변경/두께·높이 변경 등을 반영합니다.
 - 벽별 옵션 필드로 높이/개구부를 다룰 수 있습니다: height(벽 높이), thickness(두께), sill(소벽=바닥~개구부 하단), lintel(인방=개구부 상단~천장). 개구부 높이 = height - sill - lintel. 문은 sill=0. "창 달아줘/개구부"류 지시는 이 필드로 반영하고, "창 없애줘"는 sill/lintel을 제거합니다.
 - north(도면 북쪽: 'up'|'down'|'left'|'right')도 지시에 따라 설정/변경합니다. 예: "북쪽을 오른쪽으로" → north:'right'.
+- roof(지붕: {type:'flat'|'gable'|'none', pitch, overhang, ridge:'x'|'y'})도 지시에 따라 설정/변경합니다. 예: "박공지붕 물매 30도" → roof:{type:'gable',pitch:30,...}, "지붕 없애" → roof:{type:'none'} 또는 제거.
 - 지시와 무관한 벽은 그대로 둡니다. 방이 닫혀 있어야 하면 연결 좌표를 함께 맞춥니다.
 - notes에는 무엇을 어떻게 바꿨는지 한국어로 짧게 적습니다. 지시가 모호하면 합리적으로 해석하고 그 사실을 notes에 남깁니다.
 - 반드시 전체 벽 JSON(수정 결과)을 반환합니다.`;

@@ -342,6 +342,7 @@
           <button class="btn ghost" data-sample="two">투룸 + 복도</button>
           <button class="btn ghost" data-sample="L">L자 스튜디오</button>
           <button class="btn ghost" data-sample="win">창·문 개구부</button>
+          <button class="btn ghost" data-sample="gable">박공 지붕</button>
         </div>
       </div>
 
@@ -423,6 +424,16 @@ const SAMPLES = {
       { start: [4000, 0], end: [4000, 3000] },
       { start: [4000, 3000], end: [0, 3000] },
       { start: [0, 3000], end: [0, 0], sill: 0, lintel: 600 }       // 왼쪽: 문 (개구부2100·인방600)
+    ]
+  },
+  gable: {
+    unit: "mm", wallHeight: 2400, wallThickness: 200, north: "up",
+    roof: { type: "gable", pitch: 32, overhang: 400, ridge: "x" },
+    walls: [
+      { start: [0, 0], end: [5000, 0], sill: 900, lintel: 500 },
+      { start: [5000, 0], end: [5000, 4000] },
+      { start: [5000, 4000], end: [0, 4000] },
+      { start: [0, 4000], end: [0, 0], sill: 0, lintel: 500 }
     ]
   }
 };
@@ -697,7 +708,49 @@ function buildModel(data) {
       compassGroup.add(sp);
     });
 
-    const r = Math.max(size.x, size.z, H) * 1.4;
+    // 지붕 (박공/평지붕) — footprint 기준, 벽 최상단(eave)에서 생성
+    let roofTopY = bbox.max.y;
+    const roof = data.roof;
+    if (roof && roof.type && roof.type !== 'none') {
+      const oh = Number(roof.overhang) || 300;
+      const minx = bbox.min.x - oh, maxx = bbox.max.x + oh;
+      const minz = bbox.min.z - oh, maxz = bbox.max.z + oh;
+      const eaveY = bbox.max.y;
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0xb0674c, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide });
+
+      if (roof.type === 'flat') {
+        const th = 120;
+        const m = new THREE.Mesh(new THREE.BoxGeometry(maxx - minx, th, maxz - minz), roofMat);
+        m.position.set((minx + maxx) / 2, eaveY + th / 2, (minz + maxz) / 2);
+        m.castShadow = true; m.receiveShadow = true;
+        modelGroup.add(m);
+        roofTopY = eaveY + th;
+      } else if (roof.type === 'gable') {
+        const pitch = (Number(roof.pitch) || 30) * Math.PI / 180;
+        const ridgeY = roof.ridge === 'y' ? 'y' : 'x';
+        const shape = new THREE.Shape();
+        let geo, m, rise;
+        if (ridgeY === 'x') {   // 능선이 x축과 평행, z방향으로 경사
+          rise = (maxz - minz) / 2 * Math.tan(pitch);
+          shape.moveTo(minz, eaveY); shape.lineTo(maxz, eaveY); shape.lineTo((minz + maxz) / 2, eaveY + rise); shape.closePath();
+          geo = new THREE.ExtrudeGeometry(shape, { depth: maxx - minx, bevelEnabled: false });
+          geo.rotateY(-Math.PI / 2);
+          m = new THREE.Mesh(geo, roofMat);
+          m.position.set(maxx, 0, 0);
+        } else {                // 능선이 z축과 평행, x방향으로 경사
+          rise = (maxx - minx) / 2 * Math.tan(pitch);
+          shape.moveTo(minx, eaveY); shape.lineTo(maxx, eaveY); shape.lineTo((minx + maxx) / 2, eaveY + rise); shape.closePath();
+          geo = new THREE.ExtrudeGeometry(shape, { depth: maxz - minz, bevelEnabled: false });
+          m = new THREE.Mesh(geo, roofMat);
+          m.position.set(0, 0, minz);
+        }
+        m.castShadow = true; m.receiveShadow = true;
+        modelGroup.add(m);
+        roofTopY = eaveY + rise;
+      }
+    }
+
+    const r = Math.max(size.x, size.z, roofTopY, H) * 1.4;
     controls.target.copy(new THREE.Vector3(center.x, H / 2, center.z));
     camera.position.set(center.x + r, H + r * 0.9, center.z + r);
     camera.near = r / 100; camera.far = r * 50; camera.updateProjectionMatrix();
