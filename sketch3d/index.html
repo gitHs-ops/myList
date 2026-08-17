@@ -72,9 +72,11 @@
     padding: 28px 22px 60px;
   }
 
-  header.hero { position: relative; margin-bottom: 22px; animation: rise .6s var(--ease) both; }
+  header.hero { margin-bottom: 22px; animation: rise .6s var(--ease) both; }
+  .backend-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 14px; }
+  .backend-line .adv { flex: 1; margin-top: 0; }
   .desc-toggle {
-    position: absolute; top: 2px; right: 0;
+    flex: 0 0 auto;
     font-family: var(--font-main); font-weight: 700; font-size: 12px; cursor: pointer;
     border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
     border-radius: 999px; padding: 5px 12px;
@@ -82,7 +84,8 @@
   .desc-toggle:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
   body.desc-off .hint,
   body.desc-off .hero-sub,
-  body.desc-off .note { display: none; }
+  body.desc-off .note,
+  body.desc-off #status { display: none; }
   header.hero h1 {
     margin: 0;
     font-size: clamp(24px, 4vw, 34px);
@@ -285,7 +288,6 @@
 
 <div class="wrap">
   <header class="hero">
-    <button id="descToggle" class="desc-toggle">설명 숨기기</button>
     <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입</h1>
     <p class="hero-sub">치수가 적힌 손그림 스케치를 올리면 벽체를 3D로 세워줍니다. 비전 API 없이도 아래 <b>샘플/JSON</b>으로 파이프라인을 바로 확인할 수 있습니다.</p>
   </header>
@@ -314,12 +316,15 @@
 
         <button id="btnExtract" class="btn" style="margin-top:14px">비전 API로 벽 인식 → 3D</button>
 
-        <details class="adv">
-          <summary>백엔드 설정</summary>
-          <label class="fld">Extract API URL</label>
-          <input id="apiUrl" type="text" placeholder="http://localhost:8787/api/extract" />
-          <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·4번(샘플/JSON)은 동작합니다.</p>
-        </details>
+        <div class="backend-line">
+          <details class="adv">
+            <summary>백엔드 설정</summary>
+            <label class="fld">Extract API URL</label>
+            <input id="apiUrl" type="text" placeholder="http://localhost:8787/api/extract" />
+            <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·4번(샘플/JSON)은 동작합니다.</p>
+          </details>
+          <button id="descToggle" class="desc-toggle">설명 숨기기</button>
+        </div>
 
         <div id="status" class="status"></div>
       </div>
@@ -364,6 +369,7 @@
             <span id="sunLabel">12:00</span>
           </label>
           <button id="dimToggle" class="dim-btn">치수 표시</button>
+          <button id="roofToggle" class="dim-btn on">지붕 숨김</button>
         </div>
       </div>
       <canvas id="viewport"></canvas>
@@ -483,6 +489,10 @@ let showDims = false;
 
 let compassGroup = new THREE.Group();
 scene.add(compassGroup);
+
+let roofGroup = new THREE.Group();
+scene.add(roofGroup);
+let showRoof = true;
 
 // 태양 / 방위 상태
 const NORTH_VEC = { up: { x: 0, z: 1 }, down: { x: 0, z: -1 }, right: { x: 1, z: 0 }, left: { x: -1, z: 0 } };
@@ -653,6 +663,12 @@ function buildModel(data) {
   dimGroup.visible = showDims;
   scene.add(dimGroup);
 
+  // rebuild roof group
+  scene.remove(roofGroup);
+  roofGroup = new THREE.Group();
+  roofGroup.visible = showRoof;
+  scene.add(roofGroup);
+
   // recenter grid + camera
   document.getElementById('wallCount').textContent = built;
   if (built) {
@@ -723,7 +739,7 @@ function buildModel(data) {
         const m = new THREE.Mesh(new THREE.BoxGeometry(maxx - minx, th, maxz - minz), roofMat);
         m.position.set((minx + maxx) / 2, eaveY + th / 2, (minz + maxz) / 2);
         m.castShadow = true; m.receiveShadow = true;
-        modelGroup.add(m);
+        roofGroup.add(m);
         roofTopY = eaveY + th;
       } else if (roof.type === 'gable') {
         const pitch = (Number(roof.pitch) || 30) * Math.PI / 180;
@@ -745,7 +761,7 @@ function buildModel(data) {
           m.position.set(0, 0, minz);
         }
         m.castShadow = true; m.receiveShadow = true;
-        modelGroup.add(m);
+        roofGroup.add(m);
         roofTopY = eaveY + rise;
       }
     }
@@ -878,6 +894,14 @@ dimToggle.addEventListener('click', () => {
   dimGroup.visible = showDims;
   dimToggle.classList.toggle('on', showDims);
   dimToggle.textContent = showDims ? '치수 숨김' : '치수 표시';
+});
+
+const roofToggle = document.getElementById('roofToggle');
+roofToggle.addEventListener('click', () => {
+  showRoof = !showRoof;
+  roofGroup.visible = showRoof;
+  roofToggle.classList.toggle('on', showRoof);
+  roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
 });
 
 /* ---------- 대화로 수정 ---------- */
