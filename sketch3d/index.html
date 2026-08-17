@@ -557,6 +557,15 @@ function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
   return sp;
 }
 
+// 지붕 치수 라벨 스택 (dimGroup에 추가 → 치수 토글로 on/off)
+function addRoofLabels(ax, ay, az, items, lh) {
+  items.forEach((t, i) => {
+    const sp = makeLabel(t, lh, 'rgba(176,103,76,0.96)');
+    sp.position.set(ax, ay - i * lh * 1.15, az);
+    dimGroup.add(sp);
+  });
+}
+
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (canvas.width !== w || canvas.height !== h) {
@@ -741,6 +750,8 @@ function buildModel(data) {
         m.castShadow = true; m.receiveShadow = true;
         roofGroup.add(m);
         roofTopY = eaveY + th;
+        addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2,
+          ['평지붕', '처마 ' + oh, '슬래브 ' + th, '높이 ' + Math.round(roofTopY)], labelH * 0.85);
       } else if (roof.type === 'gable') {
         const pitch = (Number(roof.pitch) || 30) * Math.PI / 180;
         const ridgeY = roof.ridge === 'y' ? 'y' : 'x';
@@ -763,6 +774,11 @@ function buildModel(data) {
         m.castShadow = true; m.receiveShadow = true;
         roofGroup.add(m);
         roofTopY = eaveY + rise;
+        const pitchDeg = Number(roof.pitch) || 30;
+        const spanW = ridgeY === 'y' ? (maxx - minx) : (maxz - minz);
+        const items = ['박공 물매 ' + pitchDeg + '°', '용마루 +' + Math.round(rise), '스팬 ' + Math.round(spanW), '처마 ' + oh];
+        if (ridgeY === 'y') addRoofLabels((minx + maxx) / 2, roofTopY, maxz + labelH * 1.2, items, labelH * 0.85);
+        else addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2, items, labelH * 0.85);
       }
     }
 
