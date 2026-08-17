@@ -101,4 +101,47 @@ app.post('/api/extract', async (req, res) => {
   }
 });
 
+const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국어 지시에 따라 수정하는 편집기입니다.
+- 입력으로 현재 벽 JSON(unit/wallHeight/wallThickness/walls/notes)을 받습니다.
+- 좌표계는 그대로 유지합니다: 단위 mm, 원점 좌하단, x는 오른쪽(+), y는 위쪽(+). 각 벽은 중심선 start[x,y]~end[x,y].
+- "왼쪽/오른쪽/위쪽/아래쪽 벽"은 현재 좌표상의 위치로 식별합니다. 벽 추가/삭제/이동/길이변경/두께·높이 변경 등을 반영합니다.
+- 지시와 무관한 벽은 그대로 둡니다. 방이 닫혀 있어야 하면 연결 좌표를 함께 맞춥니다.
+- notes에는 무엇을 어떻게 바꿨는지 한국어로 짧게 적습니다. 지시가 모호하면 합리적으로 해석하고 그 사실을 notes에 남깁니다.
+- 반드시 전체 벽 JSON(수정 결과)을 반환합니다.`;
+
+app.post('/api/edit', async (req, res) => {
+  try {
+    const { walls, instruction } = req.body || {};
+    if (!walls || typeof walls !== 'object') {
+      return res.status(400).json({ error: 'walls (current wall JSON object) required' });
+    }
+    if (!instruction || typeof instruction !== 'string') {
+      return res.status(400).json({ error: 'instruction (text) required' });
+    }
+
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 8000,
+      system: EDIT_SYSTEM,
+      output_config: { format: { type: 'json_schema', schema: WALL_SCHEMA } },
+      messages: [{
+        role: 'user',
+        content: `현재 벽 JSON:\n\`\`\`json\n${JSON.stringify(walls)}\n\`\`\`\n\n수정 지시: ${instruction}\n\n지시를 반영한 전체 벽 JSON을 반환하세요.`
+      }]
+    });
+
+    const textBlock = response.content.find(b => b.type === 'text');
+    if (!textBlock) return res.status(502).json({ error: 'no text in model response', stop: response.stop_reason });
+
+    let parsed;
+    try { parsed = JSON.parse(textBlock.text); }
+    catch { return res.status(502).json({ error: 'model did not return valid JSON', raw: textBlock.text.slice(0, 500) }); }
+
+    res.json(parsed);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'edit failed' });
+  }
+});
+
 app.listen(PORT, () => console.log(`sketch3d extract API on :${PORT} (model=${MODEL})`));
