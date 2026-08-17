@@ -284,6 +284,9 @@
 
   .kakao-btn{ background:#FEE500 !important; color:#191600 !important; border:none !important; }
 
+  /* 참가자: 설정 잠금(미리보기는 가능) */
+  .locked{ pointer-events:none; opacity:0.6; }
+
   .hidden{ display:none !important; }
 
   .ver-inline{
@@ -298,7 +301,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.8</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.9</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -311,13 +314,14 @@
 
     <div class="card-panel" id="themePanel">
       <div class="panel-title">🎨 그림 패턴</div>
-      <div class="choice-row">
+      <div class="choice-row" id="themeChoices">
         <button class="choice-btn active" data-group="theme" data-value="hwatu">🎴 화투</button>
         <button class="choice-btn" data-group="theme" data-value="animal">🐶 동물</button>
         <button class="choice-btn" data-group="theme" data-value="vehicle">🚗 탈 것</button>
         <button class="choice-btn" data-group="theme" data-value="food">🍕 음식</button>
         <button class="choice-btn" data-group="theme" data-value="mahjong">🀄 마작</button>
       </div>
+      <div id="guestSettingNote" class="hidden" style="font-size:12px; color:#7a8b8a; margin-top:8px; text-align:center;">🔒 호스트가 정한 설정이에요 · 미리보기만 가능</div>
       <button class="ghost-btn" id="previewBtn" style="margin-top:12px; color:var(--teal-deep); border-color:var(--teal-deep);">🔍 카드 미리보기 (24장)</button>
     </div>
 
@@ -404,7 +408,7 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.8</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.9</span></button>
   </div>
 
   <!-- ============ 카드 미리보기 모달 ============ -->
@@ -434,7 +438,7 @@
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver1.8</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver1.9</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -637,12 +641,17 @@
   // ---------- 설정 화면 ----------
   function updateSetupVisibility(){
     var isOnline = state.mode === 'online';
-    var hideForGuest = isOnline && net.active && !net.isHost;
+    var joinView = isOnline && !$('#onlineJoinTab').classList.contains('hidden');
+    // 참가자 = 온라인이면서 (참가 화면이거나, 접속된 비호스트)
+    var isGuest = isOnline && (joinView || (net.active && !net.isHost));
     $('#playerCountPanel').classList.toggle('hidden', state.mode !== 'multi');
     $('#onlinePanel').classList.toggle('hidden', !isOnline);
-    $('#themePanel').classList.toggle('hidden', hideForGuest);
-    $('#sizePanel').classList.toggle('hidden', hideForGuest);
-    $('#timerPanel').classList.toggle('hidden', hideForGuest);
+    // 그림 패턴: 참가자는 선택 잠금(미리보기는 가능), 카드수·제한시간은 숨김
+    $('#themePanel').classList.toggle('hidden', false);
+    $('#themeChoices').classList.toggle('locked', isGuest);
+    $('#guestSettingNote').classList.toggle('hidden', !isGuest);
+    $('#sizePanel').classList.toggle('hidden', isGuest);
+    $('#timerPanel').classList.toggle('hidden', isGuest);
     $('#startBtn').classList.toggle('hidden', isOnline && !(net.isHost && net.active));
   }
 
@@ -660,6 +669,7 @@
   function selectOnlineTab(value){
     $('#onlineCreateTab').classList.toggle('hidden', value !== 'create');
     $('#onlineJoinTab').classList.toggle('hidden', value !== 'join');
+    updateSetupVisibility();
   }
 
   // 호스트/참가자는 URL(?room=)로 자동 구분 — 탭 대신 작은 링크로만 전환
@@ -671,6 +681,7 @@
       $all('.choice-btn[data-group="theme"]').forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
       state.theme = btn.dataset.value;
+      broadcastSetup();
     });
   });
 
@@ -679,6 +690,7 @@
       $all('.choice-btn[data-group="size"]').forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
       state.cardCount = parseInt(btn.dataset.value, 10);
+      broadcastSetup();
     });
   });
 
@@ -695,6 +707,7 @@
     state.timerOn = !state.timerOn;
     this.classList.toggle('on', state.timerOn);
     $('#minuteInputWrap').classList.toggle('show', state.timerOn);
+    broadcastSetup();
   });
   $('#minuteInput').addEventListener('change', function(){
     var v = parseInt(this.value,10);
@@ -702,6 +715,7 @@
     if(v > 30) v = 30;
     this.value = v;
     state.minutes = v;
+    broadcastSetup();
   });
 
   $('#startBtn').addEventListener('click', function(){ ensureAudio(); startGame(); });
@@ -818,6 +832,7 @@
           $('#onlineStatusMsg').textContent = '✅ 연결되었습니다! 위에서 옵션을 정하고 게임을 시작하세요.';
           showChatWidget(true);
           updateSetupVisibility();
+          broadcastSetup();
         });
       });
     });
@@ -962,8 +977,28 @@
       case 'sync': applyRemoteSync(msg.payload); break;
       case 'end': state.players = msg.payload.players; endGame(msg.payload.reason); break;
       case 'chat': appendChat(msg.nickname, msg.text, false); break;
+      case 'setup': applyRemoteSetup(msg.payload); break;
       case 'bye': handleNetClose(); break;
     }
+  }
+
+  // 호스트가 정한 설정을 참가자에게 동기화 (참가자는 읽기전용 + 미리보기용)
+  function broadcastSetup(){
+    if(net.active && net.isHost){
+      sendNet({type:'setup', payload:{ theme: state.theme, cardCount: state.cardCount, timerOn: state.timerOn, minutes: state.minutes }});
+    }
+  }
+  function applyRemoteSetup(p){
+    if(!p || net.isHost) return;
+    state.theme = p.theme;
+    state.cardCount = p.cardCount;
+    state.timerOn = !!p.timerOn;
+    state.minutes = p.minutes;
+    $all('.choice-btn[data-group="theme"]').forEach(function(b){ b.classList.toggle('active', b.dataset.value === p.theme); });
+    $all('.choice-btn[data-group="size"]').forEach(function(b){ b.classList.toggle('active', parseInt(b.dataset.value,10) === p.cardCount); });
+    $('#timerSwitch').classList.toggle('on', state.timerOn);
+    $('#minuteInputWrap').classList.toggle('show', state.timerOn);
+    if($('#minuteInput')) $('#minuteInput').value = p.minutes;
   }
 
   // ---------- 채팅 ----------
