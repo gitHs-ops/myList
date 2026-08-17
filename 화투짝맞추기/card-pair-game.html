@@ -298,7 +298,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.5</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.6</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -404,7 +404,7 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.5</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.6</span></button>
   </div>
 
   <!-- ============ 카드 미리보기 모달 ============ -->
@@ -434,7 +434,7 @@
 
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver1.5</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver1.6</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -810,7 +810,7 @@
       net.roomCode = code;
       $('#roomCodeDisplay').textContent = code;
       $('#roomInfoBox').classList.remove('hidden');
-      $('#kakaoShareBtn').classList.toggle('hidden', !kakaoReady());
+      $('#kakaoShareBtn').classList.toggle('hidden', !KAKAO_JS_KEY);
       $('#onlineStatusMsg').textContent = '상대방을 기다리는 중...';
       p.on('connection', function(conn){
         if(net.conn){ conn.close(); return; }
@@ -972,12 +972,13 @@
   // ---------- 카카오톡 공유 (썸네일 미리보기 카드) ----------
   var KAKAO_JS_KEY = '89c8ed7faccc8c1bb206c826555a181a';   // Kakao JavaScript 키 (도메인 제한형 클라이언트 키)
   var SHARE_IMAGE_URL = 'https://giths-ops.github.io/myList/%ED%99%94%ED%88%AC%EC%A7%9D%EB%A7%9E%EC%B6%94%EA%B8%B0/share-thumb.png'; // ← 카톡 썸네일(공개 URL, 200x200 이상)
-  (function initKakao(){
+  function ensureKakao(){
     try{ if(KAKAO_JS_KEY && window.Kakao && !Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY); }catch(e){}
-  })();
-  function kakaoReady(){ return !!(KAKAO_JS_KEY && window.Kakao && Kakao.isInitialized() && Kakao.Share); }
+    return !!(window.Kakao && window.Kakao.isInitialized && Kakao.isInitialized() && Kakao.Share);
+  }
+  ensureKakao();
   $('#kakaoShareBtn').addEventListener('click', function(){
-    if(!kakaoReady()){ alert('카카오 공유 설정이 필요합니다.\n(JavaScript 키 입력 + 도메인 등록 후 사용 가능)'); return; }
+    if(!ensureKakao()){ alert('카카오 SDK를 불러오지 못했습니다.\n새로고침 후 다시 시도해주세요.'); return; }
     var link = inviteLink();
     Kakao.Share.sendDefault({
       objectType: 'feed',
