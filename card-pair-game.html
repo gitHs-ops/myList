@@ -235,7 +235,7 @@
   .score-row .medal{ margin-right:6px; }
 
   /* ---------- 온라인 채팅 ---------- */
-  #chatWidget{ position:fixed; right:14px; bottom:14px; z-index:600; }
+  #chatWidget{ position:fixed; right:14px; bottom:14px; z-index:9999; }
   .chat-toggle{
     width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
     background:var(--teal-deep); color:#fff; font-size:24px;
@@ -301,7 +301,7 @@
   <!-- ============ 설정 화면 ============ -->
   <div id="setupScreen" class="screen active">
     <h1>🎴 카드 짝맞추기</h1>
-    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver1.9</span></div>
+    <div class="sub">같은 그림 두 장을 찾아 짝을 맞추는 카드 게임<span class="ver-inline">Ver2.0</span></div>
 
     <div class="card-panel">
       <div class="panel-title">👤 게임 방식</div>
@@ -408,7 +408,7 @@
       <div class="turn-msg" id="turnMsg" style="flex:0 0 auto; margin:0; text-align:right; white-space:nowrap;">&nbsp;</div>
     </div>
     <div class="board" id="board"></div>
-    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver1.9</span></button>
+    <button class="bottom-card-btn" id="quitBtn">← 처음으로<span class="ver-inline">Ver2.0</span></button>
   </div>
 
   <!-- ============ 카드 미리보기 모달 ============ -->
@@ -420,25 +420,9 @@
     </div>
   </div>
 
-  <!-- ============ 온라인 채팅 위젯 ============ -->
-  <div id="chatWidget" class="hidden">
-    <div id="chatBox" class="chat-box hidden">
-      <div class="chat-head">
-        <span>💬 대화</span>
-        <button id="chatClose" class="chat-close" aria-label="닫기">×</button>
-      </div>
-      <div id="chatLog" class="chat-log"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInput" placeholder="메시지 입력..." maxlength="200">
-        <button id="chatSend" class="chat-send">전송</button>
-      </div>
-    </div>
-    <button id="chatToggle" class="chat-toggle">💬<span id="chatBadge" class="chat-badge hidden">0</span></button>
-  </div>
-
   <!-- ============ 결과 화면 ============ -->
   <div id="resultScreen" class="screen">
-    <div class="trophy">🏆<span class="ver-inline">Ver1.9</span></div>
+    <div class="trophy">🏆<span class="ver-inline">Ver2.0</span></div>
     <div class="winner-name" id="winnerName">결과</div>
     <div class="winner-sub" id="winnerSub">게임 종료</div>
     <div class="score-table" id="scoreTable"></div>
@@ -446,6 +430,22 @@
     <button class="ghost-btn" id="toSetupBtn">처음으로</button>
   </div>
 
+</div>
+
+<!-- 온라인 채팅 위젯 (body 직속 — 스택/클리핑 영향 없이 항상 최상위) -->
+<div id="chatWidget" class="hidden">
+  <div id="chatBox" class="chat-box hidden">
+    <div class="chat-head">
+      <span>💬 대화</span>
+      <button id="chatClose" class="chat-close" aria-label="닫기">×</button>
+    </div>
+    <div id="chatLog" class="chat-log"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="메시지 입력..." maxlength="200">
+      <button id="chatSend" class="chat-send">전송</button>
+    </div>
+  </div>
+  <button id="chatToggle" class="chat-toggle">💬<span id="chatBadge" class="chat-badge hidden">0</span></button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js"></script>
@@ -1002,9 +1002,14 @@
   }
 
   // ---------- 채팅 ----------
+  var chatOpenedOnce = false;
   function showChatWidget(show){
     $('#chatWidget').classList.toggle('hidden', !show);
-    if(!show){
+    if(show){
+      // 연결되면 처음 한 번 대화창을 자동으로 열어 눈에 띄게 (이후엔 사용자가 여닫음)
+      if(!chatOpenedOnce){ chatOpenedOnce = true; $('#chatBox').classList.remove('hidden'); }
+    } else {
+      chatOpenedOnce = false;
       $('#chatBox').classList.add('hidden');
       $('#chatLog').innerHTML = '';
       $('#chatBadge').classList.add('hidden');
@@ -1124,6 +1129,7 @@
     }
     setTurnMsg();
     showScreen('gameScreen');
+    if(net.active) showChatWidget(true);
   }
 
   function applyRemoteSync(payload){
@@ -1212,6 +1218,7 @@
     renderBoard();
     setTurnMsg();
     showScreen('gameScreen');
+    if(net.active) showChatWidget(true);
 
     if(state.timerOn){
       state.secondsLeft = state.minutes * 60;
