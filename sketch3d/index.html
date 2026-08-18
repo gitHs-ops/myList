@@ -323,6 +323,7 @@
         </div>
 
         <button id="btnExtract" class="btn" style="margin-top:14px">비전 API로 벽 인식 → 3D</button>
+        <button id="btnCancel" class="btn ghost" style="margin-top:8px;display:none">분석 취소</button>
 
         <div class="backend-line">
           <details class="adv">
@@ -977,6 +978,10 @@ apiUrlInput.value = localStorage.getItem('sketch3d_api') || 'http://localhost:87
 apiUrlInput.addEventListener('change', () => localStorage.setItem('sketch3d_api', apiUrlInput.value.trim()));
 
 /* ---------- extract via backend ---------- */
+const btnCancel = document.getElementById('btnCancel');
+let extractController = null;
+btnCancel.addEventListener('click', () => { if (extractController) extractController.abort(); });
+
 document.getElementById('btnExtract').addEventListener('click', async () => {
   if (!images.length) { status('먼저 스케치 이미지를 업로드하세요.', 'err'); return; }
   const url = apiUrlInput.value.trim();
@@ -984,7 +989,9 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
 
   const btn = document.getElementById('btnExtract');
   btn.disabled = true;
-  status(`비전 API가 스케치 ${images.length}장을 분석 중입니다… (수 초 소요)`, 'info', true);
+  btnCancel.style.display = 'block';
+  extractController = new AbortController();
+  status(`비전 API가 스케치 ${images.length}장을 분석 중입니다… (수 초 소요) · 취소 가능`, 'info', true);
 
   try {
     const res = await fetch(url, {
@@ -994,7 +1001,8 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
         images: images,
         wallHeight: Number(document.getElementById('wallHeight').value) || 2700,
         wallThickness: Number(document.getElementById('wallThickness').value) || 200
-      })
+      }),
+      signal: extractController.signal
     });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
     const data = await res.json();
@@ -1003,9 +1011,12 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
     if (n === 0) status('벽을 찾지 못했습니다. 치수가 보이는 더 선명한 사진으로 다시 시도하세요.', 'err');
     else status(`인식 완료 — ${n}개 벽. ${data.notes ? '메모: ' + data.notes : ''}`, 'ok');
   } catch (e) {
-    status('요청 실패: ' + e.message + '<br>백엔드가 실행 중인지, URL이 맞는지 확인하세요.', 'err');
+    if (e.name === 'AbortError') status('분석을 취소했습니다.', 'info');
+    else status('요청 실패: ' + e.message + '<br>백엔드가 실행 중인지, URL이 맞는지 확인하세요.', 'err');
   } finally {
     btn.disabled = false;
+    btnCancel.style.display = 'none';
+    extractController = null;
   }
 });
 
