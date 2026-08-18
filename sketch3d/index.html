@@ -236,6 +236,14 @@
   .sun-ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
   .sun-ctl input[type="range"] { width: 110px; accent-color: var(--accent-primary); }
   #sunLabel { font-family: var(--font-accent); font-weight: 600; color: var(--text-primary); min-width: 40px; }
+
+  .views-card { margin-top: 16px; }
+  .views-card h2 { display: flex; align-items: center; }
+  .views-card h2 .dim-btn { margin-left: auto; }
+  .views { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .views figure { margin: 0; }
+  .views img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 12px; }
+  .views figcaption { text-align: center; font-size: 12px; color: var(--text-secondary); margin-top: 6px; font-weight: 600; }
   .dim-btn {
     font-family: var(--font-main); font-weight: 700; font-size: 12px; cursor: pointer;
     border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
@@ -373,6 +381,17 @@
         </div>
       </div>
       <canvas id="viewport"></canvas>
+    </div>
+  </div>
+
+  <div class="card views-card">
+    <h2>평면도 · 입면도 <button id="viewsRefresh" class="dim-btn">새로고침</button></h2>
+    <div class="views">
+      <figure><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서)</figcaption></figure>
+      <figure><img id="viewN" alt="북측 입면" /><figcaption>북측 입면</figcaption></figure>
+      <figure><img id="viewE" alt="동측 입면" /><figcaption>동측 입면</figcaption></figure>
+      <figure><img id="viewS" alt="남측 입면" /><figcaption>남측 입면</figcaption></figure>
+      <figure><img id="viewW" alt="서측 입면" /><figcaption>서측 입면</figcaption></figure>
     </div>
   </div>
 </div>
@@ -582,6 +601,65 @@ function tick() {
 }
 tick();
 
+/* ---------- 정투영 도면 (평면도 + 4방위 입면) ---------- */
+const viewRenderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+viewRenderer.setPixelRatio(1);
+viewRenderer.setSize(480, 360);
+const VIEW_ASPECT = 480 / 360;
+
+function fitOrtho(cam, halfW, halfH) {
+  if (halfW / halfH > VIEW_ASPECT) halfH = halfW / VIEW_ASPECT; else halfW = halfH * VIEW_ASPECT;
+  halfW *= 1.08; halfH *= 1.08;
+  cam.left = -halfW; cam.right = halfW; cam.top = halfH; cam.bottom = -halfH;
+  cam.updateProjectionMatrix();
+}
+
+function renderViews() {
+  const box = new THREE.Box3();
+  if (modelGroup.children.length) box.setFromObject(modelGroup);
+  if (roofGroup.visible && roofGroup.children.length) box.expandByObject(roofGroup);
+  if (box.isEmpty()) return;
+  const c = new THREE.Vector3(); box.getCenter(c);
+  const s = new THREE.Vector3(); box.getSize(s);
+  const m = Math.max(s.x, s.y, s.z) * 2 + 3000;
+
+  // 도면용: 보조요소 숨기고 흰 배경
+  const vis = { grid: grid.visible, dim: dimGroup.visible, comp: compassGroup.visible, ground: ground.visible, bg: scene.background };
+  grid.visible = false; dimGroup.visible = false; compassGroup.visible = false; ground.visible = false;
+  scene.background = new THREE.Color(0xffffff);
+
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, m * 4);
+  function shot(id, pos, up, halfW, halfH) {
+    cam.position.set(pos[0], pos[1], pos[2]);
+    cam.up.set(up[0], up[1], up[2]);
+    cam.lookAt(c);
+    fitOrtho(cam, halfW, halfH);
+    viewRenderer.render(scene, cam);
+    document.getElementById(id).src = viewRenderer.domElement.toDataURL('image/png');
+  }
+
+  // 평면도 (위에서 -y): 가로 x, 세로 z
+  shot('viewTop', [c.x, box.max.y + m, c.z], [0, 0, -1], s.x / 2, s.z / 2);
+
+  // 방위 → 축 매핑 (currentNorth 기준, 나침반과 동일)
+  const EO = ['up', 'right', 'down', 'left'];
+  const k = Math.max(0, EO.indexOf(currentNorth));
+  const edgeOf = { N: EO[k], E: EO[(k + 1) % 4], S: EO[(k + 2) % 4], W: EO[(k + 3) % 4] };
+  const place = {
+    up:    { pos: [c.x, c.y, box.max.z + m], hw: s.x / 2 },
+    down:  { pos: [c.x, c.y, box.min.z - m], hw: s.x / 2 },
+    right: { pos: [box.max.x + m, c.y, c.z], hw: s.z / 2 },
+    left:  { pos: [box.min.x - m, c.y, c.z], hw: s.z / 2 },
+  };
+  const imgById = { N: 'viewN', E: 'viewE', S: 'viewS', W: 'viewW' };
+  for (const card of ['N', 'E', 'S', 'W']) {
+    const p = place[edgeOf[card]];
+    shot(imgById[card], p.pos, [0, 1, 0], p.hw, s.y / 2);
+  }
+
+  grid.visible = vis.grid; dimGroup.visible = vis.dim; compassGroup.visible = vis.comp; ground.visible = vis.ground; scene.background = vis.bg;
+}
+
 /* ---------- build ---------- */
 function buildModel(data) {
   scene.remove(modelGroup);
@@ -789,6 +867,7 @@ function buildModel(data) {
   } else {
     document.getElementById('dims').textContent = '—';
   }
+  renderViews();
   return built;
 }
 
@@ -918,7 +997,10 @@ roofToggle.addEventListener('click', () => {
   roofGroup.visible = showRoof;
   roofToggle.classList.toggle('on', showRoof);
   roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
+  renderViews();
 });
+
+document.getElementById('viewsRefresh').addEventListener('click', renderViews);
 
 /* ---------- 대화로 수정 ---------- */
 const chatLog = document.getElementById('chatLog');
