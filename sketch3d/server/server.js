@@ -92,7 +92,7 @@ const SYSTEM = `당신은 건축 손그림 스케치를 벽 중심선 좌표로 
 
 app.post('/api/extract', async (req, res) => {
   try {
-    const { image, images, wallHeight = 2700, wallThickness = 200 } = req.body || {};
+    const { image, images, wallHeight = 2400, wallThickness = 150 } = req.body || {};
     // 단일(image) / 다중(images) 모두 허용
     const list = Array.isArray(images) && images.length ? images : (image ? [image] : []);
     if (!list.length) {

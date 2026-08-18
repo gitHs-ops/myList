@@ -314,11 +314,11 @@
         <div class="num-row" style="margin-top:14px">
           <div>
             <label class="fld">벽 높이 (mm)</label>
-            <input id="wallHeight" type="number" value="2700" />
+            <input id="wallHeight" type="number" value="2400" />
           </div>
           <div>
             <label class="fld">벽 두께 (mm)</label>
-            <input id="wallThickness" type="number" value="200" />
+            <input id="wallThickness" type="number" value="150" />
           </div>
         </div>
 
@@ -363,7 +363,7 @@
 
       <div class="card">
         <h2><span class="step">4</span> 벽 좌표 JSON</h2>
-        <textarea id="jsonBox" spellcheck="false" placeholder='{ "unit":"mm", "wallHeight":2700, "wallThickness":200, "walls":[{"start":[0,0],"end":[5000,0]}] }'></textarea>
+        <textarea id="jsonBox" spellcheck="false" placeholder='{ "unit":"mm", "wallHeight":2400, "wallThickness":150, "walls":[{"start":[0,0],"end":[5000,0]}] }'></textarea>
         <button id="btnBuild" class="btn" style="margin-top:12px">이 JSON으로 3D 생성</button>
         <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.<br>벽 옵션: <code>height</code> · <code>thickness</code> · <code>sill</code>/<code>lintel</code>(벽 전체폭 밴드).<br>가로 창/문: <code>openings:[{offset, width, sill, height, type}]</code> — offset=벽 시작점~개구부, width=폭.</p>
       </div>
@@ -706,8 +706,8 @@ function buildModel(data) {
   scene.remove(modelGroup);
   modelGroup = new THREE.Group();
 
-  const H = Number(data.wallHeight) || 2700;
-  const T = Number(data.wallThickness) || 200;
+  const H = Number(data.wallHeight) || 2400;
+  const T = Number(data.wallThickness) || 150;
   const walls = Array.isArray(data.walls) ? data.walls : [];
 
   const bbox = new THREE.Box3();
@@ -1050,8 +1050,8 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         images: images,
-        wallHeight: Number(document.getElementById('wallHeight').value) || 2700,
-        wallThickness: Number(document.getElementById('wallThickness').value) || 200
+        wallHeight: Number(document.getElementById('wallHeight').value) || 2400,
+        wallThickness: Number(document.getElementById('wallThickness').value) || 150
       }),
       signal: extractController.signal
     });
