@@ -385,7 +385,10 @@
   </div>
 
   <div class="card views-card">
-    <h2>평면도 · 입면도 <button id="viewsRefresh" class="dim-btn">새로고침</button></h2>
+    <h2>평면도 · 입면도
+      <button id="viewsSave" class="dim-btn" style="margin-left:auto">PNG 시트 저장</button>
+      <button id="viewsRefresh" class="dim-btn" style="margin-left:8px">새로고침</button>
+    </h2>
     <div class="views">
       <figure><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서)</figcaption></figure>
       <figure><img id="viewN" alt="북측 입면" /><figcaption>북측 입면</figcaption></figure>
@@ -546,6 +549,15 @@ function updateSun() {
 
 const wallMat = new THREE.MeshStandardMaterial({ color: 0xdfe6f2, roughness: 0.85, metalness: 0.02 });
 const edgeMat = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.35 });
+// 도면(라인드로잉)용: 흰 면(은선 처리) + 검은 외곽선
+const drawFaceMat = new THREE.MeshBasicMaterial({ color: 0xffffff, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
+const drawLineMat = new THREE.LineBasicMaterial({ color: 0x1e293b });
+
+function addEdges(mesh, group) {
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat);
+  e.position.copy(mesh.position); e.rotation.copy(mesh.rotation); e.scale.copy(mesh.scale);
+  group.add(e);
+}
 
 // 치수 라벨 스프라이트 (항상 카메라를 향함, 벽 위로 렌더)
 function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
@@ -628,6 +640,13 @@ function renderViews() {
   grid.visible = false; dimGroup.visible = false; compassGroup.visible = false; ground.visible = false;
   scene.background = new THREE.Color(0xffffff);
 
+  // 라인드로잉 재질로 교체 (은선처리)
+  const saved = [];
+  [modelGroup, roofGroup].forEach(g => g.traverse(o => {
+    if (o.isMesh) { saved.push([o, o.material]); o.material = drawFaceMat; }
+    else if (o.isLineSegments) { saved.push([o, o.material]); o.material = drawLineMat; }
+  }));
+
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, m * 4);
   function shot(id, pos, up, halfW, halfH) {
     cam.position.set(pos[0], pos[1], pos[2]);
@@ -657,6 +676,7 @@ function renderViews() {
     shot(imgById[card], p.pos, [0, 1, 0], p.hw, s.y / 2);
   }
 
+  saved.forEach(([o, mat]) => { o.material = mat; });
   grid.visible = vis.grid; dimGroup.visible = vis.dim; compassGroup.visible = vis.comp; ground.visible = vis.ground; scene.background = vis.bg;
 }
 
@@ -827,6 +847,7 @@ function buildModel(data) {
         m.position.set((minx + maxx) / 2, eaveY + th / 2, (minz + maxz) / 2);
         m.castShadow = true; m.receiveShadow = true;
         roofGroup.add(m);
+        addEdges(m, roofGroup);
         roofTopY = eaveY + th;
         addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2,
           ['평지붕', '처마 ' + oh, '슬래브 ' + th, '높이 ' + Math.round(roofTopY)], labelH * 0.85);
@@ -851,6 +872,7 @@ function buildModel(data) {
         }
         m.castShadow = true; m.receiveShadow = true;
         roofGroup.add(m);
+        addEdges(m, roofGroup);
         roofTopY = eaveY + rise;
         const pitchDeg = Number(roof.pitch) || 30;
         const spanW = ridgeY === 'y' ? (maxx - minx) : (maxz - minz);
@@ -1001,6 +1023,37 @@ roofToggle.addEventListener('click', () => {
 });
 
 document.getElementById('viewsRefresh').addEventListener('click', renderViews);
+
+document.getElementById('viewsSave').addEventListener('click', () => {
+  const tiles = [
+    ['viewTop', '평면도 (위에서)'],
+    ['viewN', '북측 입면'], ['viewE', '동측 입면'],
+    ['viewS', '남측 입면'], ['viewW', '서측 입면']
+  ];
+  const cols = 2, pad = 28, tw = 460, th = 345, cap = 30, titleH = 56;
+  const rows = Math.ceil(tiles.length / cols);
+  const W = pad + cols * (tw + pad);
+  const H = titleH + pad + rows * (th + cap + pad);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#0f172a'; ctx.font = 'bold 24px sans-serif'; ctx.textBaseline = 'middle';
+  ctx.fillText('sketch3d 도면 — 평면도 · 입면도', pad, titleH / 2 + 6);
+  tiles.forEach(([id, label], i) => {
+    const im = document.getElementById(id);
+    const cx = pad + (i % cols) * (tw + pad);
+    const cy = titleH + pad + Math.floor(i / cols) * (th + cap + pad);
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.strokeRect(cx, cy, tw, th);
+    if (im && im.naturalWidth) ctx.drawImage(im, cx, cy, tw, th);
+    ctx.fillStyle = '#334155'; ctx.font = '600 15px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(label, cx + tw / 2, cy + th + cap / 2 + 4);
+    ctx.textAlign = 'left';
+  });
+  const a = document.createElement('a');
+  a.download = 'sketch3d-도면.png';
+  a.href = cv.toDataURL('image/png');
+  a.click();
+});
 
 /* ---------- 대화로 수정 ---------- */
 const chatLog = document.getElementById('chatLog');
