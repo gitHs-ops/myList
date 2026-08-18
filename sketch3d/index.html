@@ -517,7 +517,7 @@ scene.add(roofGroup);
 let showRoof = true;
 
 // 태양 / 방위 상태
-const NORTH_VEC = { up: { x: 0, z: 1 }, down: { x: 0, z: -1 }, right: { x: 1, z: 0 }, left: { x: -1, z: 0 } };
+const NORTH_VEC = { up: { x: 0, z: -1 }, down: { x: 0, z: 1 }, right: { x: 1, z: 0 }, left: { x: -1, z: 0 } };
 let currentNorth = 'up';
 let sunHour = 12;
 const lastCenter = new THREE.Vector3(0, 0, 0);
@@ -531,8 +531,8 @@ function updateSun() {
   const alt = (day ? t * 70 : -5) * Math.PI / 180;            // 고도
   const bearing = (90 + (h - 6) / 12 * 180) * Math.PI / 180;  // 6→동,12→남,18→서
   const nv = NORTH_VEC[currentNorth] || NORTH_VEC.up;
-  const hx = nv.x * Math.cos(bearing) + nv.z * Math.sin(bearing);
-  const hz = -nv.x * Math.sin(bearing) + nv.z * Math.cos(bearing);
+  const hx = nv.x * Math.cos(bearing) - nv.z * Math.sin(bearing);
+  const hz = nv.x * Math.sin(bearing) + nv.z * Math.cos(bearing);
   const dist = Math.max(sz.x, sz.z, 3000) * 2.2;
   const cosA = Math.cos(alt), sinA = Math.max(0.06, Math.sin(Math.max(alt, 0)));
   sun.position.set(c.x + hx * cosA * dist, sinA * dist + 200, c.z + hz * cosA * dist);
@@ -665,8 +665,8 @@ function renderViews() {
   const k = Math.max(0, EO.indexOf(currentNorth));
   const edgeOf = { N: EO[k], E: EO[(k + 1) % 4], S: EO[(k + 2) % 4], W: EO[(k + 3) % 4] };
   const place = {
-    up:    { pos: [c.x, c.y, box.max.z + m], hw: s.x / 2 },
-    down:  { pos: [c.x, c.y, box.min.z - m], hw: s.x / 2 },
+    up:    { pos: [c.x, c.y, box.min.z - m], hw: s.x / 2 },
+    down:  { pos: [c.x, c.y, box.max.z + m], hw: s.x / 2 },
     right: { pos: [box.max.x + m, c.y, c.z], hw: s.z / 2 },
     left:  { pos: [box.min.x - m, c.y, c.z], hw: s.z / 2 },
   };
@@ -714,7 +714,7 @@ function buildModel(data) {
   for (const w of walls) {
     const s = w.start, e = w.end;
     if (!Array.isArray(s) || !Array.isArray(e)) continue;
-    const x1 = s[0], z1 = s[1], x2 = e[0], z2 = e[1];
+    const x1 = s[0], z1 = -s[1], x2 = e[0], z2 = -e[1];  // 평면 y(위=북) → world -z (도면 방위 일치)
     const dx = x2 - x1, dz = z2 - z1;
     const len = Math.hypot(dx, dz);
     if (len < 1) continue;
@@ -821,7 +821,7 @@ function buildModel(data) {
     const k = Math.max(0, EO.indexOf(currentNorth));
     const cm = Math.max(size.x, size.z) / 8 + labelH * 1.5;
     const edgePos = {
-      up: [center.x, bbox.max.z + cm], down: [center.x, bbox.min.z - cm],
+      up: [center.x, bbox.min.z - cm], down: [center.x, bbox.max.z + cm],
       right: [bbox.max.x + cm, center.z], left: [bbox.min.x - cm, center.z]
     };
     EO.forEach((edge, i) => {
