@@ -240,8 +240,8 @@
   .views-card { margin-top: 16px; }
   .views-card h2 { display: flex; align-items: center; }
   .views-card h2 .dim-btn { margin-left: auto; }
-  .views { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
-  .views figure { margin: 0; }
+  .views { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  .views figure { margin: 0; width: 100%; max-width: 680px; }
   .views img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 12px; }
   .views figcaption { text-align: center; font-size: 12px; color: var(--text-secondary); margin-top: 6px; font-weight: 600; }
   .dim-btn {
@@ -386,7 +386,8 @@
 
   <div class="card views-card">
     <h2>평면도 · 입면도
-      <button id="viewsSave" class="dim-btn" style="margin-left:auto">PNG 시트 저장</button>
+      <button id="viewsRoofToggle" class="dim-btn on" style="margin-left:auto">지붕 포함</button>
+      <button id="viewsSave" class="dim-btn" style="margin-left:8px">PNG 시트 저장</button>
       <button id="viewsRefresh" class="dim-btn" style="margin-left:8px">새로고침</button>
     </h2>
     <div class="views">
@@ -515,9 +516,10 @@ scene.add(compassGroup);
 let roofGroup = new THREE.Group();
 scene.add(roofGroup);
 let showRoof = true;
+let drawRoof = true;   // 도면(평면/입면)에 지붕 포함 여부
 
 // 태양 / 방위 상태
-const NORTH_VEC = { up: { x: 0, z: -1 }, down: { x: 0, z: 1 }, right: { x: 1, z: 0 }, left: { x: -1, z: 0 } };
+const NORTH_VEC = { up: { x: 0, z: -1 }, down: { x: 0, z: 1 }, right: { x: -1, z: 0 }, left: { x: 1, z: 0 } };
 let currentNorth = 'up';
 let sunHour = 12;
 const lastCenter = new THREE.Vector3(0, 0, 0);
@@ -531,8 +533,8 @@ function updateSun() {
   const alt = (day ? t * 70 : -5) * Math.PI / 180;            // 고도
   const bearing = (90 + (h - 6) / 12 * 180) * Math.PI / 180;  // 6→동,12→남,18→서
   const nv = NORTH_VEC[currentNorth] || NORTH_VEC.up;
-  const hx = nv.x * Math.cos(bearing) - nv.z * Math.sin(bearing);
-  const hz = nv.x * Math.sin(bearing) + nv.z * Math.cos(bearing);
+  const hx = nv.x * Math.cos(bearing) + nv.z * Math.sin(bearing);
+  const hz = -nv.x * Math.sin(bearing) + nv.z * Math.cos(bearing);
   const dist = Math.max(sz.x, sz.z, 3000) * 2.2;
   const cosA = Math.cos(alt), sinA = Math.max(0.06, Math.sin(Math.max(alt, 0)));
   sun.position.set(c.x + hx * cosA * dist, sinA * dist + 200, c.z + hz * cosA * dist);
@@ -627,10 +629,12 @@ function fitOrtho(cam, halfW, halfH) {
 }
 
 function renderViews() {
+  const roofVisSaved = roofGroup.visible;
+  roofGroup.visible = drawRoof;   // 도면은 3D 지붕 상태와 무관하게 drawRoof로 제어
   const box = new THREE.Box3();
   if (modelGroup.children.length) box.setFromObject(modelGroup);
-  if (roofGroup.visible && roofGroup.children.length) box.expandByObject(roofGroup);
-  if (box.isEmpty()) return;
+  if (drawRoof && roofGroup.children.length) box.expandByObject(roofGroup);
+  if (box.isEmpty()) { roofGroup.visible = roofVisSaved; return; }
   const c = new THREE.Vector3(); box.getCenter(c);
   const s = new THREE.Vector3(); box.getSize(s);
   const m = Math.max(s.x, s.y, s.z) * 2 + 3000;
@@ -667,8 +671,8 @@ function renderViews() {
   const place = {
     up:    { pos: [c.x, c.y, box.min.z - m], hw: s.x / 2 },
     down:  { pos: [c.x, c.y, box.max.z + m], hw: s.x / 2 },
-    right: { pos: [box.max.x + m, c.y, c.z], hw: s.z / 2 },
-    left:  { pos: [box.min.x - m, c.y, c.z], hw: s.z / 2 },
+    right: { pos: [box.min.x - m, c.y, c.z], hw: s.z / 2 },
+    left:  { pos: [box.max.x + m, c.y, c.z], hw: s.z / 2 },
   };
   const imgById = { N: 'viewN', E: 'viewE', S: 'viewS', W: 'viewW' };
   for (const card of ['N', 'E', 'S', 'W']) {
@@ -678,6 +682,7 @@ function renderViews() {
 
   saved.forEach(([o, mat]) => { o.material = mat; });
   grid.visible = vis.grid; dimGroup.visible = vis.dim; compassGroup.visible = vis.comp; ground.visible = vis.ground; scene.background = vis.bg;
+  roofGroup.visible = roofVisSaved;
 }
 
 /* ---------- build ---------- */
@@ -714,7 +719,7 @@ function buildModel(data) {
   for (const w of walls) {
     const s = w.start, e = w.end;
     if (!Array.isArray(s) || !Array.isArray(e)) continue;
-    const x1 = s[0], z1 = -s[1], x2 = e[0], z2 = -e[1];  // 평면 y(위=북) → world -z (도면 방위 일치)
+    const x1 = -s[0], z1 = -s[1], x2 = -e[0], z2 = -e[1];  // 평면(우=동/위=북) → world(-x,-z) 도면 방위 일치
     const dx = x2 - x1, dz = z2 - z1;
     const len = Math.hypot(dx, dz);
     if (len < 1) continue;
@@ -822,7 +827,7 @@ function buildModel(data) {
     const cm = Math.max(size.x, size.z) / 8 + labelH * 1.5;
     const edgePos = {
       up: [center.x, bbox.min.z - cm], down: [center.x, bbox.max.z + cm],
-      right: [bbox.max.x + cm, center.z], left: [bbox.min.x - cm, center.z]
+      right: [bbox.min.x - cm, center.z], left: [bbox.max.x + cm, center.z]
     };
     EO.forEach((edge, i) => {
       const sp = makeLabel(CARD[(i - k + 4) % 4], labelH * 1.05, 'rgba(217,119,6,0.95)');
@@ -1023,6 +1028,14 @@ roofToggle.addEventListener('click', () => {
 });
 
 document.getElementById('viewsRefresh').addEventListener('click', renderViews);
+
+document.getElementById('viewsRoofToggle').addEventListener('click', () => {
+  drawRoof = !drawRoof;
+  const b = document.getElementById('viewsRoofToggle');
+  b.classList.toggle('on', drawRoof);
+  b.textContent = drawRoof ? '지붕 포함' : '지붕 제외';
+  renderViews();
+});
 
 document.getElementById('viewsSave').addEventListener('click', () => {
   const tiles = [
