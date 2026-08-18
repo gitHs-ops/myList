@@ -240,8 +240,10 @@
   .views-card { margin-top: 16px; }
   .views-card h2 { display: flex; align-items: center; }
   .views-card h2 .dim-btn { margin-left: auto; }
-  .views { display: flex; flex-direction: column; gap: 16px; align-items: center; }
-  .views figure { margin: 0; width: 100%; max-width: 680px; }
+  .clr { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .clr input[type="color"] { width: 26px; height: 22px; border: 1px solid var(--field-border); border-radius: 6px; padding: 0; background: none; cursor: pointer; }
+  .views { display: flex; flex-direction: column; gap: 16px; }
+  .views figure { margin: 0; width: 100%; }
   .views img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 12px; }
   .views figcaption { text-align: center; font-size: 12px; color: var(--text-secondary); margin-top: 6px; font-weight: 600; }
   .dim-btn {
@@ -369,8 +371,9 @@
       </div>
     </div>
 
-    <!-- RIGHT: 3D -->
-    <div class="card viewport-card">
+    <!-- RIGHT: 3D + 도면 -->
+    <div class="vp-col">
+      <div class="card viewport-card">
       <div class="vp-bar">
         <span class="stat">벽 <b id="wallCount">0</b>개 · 크기 <b id="dims">—</b></span>
         <div class="vp-right">
@@ -378,26 +381,31 @@
             <input id="sunTime" type="range" min="0" max="24" step="0.5" value="12" />
             <span id="sunLabel">12:00</span>
           </label>
+          <button id="shadowToggle" class="dim-btn on">그림자</button>
+          <label class="clr">벽<input type="color" id="wallColor" value="#dfe6f2" /></label>
+          <label class="clr">지붕<input type="color" id="roofColor" value="#b0674c" /></label>
           <button id="dimToggle" class="dim-btn">치수 표시</button>
           <button id="roofToggle" class="dim-btn on">지붕 숨김</button>
         </div>
       </div>
       <canvas id="viewport"></canvas>
-    </div>
-  </div>
+      </div>
 
-  <div class="card views-card">
-    <h2>평면도 · 입면도
-      <button id="viewsRoofToggle" class="dim-btn on" style="margin-left:auto">지붕 포함</button>
-      <button id="viewsSave" class="dim-btn" style="margin-left:8px">PNG 시트 저장</button>
-      <button id="viewsRefresh" class="dim-btn" style="margin-left:8px">새로고침</button>
-    </h2>
-    <div class="views">
-      <figure><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서)</figcaption></figure>
-      <figure><img id="viewN" alt="북측 입면" /><figcaption>북측 입면</figcaption></figure>
-      <figure><img id="viewE" alt="동측 입면" /><figcaption>동측 입면</figcaption></figure>
-      <figure><img id="viewS" alt="남측 입면" /><figcaption>남측 입면</figcaption></figure>
-      <figure><img id="viewW" alt="서측 입면" /><figcaption>서측 입면</figcaption></figure>
+      <div class="card views-card">
+        <h2>평면도 · 입면도
+          <button id="viewsDimToggle" class="dim-btn" style="margin-left:auto">수치 표시</button>
+          <button id="viewsRoofToggle" class="dim-btn on" style="margin-left:8px">지붕 포함</button>
+          <button id="viewsSave" class="dim-btn" style="margin-left:8px">PNG 저장</button>
+          <button id="viewsRefresh" class="dim-btn" style="margin-left:8px">새로고침</button>
+        </h2>
+        <div class="views">
+          <figure><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서)</figcaption></figure>
+          <figure><img id="viewN" alt="북측 입면" /><figcaption>북측 입면</figcaption></figure>
+          <figure><img id="viewE" alt="동측 입면" /><figcaption>동측 입면</figcaption></figure>
+          <figure><img id="viewS" alt="남측 입면" /><figcaption>남측 입면</figcaption></figure>
+          <figure><img id="viewW" alt="서측 입면" /><figcaption>서측 입면</figcaption></figure>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -533,6 +541,8 @@ let roofGroup = new THREE.Group();
 scene.add(roofGroup);
 let showRoof = true;
 let drawRoof = true;   // 도면(평면/입면)에 지붕 포함 여부
+let viewsDim = false;  // 도면에 치수 표시 여부
+let showShadow = true; // 그림자 표시 여부
 
 // 태양 / 방위 상태
 const NORTH_VEC = { up: { x: 0, z: -1 }, down: { x: 0, z: 1 }, right: { x: 1, z: 0 }, left: { x: -1, z: 0 } };
@@ -570,6 +580,7 @@ const edgeMat = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true
 // 도면(라인드로잉)용: 흰 면(은선 처리) + 검은 외곽선
 const drawFaceMat = new THREE.MeshBasicMaterial({ color: 0xffffff, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 const drawLineMat = new THREE.LineBasicMaterial({ color: 0x1e293b });
+const roofMat = new THREE.MeshStandardMaterial({ color: 0xb0674c, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide });
 
 function addEdges(mesh, group) {
   const e = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat);
@@ -657,7 +668,7 @@ function renderViews() {
 
   // 도면용: 보조요소 숨기고 흰 배경
   const vis = { grid: grid.visible, dim: dimGroup.visible, comp: compassGroup.visible, ground: ground.visible, bg: scene.background };
-  grid.visible = false; dimGroup.visible = false; compassGroup.visible = false; ground.visible = false;
+  grid.visible = false; dimGroup.visible = viewsDim; compassGroup.visible = false; ground.visible = false;
   scene.background = new THREE.Color(0xffffff);
 
   // 라인드로잉 재질로 교체 (은선처리)
@@ -874,7 +885,7 @@ function buildModel(data) {
     scene.remove(compassGroup);
     compassGroup = new THREE.Group();
     scene.add(compassGroup);
-    const EO = ['up', 'right', 'down', 'left'], CARD = ['북', '동', '남', '서'];
+    const EO = ['up', 'right', 'down', 'left'], CARD = ['북', '서', '남', '동'];
     const k = Math.max(0, EO.indexOf(currentNorth));
     const cm = Math.max(size.x, size.z) / 8 + labelH * 1.5;
     const edgePos = {
@@ -896,7 +907,6 @@ function buildModel(data) {
       const minx = bbox.min.x - oh, maxx = bbox.max.x + oh;
       const minz = bbox.min.z - oh, maxz = bbox.max.z + oh;
       const eaveY = bbox.max.y;
-      const roofMat = new THREE.MeshStandardMaterial({ color: 0xb0674c, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide });
 
       if (roof.type === 'flat') {
         const th = 120;
@@ -1098,6 +1108,26 @@ document.getElementById('viewsRoofToggle').addEventListener('click', () => {
   b.textContent = drawRoof ? '지붕 포함' : '지붕 제외';
   renderViews();
 });
+
+document.getElementById('viewsDimToggle').addEventListener('click', () => {
+  viewsDim = !viewsDim;
+  const b = document.getElementById('viewsDimToggle');
+  b.classList.toggle('on', viewsDim);
+  b.textContent = viewsDim ? '수치 숨김' : '수치 표시';
+  renderViews();
+});
+
+/* ---------- 그림자 토글 ---------- */
+document.getElementById('shadowToggle').addEventListener('click', () => {
+  showShadow = !showShadow;
+  sun.castShadow = showShadow;
+  ground.visible = showShadow;
+  document.getElementById('shadowToggle').classList.toggle('on', showShadow);
+});
+
+/* ---------- 색상 지정 (벽/지붕) ---------- */
+document.getElementById('wallColor').addEventListener('input', e => wallMat.color.set(e.target.value));
+document.getElementById('roofColor').addEventListener('input', e => roofMat.color.set(e.target.value));
 
 document.getElementById('viewsSave').addEventListener('click', () => {
   const tiles = [
