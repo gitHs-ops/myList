@@ -47,8 +47,23 @@ const WALL_SCHEMA = {
           end: { type: 'array', items: { type: 'number' } },
           height: { type: 'number' },     // 이 벽 높이(mm). 없으면 wallHeight
           thickness: { type: 'number' },  // 이 벽 두께(mm). 없으면 wallThickness
-          sill: { type: 'number' },       // 소벽: 바닥~개구부 하단(창 아래 벽). 문은 0
-          lintel: { type: 'number' }      // 인방: 개구부 상단~천장(개구부 위 벽)
+          sill: { type: 'number' },       // (벽 전체폭 밴드용) 소벽: 바닥~개구부 하단. 문은 0
+          lintel: { type: 'number' },     // (벽 전체폭 밴드용) 인방: 개구부 상단~천장
+          openings: {                     // 가로 위치·폭이 있는 개별 개구부(창/문)
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['offset', 'width'],
+              properties: {
+                offset: { type: 'number' },  // 벽 시작점에서 개구부 시작까지 거리(mm)
+                width: { type: 'number' },   // 개구부 폭(mm)
+                sill: { type: 'number' },    // 개구부 하단 높이(바닥~, mm). 문=0
+                height: { type: 'number' },  // 개구부 높이(mm)
+                type: { type: 'string', enum: ['window', 'door'] }
+              }
+            }
+          }
         }
       }
     },
@@ -67,7 +82,10 @@ const SYSTEM = `당신은 건축 손그림 스케치를 벽 중심선 좌표로 
   · sill = 소벽 높이 = 바닥~개구부 하단(창 아래 벽). 문이면 0.
   · lintel = 인방 높이 = 개구부 상단~천장(개구부 위 벽).
   · 개구부 높이 = height - sill - lintel 이 됩니다. 치수가 없으면 통상값(창: sill 900, 개구부 1200, lintel 600 / 문: sill 0, 개구부 2100)으로 추정하고 notes에 적습니다.
-- 개구부가 없는 벽은 sill/lintel을 넣지 않습니다(솔리드 벽).
+- 한 벽에 창/문이 특정 가로 위치·폭으로 있으면(예: 통창 + 작은 창) 벽 전체폭 sill/lintel 대신 openings 배열로 각 개구부를 남깁니다:
+  · offset = 벽 시작점(start)에서 개구부 시작까지 거리(mm), width = 개구부 폭(mm), sill = 개구부 하단 높이, height = 개구부 높이, type = 'window'|'door'.
+  · 스케치에 폭·위치 치수가 있으면 반드시 openings로 반영하세요. 문은 sill 0.
+- 개구부가 없는 벽은 sill/lintel/openings를 넣지 않습니다(솔리드 벽).
 - north: 도면에서 북쪽이 어느 방향인지 = 'up'(위,+y) | 'down' | 'left' | 'right'. 스케치에 방위표(N 화살표 등)가 있으면 반영하고, 없으면 'up'으로 둡니다.
 - roof: 지붕 정보(옵션). { type: 'flat'|'gable'|'none', pitch: 물매(°, 박공), overhang: 처마내밀기(mm), ridge: 'x'|'y'(박공 능선 방향) }. 스케치에 지붕/단면이 보이면 반영하고, 없으면 생략합니다.
 - 확신이 낮거나 추정한 내용은 notes에 한국어로 간단히 남깁니다.`;
@@ -129,7 +147,8 @@ const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국�
 - 입력으로 현재 벽 JSON(unit/wallHeight/wallThickness/walls/notes)을 받습니다.
 - 좌표계는 그대로 유지합니다: 단위 mm, 원점 좌하단, x는 오른쪽(+), y는 위쪽(+). 각 벽은 중심선 start[x,y]~end[x,y].
 - "왼쪽/오른쪽/위쪽/아래쪽 벽"은 현재 좌표상의 위치로 식별합니다. 벽 추가/삭제/이동/길이변경/두께·높이 변경 등을 반영합니다.
-- 벽별 옵션 필드로 높이/개구부를 다룰 수 있습니다: height(벽 높이), thickness(두께), sill(소벽=바닥~개구부 하단), lintel(인방=개구부 상단~천장). 개구부 높이 = height - sill - lintel. 문은 sill=0. "창 달아줘/개구부"류 지시는 이 필드로 반영하고, "창 없애줘"는 sill/lintel을 제거합니다.
+- 벽별 옵션 필드로 높이/개구부를 다룰 수 있습니다: height(벽 높이), thickness(두께), sill(소벽=바닥~개구부 하단), lintel(인방=개구부 상단~천장). 개구부 높이 = height - sill - lintel. 문은 sill=0.
+- 가로 위치·폭이 있는 창/문은 openings 배열로 다룹니다: [{offset(벽 시작점~개구부 시작), width(폭), sill, height, type:'window'|'door'}]. "폭 1600 창을 오른쪽에" 같은 지시는 openings로 반영하고, "창 없애줘"는 openings/sill/lintel을 제거합니다.
 - north(도면 북쪽: 'up'|'down'|'left'|'right')도 지시에 따라 설정/변경합니다. 예: "북쪽을 오른쪽으로" → north:'right'.
 - roof(지붕: {type:'flat'|'gable'|'none', pitch, overhang, ridge:'x'|'y'})도 지시에 따라 설정/변경합니다. 예: "박공지붕 물매 30도" → roof:{type:'gable',pitch:30,...}, "지붕 없애" → roof:{type:'none'} 또는 제거.
 - 지시와 무관한 벽은 그대로 둡니다. 방이 닫혀 있어야 하면 연결 좌표를 함께 맞춥니다.

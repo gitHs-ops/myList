@@ -357,6 +357,7 @@
           <button class="btn ghost" data-sample="L">L자 스튜디오</button>
           <button class="btn ghost" data-sample="win">창·문 개구부</button>
           <button class="btn ghost" data-sample="gable">박공 지붕</button>
+          <button class="btn ghost" data-sample="openings">가로 개구부(창·문)</button>
         </div>
       </div>
 
@@ -364,7 +365,7 @@
         <h2><span class="step">4</span> 벽 좌표 JSON</h2>
         <textarea id="jsonBox" spellcheck="false" placeholder='{ "unit":"mm", "wallHeight":2700, "wallThickness":200, "walls":[{"start":[0,0],"end":[5000,0]}] }'></textarea>
         <button id="btnBuild" class="btn" style="margin-top:12px">이 JSON으로 3D 생성</button>
-        <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.<br>벽 옵션: <code>height</code> 벽높이 · <code>thickness</code> 두께 · <code>sill</code> 소벽(개구부 하단) · <code>lintel</code> 인방(개구부 상단). 개구부높이 = height − sill − lintel.</p>
+        <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.<br>벽 옵션: <code>height</code> · <code>thickness</code> · <code>sill</code>/<code>lintel</code>(벽 전체폭 밴드).<br>가로 창/문: <code>openings:[{offset, width, sill, height, type}]</code> — offset=벽 시작점~개구부, width=폭.</p>
       </div>
     </div>
 
@@ -464,6 +465,20 @@ const SAMPLES = {
       { start: [5000, 0], end: [5000, 4000] },
       { start: [5000, 4000], end: [0, 4000] },
       { start: [0, 4000], end: [0, 0], sill: 0, lintel: 500 }
+    ]
+  },
+  openings: {
+    unit: "mm", wallHeight: 2400, wallThickness: 200, north: "up",
+    walls: [
+      { start: [0, 0], end: [6000, 0], openings: [
+        { offset: 200, width: 3800, sill: 900, height: 1200, type: "window" }, // 통창(서/왼쪽)
+        { offset: 4400, width: 1600, sill: 1400, height: 600, type: "window" } // 작은 창(동/오른쪽)
+      ] },
+      { start: [6000, 0], end: [6000, 3000] },
+      { start: [6000, 3000], end: [0, 3000] },
+      { start: [0, 3000], end: [0, 0], openings: [
+        { offset: 900, width: 1000, sill: 0, height: 2100, type: "door" }     // 문
+      ] }
     ]
   }
 };
@@ -701,10 +716,10 @@ function buildModel(data) {
   let built = 0;
 
   // 한 벽의 수직 구간(yb~yt) 박스 생성
-  function addSeg(midX, midZ, len, thick, angle, yb, yt) {
+  function addSeg(midX, midZ, len, thick, angle, yb, yt, ext = thick) {
     const h = yt - yb;
     if (h <= 0) return;
-    const geo = new THREE.BoxGeometry(len + thick, h, thick);
+    const geo = new THREE.BoxGeometry(len + ext, h, thick);
     const mesh = new THREE.Mesh(geo, wallMat);
     mesh.position.set(midX, (yb + yt) / 2, midZ);
     mesh.rotation.y = angle;
@@ -729,29 +744,65 @@ function buildModel(data) {
     const angle = -Math.atan2(dz, dx);
     const thick = Number(w.thickness) || T;
     const wh = Number(w.height) || H;
-    const sill = Math.max(0, Number(w.sill) || 0);
-    const lintel = Math.max(0, Number(w.lintel) || 0);
-    const openBottom = sill, openTop = wh - lintel;
-    const hasOpening = (sill > 0 || lintel > 0) && (openTop - openBottom) > 1;
+    const dux = dx / len, duz = dz / len;
+    const nx = -dz / len, nz = dx / len;
 
-    if (hasOpening) {
-      if (sill > 0) addSeg(midX, midZ, len, thick, angle, 0, sill);        // 소벽
-      if (lintel > 0) addSeg(midX, midZ, len, thick, angle, openTop, wh);  // 인방
+    const opsRaw = Array.isArray(w.openings) ? w.openings : null;
+    if (opsRaw && opsRaw.length) {
+      // 가로 위치·폭이 있는 개구부(창/문): 벽체·소벽·인방으로 가로 분할
+      const segAt = (u0, u1, yb, yt) => {
+        let a = u0, b = u1;
+        if (a <= 1) a -= thick;            // 시작 모서리 겹침
+        if (b >= len - 1) b += thick;      // 끝 모서리 겹침
+        const uc = (a + b) / 2;
+        addSeg(x1 + dux * uc, z1 + duz * uc, b - a, thick, angle, yb, yt, 0);
+      };
+      const ops = opsRaw.map(o => ({
+        off: Number(o.offset) || 0,
+        w: Math.max(0, Number(o.width) || 0),
+        sill: Math.max(0, Number(o.sill) || 0),
+        h: Math.max(0, Number(o.height) || (wh - (Number(o.sill) || 0)))
+      })).filter(o => o.w > 0).sort((a, b) => a.off - b.off);
+
+      let cursor = 0;
+      for (const o of ops) {
+        const oStart = Math.max(0, Math.min(o.off, len));
+        const oEnd = Math.min(len, o.off + o.w);
+        if (oEnd <= oStart) continue;
+        if (oStart > cursor) segAt(cursor, oStart, 0, wh);   // 벽체(기둥)
+        const top = Math.min(wh, o.sill + o.h);
+        if (o.sill > 0) segAt(oStart, oEnd, 0, o.sill);      // 소벽
+        if (top < wh) segAt(oStart, oEnd, top, wh);          // 인방
+        cursor = Math.max(cursor, oEnd);
+
+        const uc = (oStart + oEnd) / 2;
+        const items = [{ y: (o.sill + top) / 2, text: Math.round(o.w) + '×' + Math.round(top - o.sill) }];
+        if (o.sill > 0) items.push({ y: o.sill / 2, text: '소벽 ' + Math.round(o.sill) });
+        if (top < wh) items.push({ y: (top + wh) / 2, text: '인방 ' + Math.round(wh - top) });
+        hLabels.push({ x: x1 + dux * uc, z: z1 + duz * uc, nx, nz, thick, items });
+      }
+      if (cursor < len) segAt(cursor, len, 0, wh);
     } else {
-      addSeg(midX, midZ, len, thick, angle, 0, wh);                        // 솔리드
+      const sill = Math.max(0, Number(w.sill) || 0);
+      const lintel = Math.max(0, Number(w.lintel) || 0);
+      const openTop = wh - lintel;
+      const hasOpening = (sill > 0 || lintel > 0) && (openTop - sill) > 1;
+      if (hasOpening) {
+        if (sill > 0) addSeg(midX, midZ, len, thick, angle, 0, sill);        // 소벽
+        if (lintel > 0) addSeg(midX, midZ, len, thick, angle, openTop, wh);  // 인방
+        const items = [];
+        if (sill > 0) items.push({ y: sill / 2, text: '소벽 ' + Math.round(sill) });
+        items.push({ y: (sill + openTop) / 2, text: '개구부 ' + Math.round(openTop - sill) });
+        if (lintel > 0) items.push({ y: (openTop + wh) / 2, text: '인방 ' + Math.round(lintel) });
+        hLabels.push({ x: midX, z: midZ, nx, nz, thick, items });
+      } else {
+        addSeg(midX, midZ, len, thick, angle, 0, wh);                        // 솔리드
+      }
     }
 
     bbox.expandByPoint(new THREE.Vector3(x1, 0, z1));
     bbox.expandByPoint(new THREE.Vector3(x2, wh, z2));
     labels.push({ x: midX, z: midZ, len, top: wh });
-
-    if (hasOpening) {
-      const items = [];
-      if (sill > 0) items.push({ y: sill / 2, text: '소벽 ' + Math.round(sill) });
-      items.push({ y: (openBottom + openTop) / 2, text: '개구부 ' + Math.round(openTop - openBottom) });
-      if (lintel > 0) items.push({ y: (openTop + wh) / 2, text: '인방 ' + Math.round(lintel) });
-      hLabels.push({ x: midX, z: midZ, nx: -dz / len, nz: dx / len, thick, items });
-    }
     built++;
   }
 
