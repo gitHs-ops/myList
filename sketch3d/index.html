@@ -554,6 +554,9 @@ dimGroup.visible = false;
 scene.add(dimGroup);
 let showDims = false;
 
+let roofDimGroup = new THREE.Group();
+dimGroup.add(roofDimGroup);
+
 let compassGroup = new THREE.Group();
 scene.add(compassGroup);
 
@@ -645,7 +648,7 @@ function addRoofLabels(ax, ay, az, items, lh) {
   items.forEach((t, i) => {
     const sp = makeLabel(t, lh, 'rgba(176,103,76,0.96)');
     sp.position.set(ax, ay - i * lh * 1.15, az);
-    dimGroup.add(sp);
+    roofDimGroup.add(sp);
   });
 }
 
@@ -666,10 +669,11 @@ function tick() {
 tick();
 
 /* ---------- 정투영 도면 (평면도 + 4방위 입면) ---------- */
+const VIEW_W = 960, VIEW_H = 720; // 갤러리 썸네일 렌더 해상도(2배) — 흐림 방지
 const viewRenderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 viewRenderer.setPixelRatio(1);
-viewRenderer.setSize(480, 360);
-const VIEW_ASPECT = 480 / 360;
+viewRenderer.setSize(VIEW_W, VIEW_H);
+const VIEW_ASPECT = VIEW_W / VIEW_H;
 
 function fitOrtho(cam, halfW, halfH) {
   if (halfW / halfH > VIEW_ASPECT) halfH = halfW / VIEW_ASPECT; else halfW = halfH * VIEW_ASPECT;
@@ -680,11 +684,13 @@ function fitOrtho(cam, halfW, halfH) {
 
 function renderViews() {
   const roofVisSaved = roofGroup.visible;
+  const roofDimVisSaved = roofDimGroup.visible;
   roofGroup.visible = drawRoof;   // 도면은 3D 지붕 상태와 무관하게 drawRoof로 제어
+  roofDimGroup.visible = drawRoof;
   const box = new THREE.Box3();
   if (modelGroup.children.length) box.setFromObject(modelGroup);
   if (drawRoof && roofGroup.children.length) box.expandByObject(roofGroup);
-  if (box.isEmpty()) { roofGroup.visible = roofVisSaved; return; }
+  if (box.isEmpty()) { roofGroup.visible = roofVisSaved; roofDimGroup.visible = roofDimVisSaved; return; }
   const c = new THREE.Vector3(); box.getCenter(c);
   const s = new THREE.Vector3(); box.getSize(s);
   const m = Math.max(s.x, s.y, s.z) * 2 + 3000;
@@ -733,6 +739,7 @@ function renderViews() {
   saved.forEach(([o, mat]) => { o.material = mat; });
   grid.visible = vis.grid; dimGroup.visible = vis.dim; compassGroup.visible = vis.comp; ground.visible = vis.ground; scene.background = vis.bg;
   roofGroup.visible = roofVisSaved;
+  roofDimGroup.visible = roofDimVisSaved;
 }
 
 /* ---------- build ---------- */
@@ -860,6 +867,9 @@ function buildModel(data) {
   dimGroup = new THREE.Group();
   dimGroup.visible = showDims;
   scene.add(dimGroup);
+  roofDimGroup = new THREE.Group();
+  roofDimGroup.visible = showRoof;
+  dimGroup.add(roofDimGroup);
 
   // rebuild roof group
   scene.remove(roofGroup);
@@ -1118,6 +1128,7 @@ const roofToggle = document.getElementById('roofToggle');
 roofToggle.addEventListener('click', () => {
   showRoof = !showRoof;
   roofGroup.visible = showRoof;
+  roofDimGroup.visible = showRoof;
   roofToggle.classList.toggle('on', showRoof);
   roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
   renderViews();
@@ -1215,7 +1226,7 @@ document.getElementById('btnPermitPdf').addEventListener('click', () => {
     W: document.getElementById('viewW').src
   };
   viewsDim = savedViewsDim;
-  viewRenderer.setSize(480, 360);
+  viewRenderer.setSize(VIEW_W, VIEW_H);
   renderViews();
 
   const today = new Date();
