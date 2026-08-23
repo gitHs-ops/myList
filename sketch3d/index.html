@@ -369,6 +369,16 @@
         <button id="btnBuild" class="btn" style="margin-top:12px">이 JSON으로 3D 생성</button>
         <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.<br>벽 옵션: <code>height</code> · <code>thickness</code> · <code>sill</code>/<code>lintel</code>(벽 전체폭 밴드).<br>가로 창/문: <code>openings:[{offset, width, sill, height, type}]</code> — offset=벽 시작점~개구부, width=폭.</p>
       </div>
+
+      <div class="card">
+        <h2><span class="step">5</span> 프로젝트 저장 · 불러오기</h2>
+        <div class="btn-row">
+          <button id="btnSaveProject" class="btn ghost">💾 저장 (.json)</button>
+          <button id="btnLoadProject" class="btn ghost">📂 불러오기</button>
+        </div>
+        <input id="projectFileInput" type="file" accept="application/json" style="display:none" />
+        <p class="hint">업로드 스케치 이미지 · 3D 표시 설정(색상·지붕·치수·그림자·태양시간) · 벽 좌표 JSON을 파일 하나로 저장합니다. 불러오면 그대로 재현됩니다.</p>
+      </div>
     </div>
 
     <!-- RIGHT: 3D + 도면 -->
@@ -1158,6 +1168,98 @@ document.getElementById('viewsSave').addEventListener('click', () => {
   a.download = 'sketch3d-도면.png';
   a.href = cv.toDataURL('image/png');
   a.click();
+});
+
+/* ---------- 프로젝트 저장 · 불러오기 ---------- */
+function collectSceneState() {
+  return {
+    wallColor: '#' + wallMat.color.getHexString(),
+    roofColor: '#' + roofMat.color.getHexString(),
+    showRoof, showDims, showShadow, viewsDim, drawRoof, sunHour
+  };
+}
+
+function applySceneVars(s) {
+  if (!s) return;
+  if (s.wallColor) wallMat.color.set(s.wallColor);
+  if (s.roofColor) roofMat.color.set(s.roofColor);
+  if (typeof s.showRoof === 'boolean') showRoof = s.showRoof;
+  if (typeof s.showDims === 'boolean') showDims = s.showDims;
+  if (typeof s.showShadow === 'boolean') showShadow = s.showShadow;
+  if (typeof s.viewsDim === 'boolean') viewsDim = s.viewsDim;
+  if (typeof s.drawRoof === 'boolean') drawRoof = s.drawRoof;
+  if (typeof s.sunHour === 'number') sunHour = s.sunHour;
+}
+
+function syncToggleUI() {
+  document.getElementById('wallColor').value = '#' + wallMat.color.getHexString();
+  document.getElementById('roofColor').value = '#' + roofMat.color.getHexString();
+  roofToggle.classList.toggle('on', showRoof);
+  roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
+  dimToggle.classList.toggle('on', showDims);
+  dimToggle.textContent = showDims ? '치수 숨김' : '치수 표시';
+  sun.castShadow = showShadow;
+  ground.visible = showShadow;
+  document.getElementById('shadowToggle').classList.toggle('on', showShadow);
+  const vdBtn = document.getElementById('viewsDimToggle');
+  vdBtn.classList.toggle('on', viewsDim);
+  vdBtn.textContent = viewsDim ? '수치 숨김' : '수치 표시';
+  const vrBtn = document.getElementById('viewsRoofToggle');
+  vrBtn.classList.toggle('on', drawRoof);
+  vrBtn.textContent = drawRoof ? '지붕 포함' : '지붕 제외';
+  sunTime.value = sunHour;
+  const hh = Math.floor(sunHour), mm = Math.round((sunHour - hh) * 60);
+  sunLabel.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+document.getElementById('btnSaveProject').addEventListener('click', () => {
+  let model = null;
+  try { model = JSON.parse(jsonBox.value); } catch { model = null; }
+  const savedAt = new Date().toISOString();
+  const project = {
+    type: 'sketch3d-project',
+    version: 1,
+    savedAt,
+    wallHeight: Number(document.getElementById('wallHeight').value) || 2400,
+    wallThickness: Number(document.getElementById('wallThickness').value) || 150,
+    images,
+    model,
+    scene: collectSceneState()
+  };
+  const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.download = `sketch3d-project-${savedAt.replace(/[:.]/g, '-')}.json`;
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  status(`프로젝트를 저장했습니다. (이미지 ${images.length}장 · 벽 ${model?.walls?.length || 0}개)`, 'ok');
+});
+
+const projectFileInput = document.getElementById('projectFileInput');
+document.getElementById('btnLoadProject').addEventListener('click', () => projectFileInput.click());
+projectFileInput.addEventListener('change', () => {
+  const file = projectFileInput.files[0];
+  projectFileInput.value = '';
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const project = JSON.parse(r.result);
+      if (Array.isArray(project.images)) { images = project.images.slice(); renderThumbs(); }
+      if (project.wallHeight) document.getElementById('wallHeight').value = project.wallHeight;
+      if (project.wallThickness) document.getElementById('wallThickness').value = project.wallThickness;
+      applySceneVars(project.scene);
+      if (project.model) {
+        jsonBox.value = JSON.stringify(project.model, null, 2);
+        buildModel(project.model);
+      }
+      syncToggleUI();
+      status(`프로젝트를 불러왔습니다. (이미지 ${images.length}장 · 벽 ${project.model?.walls?.length || 0}개)`, 'ok');
+    } catch (e) {
+      status('프로젝트 파일을 읽을 수 없습니다: ' + e.message, 'err');
+    }
+  };
+  r.readAsText(file);
 });
 
 /* ---------- 대화로 수정 ---------- */
