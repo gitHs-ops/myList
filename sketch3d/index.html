@@ -331,7 +331,7 @@
           <details class="adv">
             <summary>백엔드 설정</summary>
             <label class="fld">Extract API URL</label>
-            <input id="apiUrl" type="text" placeholder="http://localhost:8787/api/extract" />
+            <input id="apiUrl" type="text" placeholder="https://mylist-9nha.onrender.com/api/extract" />
             <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·4번(샘플/JSON)은 동작합니다.</p>
           </details>
           <button id="descToggle" class="desc-toggle">설명 숨기기</button>
@@ -1045,7 +1045,7 @@ function renderThumbs() {
 
 /* ---------- backend URL ---------- */
 const apiUrlInput = document.getElementById('apiUrl');
-apiUrlInput.value = localStorage.getItem('sketch3d_api') || 'http://localhost:8787/api/extract';
+apiUrlInput.value = localStorage.getItem('sketch3d_api') || 'https://mylist-9nha.onrender.com/api/extract';
 apiUrlInput.addEventListener('change', () => localStorage.setItem('sketch3d_api', apiUrlInput.value.trim()));
 
 /* ---------- extract via backend ---------- */

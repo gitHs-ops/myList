@@ -35,7 +35,7 @@ npm start                 # http://localhost:8787
 
 ## 배포
 - 프론트: GitHub Pages → `https://giths-ops.github.io/myList/sketch3d/`
-- 백엔드: Render (`server/render.yaml`), 환경변수 `ANTHROPIC_API_KEY` 설정 → 발급된 URL을 프론트 "백엔드 설정"에 입력
+- 백엔드: Render → `https://mylist-9nha.onrender.com` (Web Service 수동 생성, Root Directory `server`, 환경변수 `ANTHROPIC_API_KEY`/`VISION_MODEL`). 프론트 기본 Extract API URL이 이 주소로 설정되어 있음(`/api/extract`).
 
 ## 로드맵
 1. ✅ 벽체 3D 자동 생성 (현재)
