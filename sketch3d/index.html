@@ -874,9 +874,10 @@ function buildModel(data) {
     grid.position.set(center.x, 0, center.z);
 
     const labelH = Math.min(1200, Math.max(220, Math.max(size.x, size.z) / 16));
+    const dimFontH = labelH * 0.5;  // 치수 라벨 폰트 크기 (표시 위치 간격은 labelH 유지)
     // 길이 라벨 (벽 위)
     for (const l of labels) {
-      const sp = makeLabel(String(Math.round(l.len)), labelH);
+      const sp = makeLabel(String(Math.round(l.len)), dimFontH);
       sp.position.set(l.x, l.top + labelH, l.z);
       dimGroup.add(sp);
     }
@@ -887,7 +888,7 @@ function buildModel(data) {
       const off = hl.thick / 2 + labelH * 1.1 + 120;
       const px = hl.x + hl.nx * off * sgn, pz = hl.z + hl.nz * off * sgn;
       for (const it of hl.items) {
-        const sp = makeLabel(it.text, labelH * 0.78, 'rgba(8,145,178,0.94)');
+        const sp = makeLabel(it.text, dimFontH * 0.78, 'rgba(8,145,178,0.94)');
         sp.position.set(px, it.y, pz);
         dimGroup.add(sp);
       }
@@ -937,7 +938,7 @@ function buildModel(data) {
         addEdges(m, roofGroup);
         roofTopY = eaveY + th;
         addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2,
-          ['평지붕', '처마 ' + oh, '슬래브 ' + th, '높이 ' + Math.round(roofTopY)], labelH * 0.85);
+          ['평지붕', '처마 ' + oh, '슬래브 ' + th, '높이 ' + Math.round(roofTopY)], dimFontH * 0.85);
       } else if (roof.type === 'gable') {
         const pitch = (Number(roof.pitch) || 30) * Math.PI / 180;
         const ridgeY = roof.ridge === 'y' ? 'y' : 'x';
@@ -964,8 +965,8 @@ function buildModel(data) {
         const pitchDeg = Number(roof.pitch) || 30;
         const spanW = ridgeY === 'y' ? (maxx - minx) : (maxz - minz);
         const items = ['박공 물매 ' + pitchDeg + '°', '용마루 +' + Math.round(rise), '스팬 ' + Math.round(spanW), '처마 ' + oh];
-        if (ridgeY === 'y') addRoofLabels((minx + maxx) / 2, roofTopY, maxz + labelH * 1.2, items, labelH * 0.85);
-        else addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2, items, labelH * 0.85);
+        if (ridgeY === 'y') addRoofLabels((minx + maxx) / 2, roofTopY, maxz + labelH * 1.2, items, dimFontH * 0.85);
+        else addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2, items, dimFontH * 0.85);
       }
     }
 
