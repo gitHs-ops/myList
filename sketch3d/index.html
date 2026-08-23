@@ -895,7 +895,7 @@ function buildModel(data) {
     scene.remove(compassGroup);
     compassGroup = new THREE.Group();
     scene.add(compassGroup);
-    const EO = ['up', 'right', 'down', 'left'], CARD = ['북', '서', '남', '동'];
+    const EO = ['up', 'right', 'down', 'left'], CARD = ['북', '동', '남', '서'];
     const k = Math.max(0, EO.indexOf(currentNorth));
     const cm = Math.max(size.x, size.z) / 8 + labelH * 1.5;
     const edgePos = {
