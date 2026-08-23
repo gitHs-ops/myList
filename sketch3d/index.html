@@ -256,6 +256,15 @@
   }
   .dim-btn:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
   .dim-btn.on { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: #fff; border-color: transparent; }
+  .dim-btn:disabled { opacity: .5; cursor: default; background: var(--field-bg); color: var(--text-secondary); border-color: var(--field-border); }
+  .chk-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-main); font-weight: 700; font-size: 12px; cursor: pointer;
+    border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
+    border-radius: 999px; padding: 5px 12px 5px 10px;
+  }
+  .chk-btn:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
+  .chk-btn input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--accent-primary); cursor: pointer; margin: 0; }
 
   .status {
     margin-top: 12px;
@@ -413,12 +422,11 @@
 
       <div class="card views-card">
         <h2>평면도 · 입면도
-          <button id="viewsDimToggle" class="dim-btn" style="margin-left:auto">수치 표시</button>
-          <button id="viewsRoofToggle" class="dim-btn on" style="margin-left:8px">지붕 포함</button>
-          <button id="viewsSave" class="dim-btn" style="margin-left:8px">PNG 저장</button>
+          <label class="chk-btn" style="margin-left:auto"><input type="checkbox" id="viewsDimToggle" /> 수치 표시</label>
+          <label class="chk-btn" style="margin-left:8px"><input type="checkbox" id="viewsRoofToggle" checked /> 지붕 포함</label>
           <button id="viewsRefresh" class="dim-btn" style="margin-left:8px;background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">📐 도면 생성</button>
         </h2>
-        <p class="hint">위 옵션(수치/지붕)을 바꾼 뒤 <b>도면 생성</b>을 눌러야 아래 평면도·입면도에 반영됩니다.</p>
+        <p class="hint">수치·지붕 체크박스를 바꾸거나 모델을 다시 만들면 <b>도면 생성</b> 버튼이 활성화됩니다. 눌러야 아래 평면도·입면도에 반영됩니다.</p>
         <div class="views">
           <figure><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서)</figcaption></figure>
           <figure><img id="viewN" alt="북측 입면" /><figcaption>북측 입면</figcaption></figure>
@@ -1022,6 +1030,7 @@ function buildModel(data) {
   } else {
     document.getElementById('dims').textContent = '—';
   }
+  markViewsDirty();
   return built;
 }
 
@@ -1164,20 +1173,28 @@ roofToggle.addEventListener('click', () => {
   roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
 });
 
-document.getElementById('viewsRefresh').addEventListener('click', renderViews);
-
-document.getElementById('viewsRoofToggle').addEventListener('click', () => {
-  drawRoof = !drawRoof;
-  const b = document.getElementById('viewsRoofToggle');
-  b.classList.toggle('on', drawRoof);
-  b.textContent = drawRoof ? '지붕 포함' : '지붕 제외';
+/* ---------- 평면도·입면도 생성 버튼 (변경사항 발생 시 활성화) ---------- */
+const viewsGenBtn = document.getElementById('viewsRefresh');
+let hasGeneratedViews = false;
+function markViewsDirty() {
+  viewsGenBtn.disabled = false;
+  viewsGenBtn.textContent = hasGeneratedViews ? '🔄 도면 재생성' : '📐 도면 생성';
+}
+viewsGenBtn.addEventListener('click', () => {
+  renderViews();
+  hasGeneratedViews = true;
+  viewsGenBtn.disabled = true;
+  viewsGenBtn.textContent = '📐 도면 생성';
 });
 
-document.getElementById('viewsDimToggle').addEventListener('click', () => {
-  viewsDim = !viewsDim;
-  const b = document.getElementById('viewsDimToggle');
-  b.classList.toggle('on', viewsDim);
-  b.textContent = viewsDim ? '수치 숨김' : '수치 표시';
+document.getElementById('viewsRoofToggle').addEventListener('change', e => {
+  drawRoof = e.target.checked;
+  markViewsDirty();
+});
+
+document.getElementById('viewsDimToggle').addEventListener('change', e => {
+  viewsDim = e.target.checked;
+  markViewsDirty();
 });
 
 /* ---------- 그림자 토글 ---------- */
@@ -1191,37 +1208,6 @@ document.getElementById('shadowToggle').addEventListener('click', () => {
 /* ---------- 색상 지정 (벽/지붕) ---------- */
 document.getElementById('wallColor').addEventListener('input', e => wallMat.color.set(e.target.value));
 document.getElementById('roofColor').addEventListener('input', e => roofMat.color.set(e.target.value));
-
-document.getElementById('viewsSave').addEventListener('click', () => {
-  const tiles = [
-    ['viewTop', '평면도 (위에서)'],
-    ['viewN', '북측 입면'], ['viewE', '동측 입면'],
-    ['viewS', '남측 입면'], ['viewW', '서측 입면']
-  ];
-  const cols = 2, pad = 28, tw = 460, th = 345, cap = 30, titleH = 56;
-  const rows = Math.ceil(tiles.length / cols);
-  const W = pad + cols * (tw + pad);
-  const H = titleH + pad + rows * (th + cap + pad);
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#0f172a'; ctx.font = 'bold 24px sans-serif'; ctx.textBaseline = 'middle';
-  ctx.fillText('sketch3d 도면 — 평면도 · 입면도', pad, titleH / 2 + 6);
-  tiles.forEach(([id, label], i) => {
-    const im = document.getElementById(id);
-    const cx = pad + (i % cols) * (tw + pad);
-    const cy = titleH + pad + Math.floor(i / cols) * (th + cap + pad);
-    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.strokeRect(cx, cy, tw, th);
-    if (im && im.naturalWidth) ctx.drawImage(im, cx, cy, tw, th);
-    ctx.fillStyle = '#334155'; ctx.font = '600 15px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(label, cx + tw / 2, cy + th + cap / 2 + 4);
-    ctx.textAlign = 'left';
-  });
-  const a = document.createElement('a');
-  a.download = 'sketch3d-도면.png';
-  a.href = cv.toDataURL('image/png');
-  a.click();
-});
 
 /* ---------- 인허가용 정식 도면 (인쇄 → PDF) ---------- */
 function escapeHtml(s) {
@@ -1350,12 +1336,8 @@ function syncToggleUI() {
   sun.castShadow = showShadow;
   ground.visible = showShadow;
   document.getElementById('shadowToggle').classList.toggle('on', showShadow);
-  const vdBtn = document.getElementById('viewsDimToggle');
-  vdBtn.classList.toggle('on', viewsDim);
-  vdBtn.textContent = viewsDim ? '수치 숨김' : '수치 표시';
-  const vrBtn = document.getElementById('viewsRoofToggle');
-  vrBtn.classList.toggle('on', drawRoof);
-  vrBtn.textContent = drawRoof ? '지붕 포함' : '지붕 제외';
+  document.getElementById('viewsDimToggle').checked = viewsDim;
+  document.getElementById('viewsRoofToggle').checked = drawRoof;
   sunTime.value = sunHour;
   const hh = Math.floor(sunHour), mm = Math.round((sunHour - hh) * 60);
   sunLabel.textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
