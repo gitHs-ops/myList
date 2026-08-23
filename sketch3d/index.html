@@ -781,6 +781,12 @@ function renderViews() {
     Object.entries(heightEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
     Object.entries(lengthEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
     shot(imgById[card], p.pos, [0, 1, 0], p.hw, s.y / 2);
+    window.__shotDebug = window.__shotDebug || {};
+    window.__shotDebug[card] = {
+      edge, camPos: cam.position.toArray(), camTop: cam.top, camBottom: cam.bottom, camLeft: cam.left, camRight: cam.right,
+      boxMinY: box.min.y, boxMaxY: box.max.y, lastSizeY: lastSize.y,
+      lengthChildren: lengthEdgeGroups[edge].children.map(o => ({ pos: o.position.toArray(), visible: o.visible }))
+    };
   }
   Object.values(heightEdgeGroups).forEach(g => { g.visible = true; });
   Object.values(lengthEdgeGroups).forEach(g => { g.visible = true; });
