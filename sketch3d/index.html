@@ -610,7 +610,8 @@ function addEdges(mesh, group) {
 
 // 치수 라벨 스프라이트 (항상 카메라를 향함, 벽 위로 렌더)
 function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
-  const fs = 64, pad = 18;
+  const SS = 3; // 슈퍼샘플 배수 — 라벨이 작아져도 텍스트 해상도를 유지해 흐림 방지
+  const fs = 64 * SS, pad = 18 * SS;
   const cvs = document.createElement('canvas');
   let ctx = cvs.getContext('2d');
   ctx.font = `bold ${fs}px sans-serif`;
@@ -620,15 +621,17 @@ function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
   ctx = cvs.getContext('2d');
   ctx.font = `bold ${fs}px sans-serif`;
   ctx.fillStyle = color;
-  const r = 22;
+  const r = 22 * SS;
   if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(0, 0, cvs.width, cvs.height, r); ctx.fill(); }
   else ctx.fillRect(0, 0, cvs.width, cvs.height);
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, cvs.width / 2, cvs.height / 2 + 2);
+  ctx.fillText(text, cvs.width / 2, cvs.height / 2 + 2 * SS);
 
   const tex = new THREE.CanvasTexture(cvs);
+  tex.minFilter = THREE.LinearFilter;   // 밉맵 블렌딩으로 인한 흐림 방지
+  tex.generateMipmaps = false;
   tex.anisotropy = 4;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
   const sp = new THREE.Sprite(mat);
@@ -1244,6 +1247,7 @@ document.getElementById('btnPermitPdf').addEventListener('click', () => {
 <style>
   @page { size: A3 landscape; margin: 12mm; }
   * { box-sizing: border-box; }
+  html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; filter: grayscale(100%); }
   body { font-family: 'Pretendard', -apple-system, sans-serif; margin: 0; color: #0f172a; }
   .sheet { page-break-after: always; padding: 6mm; display: flex; flex-direction: column; min-height: 273mm; }
   .sheet:last-child { page-break-after: auto; }
