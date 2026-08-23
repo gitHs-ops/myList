@@ -963,6 +963,16 @@ function buildModel(data) {
         ? (l.z < center.z ? 'up' : 'down')
         : (l.x < center.x ? 'left' : 'right');
       lengthEdgeGroups[edgeKey].add(sp);
+
+      // 벽 전체 높이(세로 치수) — 입면도에서 가로(길이)만 있고 세로가 없으면
+      // 도면 해석이 안 되므로, 벽 한쪽 끝에 세로 방향으로 배치
+      const dux = l.nz, duz = -l.nx;   // 벽 진행 방향(단위벡터)
+      const endMargin = Math.max(dimFontH * 1.6, 300);
+      const hx = l.x - dux * Math.max(0, l.len / 2 - endMargin);
+      const hz = l.z - duz * Math.max(0, l.len / 2 - endMargin);
+      const hsp = makeLabel(String(Math.round(l.top)), dimFontH);
+      hsp.position.set(hx, l.top / 2, hz);
+      lengthEdgeGroups[edgeKey].add(hsp);
     }
     // 높이 라벨 (개구부 있는 벽 옆, 소벽/개구부/인방 수치)
     for (const hl of hLabels) {
