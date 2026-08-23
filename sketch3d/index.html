@@ -1266,15 +1266,15 @@ document.getElementById('btnPermitPdf').addEventListener('click', () => {
   * { box-sizing: border-box; }
   html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; filter: grayscale(100%); }
   body { font-family: 'Pretendard', -apple-system, sans-serif; margin: 0; color: #0f172a; }
-  .sheet { page-break-after: always; padding: 6mm; display: flex; flex-direction: column; min-height: 273mm; }
+  .sheet { page-break-after: always; padding: 6mm; display: flex; flex-direction: column; height: 273mm; overflow: hidden; }
   .sheet:last-child { page-break-after: auto; }
-  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; gap: 12px; }
+  header { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; gap: 12px; }
   header .proj { font-weight: 800; font-size: 16px; }
   header .dwg { font-weight: 700; font-size: 14px; }
   header .meta { font-size: 11.5px; color: #475569; white-space: nowrap; }
-  .imgwrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .imgwrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
   .imgwrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
-  footer { border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 10px; font-size: 10.5px; color: #475569; }
+  footer { flex: 0 0 auto; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 10px; font-size: 10.5px; color: #475569; }
   footer .disclaimer { margin-top: 4px; color: #b45309; font-weight: 600; }
 </style>
 </head><body>${pagesHtml}</body></html>`;
