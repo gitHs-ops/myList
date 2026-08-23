@@ -660,6 +660,18 @@ function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
   return sp;
 }
 
+// 재생성 전 그룹의 GPU 리소스(지오메트리, 라벨 전용 텍스처/머티리얼) 해제
+// — 안 하면 재생성마다 orphan 텍스처가 쌓여 세션이 길어질수록 GPU 리소스가 고갈됨
+function disposeGroup(group) {
+  group.traverse(obj => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.isSprite && obj.material) {
+      if (obj.material.map) obj.material.map.dispose();
+      obj.material.dispose();
+    }
+  });
+}
+
 // 지붕 치수 라벨 스택 (dimGroup에 추가 → 치수 토글로 on/off)
 function addRoofLabels(ax, ay, az, items, lh) {
   items.forEach((t, i) => {
@@ -770,6 +782,7 @@ function renderViews() {
 
 /* ---------- build ---------- */
 function buildModel(data) {
+  disposeGroup(modelGroup);
   scene.remove(modelGroup);
   modelGroup = new THREE.Group();
 
@@ -889,6 +902,7 @@ function buildModel(data) {
   scene.add(modelGroup);
 
   // rebuild dimension labels
+  disposeGroup(dimGroup);
   scene.remove(dimGroup);
   dimGroup = new THREE.Group();
   dimGroup.visible = showDims;
@@ -904,6 +918,7 @@ function buildModel(data) {
   Object.values(lengthEdgeGroups).forEach(g => dimGroup.add(g));
 
   // rebuild roof group
+  disposeGroup(roofGroup);
   scene.remove(roofGroup);
   roofGroup = new THREE.Group();
   roofGroup.visible = showRoof;
@@ -957,6 +972,7 @@ function buildModel(data) {
     ground.position.set(center.x, 1, center.z);
 
     // 방위 라벨 (도면 상하좌우 = 북/동/남/서)
+    disposeGroup(compassGroup);
     scene.remove(compassGroup);
     compassGroup = new THREE.Group();
     scene.add(compassGroup);
