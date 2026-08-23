@@ -73,6 +73,8 @@
   }
 
   header.hero { margin-bottom: 22px; animation: rise .6s var(--ease) both; }
+  .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .hero-actions { flex: 0 0 auto; }
   .backend-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 14px; }
   .backend-line .adv { flex: 1; margin-top: 0; }
   .desc-toggle {
@@ -298,7 +300,14 @@
 
 <div class="wrap">
   <header class="hero">
-    <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입</h1>
+    <div class="hero-top">
+      <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입</h1>
+      <div class="btn-row hero-actions">
+        <button id="btnSaveProject" class="btn ghost">💾 저장</button>
+        <button id="btnLoadProject" class="btn ghost">📂 불러오기</button>
+        <input id="projectFileInput" type="file" accept="application/json" style="display:none" />
+      </div>
+    </div>
     <p class="hero-sub">치수가 적힌 손그림 스케치를 올리면 벽체를 3D로 세워줍니다. 비전 API 없이도 아래 <b>샘플/JSON</b>으로 파이프라인을 바로 확인할 수 있습니다.</p>
   </header>
 
@@ -332,7 +341,7 @@
             <summary>백엔드 설정</summary>
             <label class="fld">Extract API URL</label>
             <input id="apiUrl" type="text" placeholder="https://mylist-9nha.onrender.com/api/extract" />
-            <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·6번(JSON/샘플)은 동작합니다.</p>
+            <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·5번(JSON/샘플)은 동작합니다.</p>
           </details>
           <button id="descToggle" class="desc-toggle">설명 숨기기</button>
         </div>
@@ -359,17 +368,7 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">4</span> 프로젝트 저장 · 불러오기</h2>
-        <div class="btn-row">
-          <button id="btnSaveProject" class="btn ghost">💾 저장 (.json)</button>
-          <button id="btnLoadProject" class="btn ghost">📂 불러오기</button>
-        </div>
-        <input id="projectFileInput" type="file" accept="application/json" style="display:none" />
-        <p class="hint">업로드 스케치 이미지 · 3D 표시 설정(색상·지붕·치수·그림자·태양시간) · 벽 좌표 JSON을 파일 하나로 저장합니다. 불러오면 그대로 재현됩니다.</p>
-      </div>
-
-      <div class="card">
-        <h2><span class="step">5</span> 인허가용 정식 도면</h2>
+        <h2><span class="step">4</span> 인허가용 정식 도면</h2>
         <div class="num-row">
           <input id="permitProject" type="text" placeholder="프로젝트명 (예: 영덕감성산장 객실동)" />
           <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
@@ -379,7 +378,7 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">6</span> 샘플로 테스트 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
+        <h2><span class="step">5</span> 샘플로 테스트 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
         <div class="btn-row">
           <button class="btn ghost" data-sample="room">단일 객실</button>
           <button class="btn ghost" data-sample="two">투룸 + 복도</button>
@@ -633,9 +632,7 @@ function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
   ctx.fillText(text, cvs.width / 2, cvs.height / 2 + 2 * SS);
 
   const tex = new THREE.CanvasTexture(cvs);
-  tex.minFilter = THREE.LinearFilter;   // 밉맵 블렌딩으로 인한 흐림 방지
-  tex.generateMipmaps = false;
-  tex.anisotropy = 4;
+  tex.anisotropy = 4;   // 밉맵은 유지(원거리 축소 시 앨리어싱 방지), 슈퍼샘플로 근접 흐림만 보완
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
   const sp = new THREE.Sprite(mat);
   sp.renderOrder = 999;
