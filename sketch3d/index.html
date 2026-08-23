@@ -560,9 +560,9 @@ dimGroup.add(roofDimGroup);
 
 let heightDimGroup = new THREE.Group();   // 소벽/인방/개구부 높이 라벨 — 평면도에서는 숨김
 dimGroup.add(heightDimGroup);
-let nsHeightGroup = new THREE.Group();    // 남/북 벽(가로 방향) 라벨 — 동/서 입면에서는 숨김
-let ewHeightGroup = new THREE.Group();    // 동/서 벽(세로 방향) 라벨 — 남/북 입면에서는 숨김
-heightDimGroup.add(nsHeightGroup, ewHeightGroup);
+// 벽이 속한 평면 모서리(up/down/left/right)별로 분리 — 해당 벽이 보이는 입면에서만 라벨 표시
+let heightEdgeGroups = { up: new THREE.Group(), down: new THREE.Group(), left: new THREE.Group(), right: new THREE.Group() };
+Object.values(heightEdgeGroups).forEach(g => heightDimGroup.add(g));
 
 let compassGroup = new THREE.Group();
 scene.add(compassGroup);
@@ -742,14 +742,11 @@ function renderViews() {
   for (const card of ['N', 'E', 'S', 'W']) {
     const edge = edgeOf[card];
     const p = place[edge];
-    // up/down 카메라(Z축 시점)엔 X방향 벽 라벨만, left/right(X축 시점)엔 Z방향 벽 라벨만 노출
-    const zAxisView = (edge === 'up' || edge === 'down');
-    nsHeightGroup.visible = zAxisView;
-    ewHeightGroup.visible = !zAxisView;
+    // 해당 카메라가 보는 모서리(edge)에 속한 벽의 라벨만 노출
+    Object.entries(heightEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
     shot(imgById[card], p.pos, [0, 1, 0], p.hw, s.y / 2);
   }
-  nsHeightGroup.visible = true;
-  ewHeightGroup.visible = true;
+  Object.values(heightEdgeGroups).forEach(g => { g.visible = true; });
 
   saved.forEach(([o, mat]) => { o.material = mat; });
   grid.visible = vis.grid; dimGroup.visible = vis.dim; compassGroup.visible = vis.comp; ground.visible = vis.ground; scene.background = vis.bg;
@@ -887,9 +884,8 @@ function buildModel(data) {
   dimGroup.add(roofDimGroup);
   heightDimGroup = new THREE.Group();
   dimGroup.add(heightDimGroup);
-  nsHeightGroup = new THREE.Group();
-  ewHeightGroup = new THREE.Group();
-  heightDimGroup.add(nsHeightGroup, ewHeightGroup);
+  heightEdgeGroups = { up: new THREE.Group(), down: new THREE.Group(), left: new THREE.Group(), right: new THREE.Group() };
+  Object.values(heightEdgeGroups).forEach(g => heightDimGroup.add(g));
 
   // rebuild roof group
   scene.remove(roofGroup);
@@ -920,9 +916,12 @@ function buildModel(data) {
       const sgn = dot >= 0 ? 1 : -1;
       const off = hl.thick / 2 + labelH * 1.1 + 120;
       const px = hl.x + hl.nx * off * sgn, pz = hl.z + hl.nz * off * sgn;
-      // 벽의 진행 방향에 따라 남/북 입면용 · 동/서 입면용으로 분리
-      // (다른 방향 벽의 라벨이 엉뚱한 입면도에 비쳐 보이는 것을 방지)
-      const wallGroup = Math.abs(hl.nz) >= Math.abs(hl.nx) ? nsHeightGroup : ewHeightGroup;
+      // 벽이 속한 평면 모서리(up/down/left/right)를 위치로 판정
+      // (진행 방향만으로는 동/서 두 벽이 한 그룹에 묶여 반대쪽 입면에도 라벨이 새어 보였음)
+      const edgeKey = Math.abs(hl.nz) >= Math.abs(hl.nx)
+        ? (hl.z < center.z ? 'up' : 'down')
+        : (hl.x < center.x ? 'left' : 'right');
+      const wallGroup = heightEdgeGroups[edgeKey];
       for (const it of hl.items) {
         const sp = makeLabel(it.text, dimFontH * 0.78, 'rgba(8,145,178,0.94)');
         sp.position.set(px, it.y, pz);
