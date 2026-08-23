@@ -416,8 +416,9 @@
           <button id="viewsDimToggle" class="dim-btn" style="margin-left:auto">수치 표시</button>
           <button id="viewsRoofToggle" class="dim-btn on" style="margin-left:8px">지붕 포함</button>
           <button id="viewsSave" class="dim-btn" style="margin-left:8px">PNG 저장</button>
-          <button id="viewsRefresh" class="dim-btn" style="margin-left:8px">새로고침</button>
+          <button id="viewsRefresh" class="dim-btn" style="margin-left:8px;background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">📐 도면 생성</button>
         </h2>
+        <p class="hint">위 옵션(수치/지붕)을 바꾼 뒤 <b>도면 생성</b>을 눌러야 아래 평면도·입면도에 반영됩니다.</p>
         <div class="views">
           <figure><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서)</figcaption></figure>
           <figure><img id="viewN" alt="북측 입면" /><figcaption>북측 입면</figcaption></figure>
@@ -1012,7 +1013,6 @@ function buildModel(data) {
   } else {
     document.getElementById('dims').textContent = '—';
   }
-  renderViews();
   return built;
 }
 
@@ -1153,7 +1153,6 @@ roofToggle.addEventListener('click', () => {
   roofDimGroup.visible = showRoof;
   roofToggle.classList.toggle('on', showRoof);
   roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
-  renderViews();
 });
 
 document.getElementById('viewsRefresh').addEventListener('click', renderViews);
@@ -1163,7 +1162,6 @@ document.getElementById('viewsRoofToggle').addEventListener('click', () => {
   const b = document.getElementById('viewsRoofToggle');
   b.classList.toggle('on', drawRoof);
   b.textContent = drawRoof ? '지붕 포함' : '지붕 제외';
-  renderViews();
 });
 
 document.getElementById('viewsDimToggle').addEventListener('click', () => {
@@ -1171,7 +1169,6 @@ document.getElementById('viewsDimToggle').addEventListener('click', () => {
   const b = document.getElementById('viewsDimToggle');
   b.classList.toggle('on', viewsDim);
   b.textContent = viewsDim ? '수치 숨김' : '수치 표시';
-  renderViews();
 });
 
 /* ---------- 그림자 토글 ---------- */
@@ -1367,7 +1364,8 @@ document.getElementById('btnSaveProject').addEventListener('click', () => {
     wallThickness: Number(document.getElementById('wallThickness').value) || 150,
     images,
     model,
-    scene: collectSceneState()
+    scene: collectSceneState(),
+    chatHistory
   };
   const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -1396,6 +1394,13 @@ projectFileInput.addEventListener('change', () => {
         jsonBox.value = JSON.stringify(project.model, null, 2);
         buildModel(project.model);
       }
+      if (Array.isArray(project.chatHistory) && project.chatHistory.length) {
+        chatHistory = [];
+        chatLog.innerHTML = '';
+        project.chatHistory.forEach(m => addMsg(m.role, m.text));
+        const lastUser = [...project.chatHistory].reverse().find(m => m.role === 'user');
+        if (lastUser) chatInput.value = lastUser.text;   // 마지막 지시를 기본값으로 채워둠
+      }
       syncToggleUI();
       status(`프로젝트를 불러왔습니다. (이미지 ${images.length}장 · 벽 ${project.model?.walls?.length || 0}개)`, 'ok');
     } catch (e) {
@@ -1409,8 +1414,9 @@ projectFileInput.addEventListener('change', () => {
 const chatLog = document.getElementById('chatLog');
 const chatInput = document.getElementById('chatInput');
 const chatSend = document.getElementById('chatSend');
+let chatHistory = [];   // {role,text} — 저장/불러오기 시 대화 지시 내용 보존용
 
-function addMsg(role, text) {
+function addMsg(role, text, record = true) {
   const empty = chatLog.querySelector('.chat-empty');
   if (empty) empty.remove();
   const el = document.createElement('div');
@@ -1429,7 +1435,9 @@ function addMsg(role, text) {
     catch { cp.textContent = '⧉'; }
   });
   el.append(span, cp);
-  el.setText = (t) => { span.textContent = t; };
+  const entry = record ? { role, text } : null;
+  if (entry) chatHistory.push(entry);
+  el.setText = (t) => { span.textContent = t; if (entry) entry.text = t; };
   chatLog.appendChild(el);
   chatLog.scrollTop = chatLog.scrollHeight;
   return el;
