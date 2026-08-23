@@ -238,6 +238,7 @@
   #sunLabel { font-family: var(--font-accent); font-weight: 600; color: var(--text-primary); min-width: 40px; }
 
   .views-card { margin-top: 16px; }
+  .permit-box { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(148,163,184,.25); }
   .views-card h2 { display: flex; align-items: center; }
   .views-card h2 .dim-btn { margin-left: auto; }
   .clr { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
@@ -414,6 +415,15 @@
           <figure><img id="viewE" alt="동측 입면" /><figcaption>동측 입면</figcaption></figure>
           <figure><img id="viewS" alt="남측 입면" /><figcaption>남측 입면</figcaption></figure>
           <figure><img id="viewW" alt="서측 입면" /><figcaption>서측 입면</figcaption></figure>
+        </div>
+
+        <div class="permit-box">
+          <div class="num-row">
+            <input id="permitProject" type="text" placeholder="프로젝트명 (예: 영덕감성산장 객실동)" />
+            <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
+          </div>
+          <button id="btnPermitPdf" class="btn" style="margin-top:10px">📐 인허가용 정식 도면 세트 생성 (인쇄 → PDF)</button>
+          <p class="hint">평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.<br><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
         </div>
       </div>
     </div>
@@ -1168,6 +1178,101 @@ document.getElementById('viewsSave').addEventListener('click', () => {
   a.download = 'sketch3d-도면.png';
   a.href = cv.toDataURL('image/png');
   a.click();
+});
+
+/* ---------- 인허가용 정식 도면 (인쇄 → PDF) ---------- */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+document.getElementById('btnPermitPdf').addEventListener('click', () => {
+  let data;
+  try { data = JSON.parse(jsonBox.value); } catch { status('벽 좌표 JSON이 올바르지 않습니다. 먼저 3D 모델을 생성하세요.', 'err'); return; }
+  if (!Array.isArray(data.walls) || !data.walls.length) { status('벽이 없습니다. 먼저 3D 모델을 생성하세요.', 'err'); return; }
+
+  const projectName = document.getElementById('permitProject').value.trim() || '손그림 3D 프로젝트';
+  const siteAddr = document.getElementById('permitSite').value.trim();
+
+  // 참고용 권장 축척 (A3 가로 기준 도면 영역 약 300mm에 맞춤)
+  const SCALES = [50, 100, 150, 200, 300, 400, 500, 600, 800, 1000];
+  const maxDim = Math.max(lastSize.x, lastSize.z, lastSize.y * 2);
+  const scale = SCALES.find(s => maxDim / s <= 300) || SCALES[SCALES.length - 1];
+
+  // 치수 강제 표시 + 고해상도로 임시 재렌더 후 원복
+  const savedViewsDim = viewsDim;
+  viewsDim = true;
+  viewRenderer.setSize(1600, 1200);
+  renderViews();
+  const shots = {
+    top: document.getElementById('viewTop').src,
+    N: document.getElementById('viewN').src,
+    E: document.getElementById('viewE').src,
+    S: document.getElementById('viewS').src,
+    W: document.getElementById('viewW').src
+  };
+  viewsDim = savedViewsDim;
+  viewRenderer.setSize(480, 360);
+  renderViews();
+
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+
+  const sheets = [
+    { key: 'top', title: '평면도 (위에서)' },
+    { key: 'N', title: '북측 입면' },
+    { key: 'E', title: '동측 입면' },
+    { key: 'S', title: '남측 입면' },
+    { key: 'W', title: '서측 입면' }
+  ];
+
+  const pagesHtml = sheets.map(s => `
+    <section class="sheet">
+      <header>
+        <div class="proj">${escapeHtml(projectName)}</div>
+        <div class="dwg">${s.title}</div>
+        <div class="meta">축척 참고 1:${scale} · 벽높이 ${Math.round(data.wallHeight || 0)}mm · ${dateStr}</div>
+      </header>
+      <div class="imgwrap"><img src="${shots[s.key]}" /></div>
+      <footer>
+        ${siteAddr ? `<div>대지위치: ${escapeHtml(siteAddr)}</div>` : ''}
+        <div class="disclaimer">본 도면은 손그림 스케치 기반 자동 생성 초안이며 법적 효력이 없습니다. 실제 인허가 제출 전 건축사의 검토·날인이 필요합니다.</div>
+      </footer>
+    </section>`).join('');
+
+  const printHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(projectName)} — 정식 도면</title>
+<style>
+  @page { size: A3 landscape; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, sans-serif; margin: 0; color: #0f172a; }
+  .sheet { page-break-after: always; padding: 6mm; display: flex; flex-direction: column; min-height: 273mm; }
+  .sheet:last-child { page-break-after: auto; }
+  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; gap: 12px; }
+  header .proj { font-weight: 800; font-size: 16px; }
+  header .dwg { font-weight: 700; font-size: 14px; }
+  header .meta { font-size: 11.5px; color: #475569; white-space: nowrap; }
+  .imgwrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .imgwrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  footer { border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 10px; font-size: 10.5px; color: #475569; }
+  footer .disclaimer { margin-top: 4px; color: #b45309; font-weight: 600; }
+</style>
+</head><body>${pagesHtml}</body></html>`;
+
+  // 팝업 차단 정책과 무관하게 동작하도록 숨긴 iframe으로 인쇄
+  const old = document.getElementById('permitPrintFrame');
+  if (old) old.remove();
+  const frame = document.createElement('iframe');
+  frame.id = 'permitPrintFrame';
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(frame);
+  frame.srcdoc = printHtml;
+  frame.onload = () => {
+    setTimeout(() => {
+      try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+      catch (e) { status('인쇄 창을 여는 데 실패했습니다: ' + e.message, 'err'); }
+    }, 200); // 이미지 디코딩 대기
+  };
+
+  status(`정식 도면 세트를 준비했습니다 (참고 축척 1:${scale}). 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.`, 'ok');
 });
 
 /* ---------- 프로젝트 저장 · 불러오기 ---------- */
