@@ -720,6 +720,12 @@ function renderViews() {
   if (modelGroup.children.length) box.setFromObject(modelGroup);
   if (drawRoof && roofGroup.children.length) box.expandByObject(roofGroup);
   if (box.isEmpty()) { roofGroup.visible = roofVisSaved; roofDimGroup.visible = roofDimVisSaved; return; }
+  // 지붕 제외 시 카메라 프레임이 벽 높이까지만 좁아져, 벽 위(top+labelH)에 놓인
+  // 길이 라벨이 화면 밖으로 잘려나가던 문제 방지 — 라벨이 들어갈 여유를 항상 확보
+  {
+    const labelMargin = Math.min(1200, Math.max(220, Math.max(lastSize.x, lastSize.z) / 16));
+    box.expandByPoint(new THREE.Vector3(box.min.x, lastSize.y + labelMargin, box.min.z));
+  }
   const c = new THREE.Vector3(); box.getCenter(c);
   const s = new THREE.Vector3(); box.getSize(s);
   const m = Math.max(s.x, s.y, s.z) * 2 + 3000;
