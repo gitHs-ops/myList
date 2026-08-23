@@ -951,9 +951,10 @@ function buildModel(data) {
     const dimFontH = labelH * 0.5;  // 치수 라벨 폰트 크기 (표시 위치 간격은 labelH 유지)
     // 길이 라벨 (벽 위) — 소속 모서리(up/down/left/right)로 분리해 해당 방향 입면에만 노출.
     // 건물 외곽선에 붙지 않은 벽(내부 칸막이)은 입면도에는 의미가 없어 평면도에서만 노출.
+    const lenGap = dimFontH * 1.4;   // 길이 라벨 - 벽 위 간격 (도면과 너무 떨어지지 않도록 labelH 대신 폰트 기준 간격 사용)
     for (const l of labels) {
       const sp = makeLabel(String(Math.round(l.len)), dimFontH);
-      sp.position.set(l.x, l.top + labelH, l.z);
+      sp.position.set(l.x, l.top + lenGap, l.z);
       const zDominant = Math.abs(l.nz) >= Math.abs(l.nx);
       const isExterior = zDominant
         ? (Math.abs(l.z - bbox.min.z) < 1 || Math.abs(l.z - bbox.max.z) < 1)
@@ -964,12 +965,11 @@ function buildModel(data) {
         : (l.x < center.x ? 'left' : 'right');
       lengthEdgeGroups[edgeKey].add(sp);
 
-      // 벽 전체 높이(세로 치수) — 입면도에서 가로(길이)만 있고 세로가 없으면
-      // 도면 해석이 안 되므로, 벽 한쪽 끝에 세로 방향으로 배치
+      // 벽 전체 높이(세로 치수) — 길이 라벨처럼 도면 바깥(벽 끝 너머)에 배치
       const dux = l.nz, duz = -l.nx;   // 벽 진행 방향(단위벡터)
       const endMargin = Math.max(dimFontH * 1.6, 300);
-      const hx = l.x - dux * Math.max(0, l.len / 2 - endMargin);
-      const hz = l.z - duz * Math.max(0, l.len / 2 - endMargin);
+      const hx = l.x - dux * (l.len / 2 + endMargin);
+      const hz = l.z - duz * (l.len / 2 + endMargin);
       const hsp = makeLabel(String(Math.round(l.top)), dimFontH);
       hsp.position.set(hx, l.top / 2, hz);
       lengthEdgeGroups[edgeKey].add(hsp);
