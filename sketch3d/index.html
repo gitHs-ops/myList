@@ -655,6 +655,7 @@ function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
   const sp = new THREE.Sprite(mat);
   sp.renderOrder = 999;
+  sp.frustumCulled = false;   // 원점에서 먼 카메라(동/서 입면)에서 컬링 오판으로 사라지는 것 방지
   sp.scale.set(heightWorld * (cvs.width / cvs.height), heightWorld, 1);
   return sp;
 }
@@ -750,22 +751,12 @@ function renderViews() {
     left:  { pos: [box.min.x - m, c.y, c.z], hw: s.z / 2 },
   };
   const imgById = { N: 'viewN', E: 'viewE', S: 'viewS', W: 'viewW' };
-  window.__viewDebug = [];
   for (const card of ['N', 'E', 'S', 'W']) {
     const edge = edgeOf[card];
     const p = place[edge];
     // 해당 카메라가 보는 모서리(edge)에 속한 벽의 라벨만 노출
     Object.entries(heightEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
     Object.entries(lengthEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
-    window.__viewDebug.push({
-      card, edge,
-      heightN: heightEdgeGroups[edge].children.length,
-      lengthN: lengthEdgeGroups[edge].children.length,
-      lengthChildren: lengthEdgeGroups[edge].children.map(c => ({
-        visible: c.visible, pos: c.position.toArray(), scale: c.scale.toArray()
-      })),
-      camPos: p.pos.slice(), camHw: p.hw
-    });
     shot(imgById[card], p.pos, [0, 1, 0], p.hw, s.y / 2);
   }
   Object.values(heightEdgeGroups).forEach(g => { g.visible = true; });
