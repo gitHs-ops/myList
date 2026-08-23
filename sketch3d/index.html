@@ -563,6 +563,9 @@ dimGroup.add(heightDimGroup);
 // 벽이 속한 평면 모서리(up/down/left/right)별로 분리 — 해당 벽이 보이는 입면에서만 라벨 표시
 let heightEdgeGroups = { up: new THREE.Group(), down: new THREE.Group(), left: new THREE.Group(), right: new THREE.Group() };
 Object.values(heightEdgeGroups).forEach(g => heightDimGroup.add(g));
+// 길이 라벨도 동일하게 모서리별로 분리 — 단, 평면도에서는 4면 전체가 보여야 하므로 heightDimGroup과 달리 dimGroup 직속(항상 visible)
+let lengthEdgeGroups = { up: new THREE.Group(), down: new THREE.Group(), left: new THREE.Group(), right: new THREE.Group() };
+Object.values(lengthEdgeGroups).forEach(g => dimGroup.add(g));
 
 let compassGroup = new THREE.Group();
 scene.add(compassGroup);
@@ -744,9 +747,11 @@ function renderViews() {
     const p = place[edge];
     // 해당 카메라가 보는 모서리(edge)에 속한 벽의 라벨만 노출
     Object.entries(heightEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
+    Object.entries(lengthEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
     shot(imgById[card], p.pos, [0, 1, 0], p.hw, s.y / 2);
   }
   Object.values(heightEdgeGroups).forEach(g => { g.visible = true; });
+  Object.values(lengthEdgeGroups).forEach(g => { g.visible = true; });
 
   saved.forEach(([o, mat]) => { o.material = mat; });
   grid.visible = vis.grid; dimGroup.visible = vis.dim; compassGroup.visible = vis.comp; ground.visible = vis.ground; scene.background = vis.bg;
@@ -855,7 +860,7 @@ function buildModel(data) {
 
     bbox.expandByPoint(new THREE.Vector3(x1, 0, z1));
     bbox.expandByPoint(new THREE.Vector3(x2, wh, z2));
-    labels.push({ x: midX, z: midZ, len, top: wh });
+    labels.push({ x: midX, z: midZ, len, top: wh, nx, nz });
     built++;
   }
 
@@ -886,6 +891,8 @@ function buildModel(data) {
   dimGroup.add(heightDimGroup);
   heightEdgeGroups = { up: new THREE.Group(), down: new THREE.Group(), left: new THREE.Group(), right: new THREE.Group() };
   Object.values(heightEdgeGroups).forEach(g => heightDimGroup.add(g));
+  lengthEdgeGroups = { up: new THREE.Group(), down: new THREE.Group(), left: new THREE.Group(), right: new THREE.Group() };
+  Object.values(lengthEdgeGroups).forEach(g => dimGroup.add(g));
 
   // rebuild roof group
   scene.remove(roofGroup);
@@ -904,11 +911,14 @@ function buildModel(data) {
 
     const labelH = Math.min(1200, Math.max(220, Math.max(size.x, size.z) / 16));
     const dimFontH = labelH * 0.5;  // 치수 라벨 폰트 크기 (표시 위치 간격은 labelH 유지)
-    // 길이 라벨 (벽 위)
+    // 길이 라벨 (벽 위) — 소속 모서리(up/down/left/right)로 분리해 해당 방향 입면에만 노출
     for (const l of labels) {
       const sp = makeLabel(String(Math.round(l.len)), dimFontH);
       sp.position.set(l.x, l.top + labelH, l.z);
-      dimGroup.add(sp);
+      const edgeKey = Math.abs(l.nz) >= Math.abs(l.nx)
+        ? (l.z < center.z ? 'up' : 'down')
+        : (l.x < center.x ? 'left' : 'right');
+      lengthEdgeGroups[edgeKey].add(sp);
     }
     // 높이 라벨 (개구부 있는 벽 옆, 소벽/개구부/인방 수치)
     for (const hl of hLabels) {
