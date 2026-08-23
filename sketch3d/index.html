@@ -750,12 +750,22 @@ function renderViews() {
     left:  { pos: [box.min.x - m, c.y, c.z], hw: s.z / 2 },
   };
   const imgById = { N: 'viewN', E: 'viewE', S: 'viewS', W: 'viewW' };
+  window.__viewDebug = [];
   for (const card of ['N', 'E', 'S', 'W']) {
     const edge = edgeOf[card];
     const p = place[edge];
     // 해당 카메라가 보는 모서리(edge)에 속한 벽의 라벨만 노출
     Object.entries(heightEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
     Object.entries(lengthEdgeGroups).forEach(([k, g]) => { g.visible = (k === edge); });
+    window.__viewDebug.push({
+      card, edge,
+      heightN: heightEdgeGroups[edge].children.length,
+      lengthN: lengthEdgeGroups[edge].children.length,
+      lengthChildren: lengthEdgeGroups[edge].children.map(c => ({
+        visible: c.visible, pos: c.position.toArray(), scale: c.scale.toArray()
+      })),
+      camPos: p.pos.slice(), camHw: p.hw
+    });
     shot(imgById[card], p.pos, [0, 1, 0], p.hw, s.y / 2);
   }
   Object.values(heightEdgeGroups).forEach(g => { g.visible = true; });
