@@ -948,7 +948,7 @@ function buildModel(data) {
     grid.position.set(center.x, 0, center.z);
 
     const labelH = Math.min(1200, Math.max(220, Math.max(size.x, size.z) / 16));
-    const dimFontH = labelH * 0.5;  // 치수 라벨 폰트 크기 (표시 위치 간격은 labelH 유지)
+    const dimFontH = labelH * 0.5 * 0.78;  // 치수 라벨 폰트 크기 — 도면 내 모든 치수(길이/높이/개구부/지붕)를 가장 작던 크기로 통일
     // 길이 라벨 (벽 위) — 소속 모서리(up/down/left/right)로 분리해 해당 방향 입면에만 노출.
     // 건물 외곽선에 붙지 않은 벽(내부 칸막이)은 입면도에는 의미가 없어 평면도에서만 노출.
     const lenGap = dimFontH * 1.4;   // 길이 라벨 - 벽 위 간격 (도면과 너무 떨어지지 않도록 labelH 대신 폰트 기준 간격 사용)
@@ -987,7 +987,7 @@ function buildModel(data) {
         : (hl.x < center.x ? 'left' : 'right');
       const wallGroup = heightEdgeGroups[edgeKey];
       for (const it of hl.items) {
-        const sp = makeLabel(it.text, dimFontH * 0.78, 'rgba(8,145,178,0.94)');
+        const sp = makeLabel(it.text, dimFontH, 'rgba(8,145,178,0.94)');
         sp.position.set(px, it.y, pz);
         wallGroup.add(sp);
       }
@@ -1038,7 +1038,7 @@ function buildModel(data) {
         addEdges(m, roofGroup);
         roofTopY = eaveY + th;
         addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2,
-          ['평지붕', '처마 ' + oh, '슬래브 ' + th, '높이 ' + Math.round(roofTopY)], dimFontH * 0.85);
+          ['평지붕', '처마 ' + oh, '슬래브 ' + th, '높이 ' + Math.round(roofTopY)], dimFontH);
       } else if (roof.type === 'gable') {
         const pitch = (Number(roof.pitch) || 30) * Math.PI / 180;
         const ridgeY = roof.ridge === 'y' ? 'y' : 'x';
@@ -1065,8 +1065,8 @@ function buildModel(data) {
         const pitchDeg = Number(roof.pitch) || 30;
         const spanW = ridgeY === 'y' ? (maxx - minx) : (maxz - minz);
         const items = ['박공 물매 ' + pitchDeg + '°', '용마루 +' + Math.round(rise), '스팬 ' + Math.round(spanW), '처마 ' + oh];
-        if (ridgeY === 'y') addRoofLabels((minx + maxx) / 2, roofTopY, maxz + labelH * 1.2, items, dimFontH * 0.85);
-        else addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2, items, dimFontH * 0.85);
+        if (ridgeY === 'y') addRoofLabels((minx + maxx) / 2, roofTopY, maxz + labelH * 1.2, items, dimFontH);
+        else addRoofLabels(maxx + labelH * 1.2, roofTopY, (minz + maxz) / 2, items, dimFontH);
       }
     }
 
