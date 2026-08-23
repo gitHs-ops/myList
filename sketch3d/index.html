@@ -238,7 +238,6 @@
   #sunLabel { font-family: var(--font-accent); font-weight: 600; color: var(--text-primary); min-width: 40px; }
 
   .views-card { margin-top: 16px; }
-  .permit-box { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(148,163,184,.25); }
   .views-card h2 { display: flex; align-items: center; }
   .views-card h2 .dim-btn { margin-left: auto; }
   .clr { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
@@ -333,7 +332,7 @@
             <summary>백엔드 설정</summary>
             <label class="fld">Extract API URL</label>
             <input id="apiUrl" type="text" placeholder="https://mylist-9nha.onrender.com/api/extract" />
-            <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·5번(JSON/샘플)은 동작합니다.</p>
+            <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·6번(JSON/샘플)은 동작합니다.</p>
           </details>
           <button id="descToggle" class="desc-toggle">설명 숨기기</button>
         </div>
@@ -370,7 +369,17 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">5</span> 샘플로 테스트 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
+        <h2><span class="step">5</span> 인허가용 정식 도면</h2>
+        <div class="num-row">
+          <input id="permitProject" type="text" placeholder="프로젝트명 (예: 영덕감성산장 객실동)" />
+          <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
+        </div>
+        <button id="btnPermitPdf" class="btn" style="margin-top:10px">📐 인허가용 정식 도면 세트 생성 (인쇄 → PDF)</button>
+        <p class="hint">평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.<br><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">6</span> 샘플로 테스트 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
         <div class="btn-row">
           <button class="btn ghost" data-sample="room">단일 객실</button>
           <button class="btn ghost" data-sample="two">투룸 + 복도</button>
@@ -415,15 +424,6 @@
           <figure><img id="viewE" alt="동측 입면" /><figcaption>동측 입면</figcaption></figure>
           <figure><img id="viewS" alt="남측 입면" /><figcaption>남측 입면</figcaption></figure>
           <figure><img id="viewW" alt="서측 입면" /><figcaption>서측 입면</figcaption></figure>
-        </div>
-
-        <div class="permit-box">
-          <div class="num-row">
-            <input id="permitProject" type="text" placeholder="프로젝트명 (예: 영덕감성산장 객실동)" />
-            <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
-          </div>
-          <button id="btnPermitPdf" class="btn" style="margin-top:10px">📐 인허가용 정식 도면 세트 생성 (인쇄 → PDF)</button>
-          <p class="hint">평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.<br><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
         </div>
       </div>
     </div>
