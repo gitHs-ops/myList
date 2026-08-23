@@ -557,8 +557,8 @@ let showDims = false;
 let roofDimGroup = new THREE.Group();
 dimGroup.add(roofDimGroup);
 
-let lintelDimGroup = new THREE.Group();   // 인방 라벨 — 평면도에서는 숨김
-dimGroup.add(lintelDimGroup);
+let heightDimGroup = new THREE.Group();   // 소벽/인방/개구부 높이 라벨 — 평면도에서는 숨김
+dimGroup.add(heightDimGroup);
 
 let compassGroup = new THREE.Group();
 scene.add(compassGroup);
@@ -718,11 +718,11 @@ function renderViews() {
     document.getElementById(id).src = viewRenderer.domElement.toDataURL('image/png');
   }
 
-  // 평면도 (위에서 -y): 가로 x, 세로 z — 인방 라벨은 평면도에서 의미 없어 숨김
-  const lintelVisSaved = lintelDimGroup.visible;
-  lintelDimGroup.visible = false;
+  // 평면도 (위에서 -y): 가로 x, 세로 z — 높이축 라벨(소벽/인방/개구부 크기)은 평면도에서 의미 없어 숨김
+  const heightVisSaved = heightDimGroup.visible;
+  heightDimGroup.visible = false;
   shot('viewTop', [c.x, box.max.y + m, c.z], [0, 0, -1], s.x / 2, s.z / 2);
-  lintelDimGroup.visible = lintelVisSaved;
+  heightDimGroup.visible = heightVisSaved;
 
   // 방위 → 축 매핑 (currentNorth 기준, 나침반과 동일)
   const EO = ['up', 'right', 'down', 'left'];
@@ -874,8 +874,8 @@ function buildModel(data) {
   roofDimGroup = new THREE.Group();
   roofDimGroup.visible = showRoof;
   dimGroup.add(roofDimGroup);
-  lintelDimGroup = new THREE.Group();
-  dimGroup.add(lintelDimGroup);
+  heightDimGroup = new THREE.Group();
+  dimGroup.add(heightDimGroup);
 
   // rebuild roof group
   scene.remove(roofGroup);
@@ -909,7 +909,7 @@ function buildModel(data) {
       for (const it of hl.items) {
         const sp = makeLabel(it.text, dimFontH * 0.78, 'rgba(8,145,178,0.94)');
         sp.position.set(px, it.y, pz);
-        (it.text.startsWith('인방') ? lintelDimGroup : dimGroup).add(sp);
+        heightDimGroup.add(sp);   // 높이축 라벨(소벽/인방/개구부 크기) — 평면도에서는 의미 없어 숨김
       }
     }
 
