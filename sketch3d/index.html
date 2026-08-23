@@ -1342,11 +1342,12 @@ document.getElementById('btnPermitPdf').addEventListener('click', () => {
   frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
   document.body.appendChild(frame);
   frame.srcdoc = printHtml;
-  frame.onload = () => {
-    setTimeout(() => {
-      try { frame.contentWindow.focus(); frame.contentWindow.print(); }
-      catch (e) { status('인쇄 창을 여는 데 실패했습니다: ' + e.message, 'err'); }
-    }, 200); // 이미지 디코딩 대기
+  frame.onload = async () => {
+    // 고정 지연 대신 실제 디코딩 완료를 기다림 (느린 환경에서 이미지가 안 그려진 채 인쇄되는 것 방지)
+    const imgs = Array.from(frame.contentDocument.images);
+    await Promise.all(imgs.map(im => im.decode().catch(() => {})));
+    try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+    catch (e) { status('인쇄 창을 여는 데 실패했습니다: ' + e.message, 'err'); }
   };
 
   status(`정식 도면 세트를 준비했습니다 (참고 축척 1:${scale}). 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.`, 'ok');
