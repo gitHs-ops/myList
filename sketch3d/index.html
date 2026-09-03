@@ -351,7 +351,9 @@
             <summary>백엔드 설정</summary>
             <label class="fld">Extract API URL</label>
             <input id="apiUrl" type="text" placeholder="https://mylist-9nha.onrender.com/api/extract" />
-            <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·5번(JSON/샘플)은 동작합니다.</p>
+            <label class="fld">접근 코드</label>
+            <input id="apiSecret" type="text" placeholder="서버 .env의 APP_SHARED_SECRET과 동일하게" />
+            <p class="hint">GitHub Pages(프론트) + Render(백엔드) 구조. 백엔드가 없어도 아래 3·5번(JSON/샘플)은 동작합니다.<br>접근 코드는 이 브라우저에만 저장됩니다.</p>
           </details>
           <button id="descToggle" class="desc-toggle">설명 숨기기</button>
         </div>
@@ -360,13 +362,16 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">2</span> 대화로 수정 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 필요)</span></h2>
+        <h2><span class="step">2</span> 대화로 수정 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 필요)</span>
+          <button id="chatUndo" class="dim-btn" style="margin-left:auto" disabled>↩ 되돌리기</button>
+        </h2>
         <div id="chatLog" class="chat-log">
           <div class="chat-empty">현재 3D 모델을 말로 고칩니다. 우측 화면을 보며 조정하세요.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”</div>
         </div>
         <div class="chat-row">
           <input id="chatInput" type="text" placeholder="수정 지시를 입력…" />
           <button id="chatSend" class="btn" style="width:auto;padding:11px 16px">보내기</button>
+          <button id="chatCancel" class="btn ghost" style="width:auto;padding:11px 16px;display:none">취소</button>
         </div>
       </div>
 
@@ -1128,11 +1133,38 @@ drop.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
 
+function loadImageEl(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// 원본 그대로 보내면 비전 API 토큰비가 불필요하게 커져 장변 1600px로 축소 후 전송
+async function downscaleDataUrl(dataUrl, maxDim = 1600, quality = 0.85) {
+  try {
+    const img = await loadImageEl(dataUrl);
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    if (scale >= 1) return dataUrl;
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', quality);
+  } catch { return dataUrl; }
+}
+
 function handleFiles(fileList) {
   const files = [...fileList].filter(f => f.type.startsWith('image/'));
   files.forEach(file => {
     const r = new FileReader();
-    r.onload = () => { images.push(r.result); renderThumbs(); };
+    r.onload = async () => {
+      const small = await downscaleDataUrl(r.result);
+      images.push(small);
+      renderThumbs();
+    };
     r.readAsDataURL(file);
   });
 }
@@ -1159,6 +1191,39 @@ const apiUrlInput = document.getElementById('apiUrl');
 apiUrlInput.value = localStorage.getItem('sketch3d_api') || 'https://mylist-9nha.onrender.com/api/extract';
 apiUrlInput.addEventListener('change', () => localStorage.setItem('sketch3d_api', apiUrlInput.value.trim()));
 
+const apiSecretInput = document.getElementById('apiSecret');
+apiSecretInput.value = localStorage.getItem('sketch3d_secret') || '';
+apiSecretInput.addEventListener('change', () => localStorage.setItem('sketch3d_secret', apiSecretInput.value.trim()));
+
+/* ---------- 되돌리기 (AI 응답 적용 전 스냅샷) ---------- */
+let undoStack = [];
+const chatUndoBtn = document.getElementById('chatUndo');
+function pushUndo() {
+  const cur = jsonBox.value.trim();
+  if (!cur) return;
+  undoStack.push(cur);
+  if (undoStack.length > 20) undoStack.shift();
+  chatUndoBtn.disabled = false;
+}
+chatUndoBtn.addEventListener('click', () => {
+  if (!undoStack.length) return;
+  const prev = undoStack.pop();
+  try {
+    const data = JSON.parse(prev);
+    jsonBox.value = prev;
+    const n = buildModel(data);
+    status(`이전 상태로 되돌렸습니다. (벽 ${n}개)`, 'ok');
+  } catch { status('되돌리기 실패: 저장된 상태가 손상됨', 'err'); }
+  chatUndoBtn.disabled = undoStack.length === 0;
+});
+
+function usageText(res) {
+  const i = res.headers.get('X-Usage-Input-Tokens');
+  const o = res.headers.get('X-Usage-Output-Tokens');
+  if (!i || !o) return '';
+  return ` · 토큰 입력${Number(i).toLocaleString()}/출력${Number(o).toLocaleString()}`;
+}
+
 /* ---------- extract via backend ---------- */
 const btnCancel = document.getElementById('btnCancel');
 let extractController = null;
@@ -1178,7 +1243,7 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-App-Secret': apiSecretInput.value.trim() },
       body: JSON.stringify({
         images: images,
         wallHeight: Number(document.getElementById('wallHeight').value) || 2400,
@@ -1187,11 +1252,13 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
       signal: extractController.signal
     });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
+    const usage = usageText(res);
     const data = await res.json();
+    pushUndo();
     const n = buildModel(data);
     jsonBox.value = JSON.stringify(data, null, 2);
     if (n === 0) status('벽을 찾지 못했습니다. 치수가 보이는 더 선명한 사진으로 다시 시도하세요.', 'err');
-    else status(`인식 완료 — ${n}개 벽. ${data.notes ? '메모: ' + data.notes : ''}`, 'ok');
+    else status(`인식 완료 — ${n}개 벽.${usage} ${data.notes ? '메모: ' + data.notes : ''}`, 'ok');
   } catch (e) {
     if (e.name === 'AbortError') status('분석을 취소했습니다.', 'info');
     else status('요청 실패: ' + e.message + '<br>백엔드가 실행 중인지, URL이 맞는지 확인하세요.', 'err');
@@ -1516,6 +1583,10 @@ function editApiUrl() {
   return /\/extract\/?$/.test(u) ? u.replace(/\/extract\/?$/, '/edit') : u.replace(/\/?$/, '') + '/../edit';
 }
 
+let editController = null;
+const chatCancelBtn = document.getElementById('chatCancel');
+chatCancelBtn.addEventListener('click', () => { if (editController) editController.abort(); });
+
 async function sendChat() {
   const text = chatInput.value.trim();
   if (!text) return;
@@ -1530,24 +1601,31 @@ async function sendChat() {
   addMsg('user', text);
   chatInput.value = '';
   chatSend.disabled = true;
+  chatCancelBtn.style.display = 'inline-block';
+  editController = new AbortController();
   const typing = addMsg('bot', '…수정 중');
 
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ walls: base, instruction: text })
+      headers: { 'Content-Type': 'application/json', 'X-App-Secret': apiSecretInput.value.trim() },
+      body: JSON.stringify({ walls: base, instruction: text }),
+      signal: editController.signal
     });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
+    const usage = usageText(res);
     const data = await res.json();
+    pushUndo();
     const n = buildModel(data);
     jsonBox.value = JSON.stringify(data, null, 2);
-    typing.setText((data.notes ? data.notes : `수정 완료`) + ` (벽 ${n}개)`);
+    typing.setText((data.notes ? data.notes : `수정 완료`) + ` (벽 ${n}개${usage})`);
   } catch (e) {
-    typing.className = 'msg bot err';
-    typing.setText('수정 실패: ' + e.message);
+    if (e.name === 'AbortError') typing.setText('수정을 취소했습니다.');
+    else { typing.className = 'msg bot err'; typing.setText('수정 실패: ' + e.message); }
   } finally {
     chatSend.disabled = false;
+    chatCancelBtn.style.display = 'none';
+    editController = null;
   }
 }
 

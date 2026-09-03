@@ -6,15 +6,29 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const PORT = process.env.PORT || 8787;
 const MODEL = process.env.VISION_MODEL || 'claude-opus-5';
+const APP_SHARED_SECRET = process.env.APP_SHARED_SECRET;
+
+if (!APP_SHARED_SECRET) {
+  console.error('[설정 오류] APP_SHARED_SECRET이 비어있습니다. 외부(클라우드) 배포 시 이 값이 없으면 누구나 이 서버로 비전 API 요금을 발생시킬 수 있습니다. .env에 임의의 긴 문자열을 넣어주세요.');
+  process.exit(1);
+}
 
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
 const app = express();
-app.use(cors());
+app.use(cors({ exposedHeaders: ['X-Usage-Input-Tokens', 'X-Usage-Output-Tokens'] })); // 실제 접근 제어는 APP_SHARED_SECRET 미들웨어가 담당
 app.use(express.json({ limit: '25mb' }));
 
 app.get('/', (_req, res) => res.send('sketch3d extract API OK'));
 app.get('/health', (_req, res) => res.json({ ok: true, model: MODEL }));
+
+// /api/* 는 Vision API 호출(과금)을 트리거하므로 공유 비밀키가 일치해야 통과.
+app.use('/api', (req, res, next) => {
+  if (req.get('X-App-Secret') !== APP_SHARED_SECRET) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  next();
+});
 
 const WALL_SCHEMA = {
   type: 'object',
@@ -136,6 +150,10 @@ app.post('/api/extract', async (req, res) => {
     try { parsed = JSON.parse(textBlock.text); }
     catch { return res.status(502).json({ error: 'model did not return valid JSON', raw: textBlock.text.slice(0, 500) }); }
 
+    if (response.usage) {
+      res.set('X-Usage-Input-Tokens', String(response.usage.input_tokens ?? ''));
+      res.set('X-Usage-Output-Tokens', String(response.usage.output_tokens ?? ''));
+    }
     res.json(parsed);
   } catch (e) {
     console.error(e);
@@ -183,6 +201,10 @@ app.post('/api/edit', async (req, res) => {
     try { parsed = JSON.parse(textBlock.text); }
     catch { return res.status(502).json({ error: 'model did not return valid JSON', raw: textBlock.text.slice(0, 500) }); }
 
+    if (response.usage) {
+      res.set('X-Usage-Input-Tokens', String(response.usage.input_tokens ?? ''));
+      res.set('X-Usage-Output-Tokens', String(response.usage.output_tokens ?? ''));
+    }
     res.json(parsed);
   } catch (e) {
     console.error(e);
