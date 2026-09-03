@@ -769,7 +769,7 @@ function renderViews() {
   // 방위 → 축 매핑 (currentNorth 기준, 나침반과 동일)
   const EO = ['up', 'right', 'down', 'left'];
   const k = Math.max(0, EO.indexOf(currentNorth));
-  const edgeOf = { N: EO[k], E: EO[(k + 3) % 4], S: EO[(k + 2) % 4], W: EO[(k + 1) % 4] };
+  const edgeOf = { N: EO[k], E: EO[(k + 1) % 4], S: EO[(k + 2) % 4], W: EO[(k + 3) % 4] };
   const place = {
     up:    { pos: [c.x, c.y, box.min.z - m], hw: s.x / 2 },
     down:  { pos: [c.x, c.y, box.max.z + m], hw: s.x / 2 },
@@ -1011,7 +1011,7 @@ function buildModel(data) {
     scene.remove(compassGroup);
     compassGroup = new THREE.Group();
     scene.add(compassGroup);
-    const EO = ['up', 'right', 'down', 'left'], CARD = ['북', '서', '남', '동'];
+    const EO = ['up', 'right', 'down', 'left'], CARD = ['북', '동', '남', '서'];
     const k = Math.max(0, EO.indexOf(currentNorth));
     const cm = Math.max(size.x, size.z) / 8 + labelH * 1.5;
     const edgePos = {
