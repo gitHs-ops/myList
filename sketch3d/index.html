@@ -435,7 +435,9 @@
       </div>
 
       <div class="card">
-        <h2><span class="step">5</span> 샘플로 테스트 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span></h2>
+        <h2><span class="step">5</span> 샘플로 테스트 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 불필요)</span>
+          <label class="chk-btn" style="margin-left:auto"><input type="checkbox" id="sampleLockToggle" /> 잠금 해제</label>
+        </h2>
         <div class="btn-row">
           <button class="btn ghost" data-sample="room">단일 객실</button>
           <button class="btn ghost" data-sample="two">투룸 + 복도</button>
@@ -1170,6 +1172,16 @@ document.getElementById('btnBuild').addEventListener('click', () => {
 document.querySelectorAll('[data-sample]').forEach(b => {
   b.addEventListener('click', () => loadIntoBoxAndBuild(SAMPLES[b.dataset.sample]));
 });
+
+/* ---------- 샘플 버튼 실수 클릭 방지 잠금 (기본 잠김) ---------- */
+const sampleLockToggle = document.getElementById('sampleLockToggle');
+const sampleBtns = document.querySelectorAll('[data-sample]');
+function applySampleLock() {
+  const unlocked = sampleLockToggle.checked;
+  sampleBtns.forEach(b => { b.disabled = !unlocked; });
+}
+sampleLockToggle.addEventListener('change', applySampleLock);
+applySampleLock();
 
 /* ---------- upload (multi-image) ---------- */
 const drop = document.getElementById('drop');
