@@ -16,7 +16,7 @@ if (!APP_SHARED_SECRET) {
 const client = new Anthropic(); // reads ANTHROPIC_API_KEY
 
 const app = express();
-app.use(cors({ exposedHeaders: ['X-Usage-Input-Tokens', 'X-Usage-Output-Tokens'] })); // 실제 접근 제어는 APP_SHARED_SECRET 미들웨어가 담당
+app.use(cors({ exposedHeaders: ['X-Usage-Input-Tokens', 'X-Usage-Output-Tokens', 'X-Usage-Model'] })); // 실제 접근 제어는 APP_SHARED_SECRET 미들웨어가 담당
 app.use(express.json({ limit: '25mb' }));
 
 app.get('/', (_req, res) => res.send('sketch3d extract API OK'));
@@ -155,6 +155,7 @@ app.post('/api/extract', async (req, res) => {
     if (response.usage) {
       res.set('X-Usage-Input-Tokens', String(response.usage.input_tokens ?? ''));
       res.set('X-Usage-Output-Tokens', String(response.usage.output_tokens ?? ''));
+      res.set('X-Usage-Model', MODEL);
     }
     res.json(parsed);
   } catch (e) {
@@ -211,6 +212,7 @@ app.post('/api/edit', async (req, res) => {
     if (response.usage) {
       res.set('X-Usage-Input-Tokens', String(response.usage.input_tokens ?? ''));
       res.set('X-Usage-Output-Tokens', String(response.usage.output_tokens ?? ''));
+      res.set('X-Usage-Model', MODEL);
     }
     res.json(parsed);
   } catch (e) {

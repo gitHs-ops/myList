@@ -78,6 +78,18 @@
   .hero-actions .btn { flex: 0 0 auto; white-space: nowrap; }
   .backend-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 14px; }
   .backend-line .adv { flex: 1; margin-top: 0; }
+  .usage-badge {
+    display: inline-flex;
+    margin-top: 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+  .usage-badge[hidden] { display: none; }
   .desc-toggle {
     flex: 0 0 auto;
     font-family: var(--font-main); font-weight: 700; font-size: 12px; cursor: pointer;
@@ -336,6 +348,7 @@
       </div>
     </div>
     <p class="hero-sub">치수가 적힌 손그림 스케치를 올리면 벽체를 3D로 세워줍니다. 비전 API 없이도 아래 <b>샘플/JSON</b>으로 파이프라인을 바로 확인할 수 있습니다.</p>
+    <div id="usageBadge" class="usage-badge" hidden>💰 이번 세션 비전 API ≈ $<span id="usageCost">0</span> · 토큰 입력<span id="usageIn">0</span>/출력<span id="usageOut">0</span></div>
   </header>
 
   <div class="grid">
@@ -649,7 +662,7 @@ function updateSun() {
 }
 
 const wallMat = new THREE.MeshStandardMaterial({ color: 0xdfe6f2, roughness: 0.85, metalness: 0.02 });
-const edgeMat = new THREE.LineBasicMaterial({ color: 0x6366f1, transparent: true, opacity: 0.35 });
+const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff });
 // 도면(라인드로잉)용: 흰 면(은선 처리) + 검은 외곽선
 const drawFaceMat = new THREE.MeshBasicMaterial({ color: 0xffffff, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 const drawLineMat = new THREE.LineBasicMaterial({ color: 0x1e293b });
@@ -1278,6 +1291,29 @@ function usageText(res) {
   return ` · 토큰 입력${Number(i).toLocaleString()}/출력${Number(o).toLocaleString()}`;
 }
 
+/* ---------- 세션 누적 비전 API 비용 배지 ---------- */
+const MODEL_PRICE_PER_1M = { // [입력, 출력] USD — 2026-06-24 기준 공개가
+  'claude-opus-5': [5, 25],
+  'claude-sonnet-5': [2, 10],
+  'claude-haiku-4-5': [1, 5],
+};
+let sessionInTok = 0, sessionOutTok = 0, sessionCostUSD = 0;
+const usageBadge = document.getElementById('usageBadge');
+function addUsage(res) {
+  const i = Number(res.headers.get('X-Usage-Input-Tokens')) || 0;
+  const o = Number(res.headers.get('X-Usage-Output-Tokens')) || 0;
+  if (!i && !o) return;
+  const model = res.headers.get('X-Usage-Model') || '';
+  const price = MODEL_PRICE_PER_1M[model];
+  sessionInTok += i;
+  sessionOutTok += o;
+  if (price) sessionCostUSD += (i / 1e6) * price[0] + (o / 1e6) * price[1];
+  document.getElementById('usageCost').textContent = sessionCostUSD.toFixed(3);
+  document.getElementById('usageIn').textContent = sessionInTok.toLocaleString();
+  document.getElementById('usageOut').textContent = sessionOutTok.toLocaleString();
+  usageBadge.hidden = false;
+}
+
 /* ---------- extract via backend ---------- */
 const btnCancel = document.getElementById('btnCancel');
 let extractController = null;
@@ -1307,6 +1343,7 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
     const usage = usageText(res);
+    addUsage(res);
     const data = await res.json();
     pushUndo();
     const n = buildModel(data);
@@ -1392,8 +1429,17 @@ function fpGroundPoint(clientX, clientY) {
   return fpRaycaster.ray.intersectPlane(fpGroundPlane, pt) ? pt : null;
 }
 
-canvas.addEventListener('click', (e) => {
-  if (!firstPerson) return;
+// click 이벤트 대신 pointerdown/up 좌표 차이로 직접 판정: OrbitControls가 드래그 중
+// 포인터 캡처를 잡고 있어서, 캔버스 밖으로 나간 채 드래그를 끝내도 click이 캔버스에서
+// 발생해버려 "드래그 끝 = 이동 클릭"으로 오인식되는 문제가 있었음.
+let fpDownPos = null;
+canvas.addEventListener('pointerdown', (e) => { if (firstPerson) fpDownPos = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointercancel', () => { fpDownPos = null; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!firstPerson || !fpDownPos) return;
+  const moved = Math.hypot(e.clientX - fpDownPos.x, e.clientY - fpDownPos.y);
+  fpDownPos = null;
+  if (moved > 6) return; // 드래그(시선 회전)였음 — 이동 처리 안 함
   const pt = fpGroundPoint(e.clientX, e.clientY);
   if (!pt) { status('바닥 쪽을 클릭하세요.', 'err'); return; }
   const dir = new THREE.Vector3(lastCenter.x - pt.x, 0, lastCenter.z - pt.z);
@@ -1726,6 +1772,7 @@ async function sendChat() {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
     const usage = usageText(res);
+    addUsage(res);
     const data = await res.json();
     pushUndo();
     const n = buildModel(data);
