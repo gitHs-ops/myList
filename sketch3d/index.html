@@ -217,7 +217,24 @@
   .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
   .btn-row .btn { flex: 1 1 40%; }
 
-  .viewport-card { padding: 0; overflow: hidden; }
+  .viewport-card { padding: 0; overflow: hidden; position: relative; }
+  .fp-hint {
+    position: absolute;
+    left: 50%; bottom: 18px;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, .72);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+    display: none;
+    z-index: 5;
+    white-space: nowrap;
+  }
+  .fp-hint.show { display: block; }
   #viewport {
     width: 100%;
     height: 620px;
@@ -424,6 +441,7 @@
         </div>
       </div>
       <canvas id="viewport"></canvas>
+      <div id="fpHint" class="fp-hint">🖱️ 드래그: 시선 회전 · 바닥 클릭: 그 위치로 이동</div>
       </div>
 
       <div class="card views-card">
@@ -802,6 +820,12 @@ function renderViews() {
 
 /* ---------- build ---------- */
 function buildModel(data) {
+  if (fpMarkerSprite) {
+    scene.remove(fpMarkerSprite);
+    fpMarkerSprite.material.map?.dispose();
+    fpMarkerSprite.material.dispose();
+    fpMarkerSprite = null;
+  }
   disposeGroup(modelGroup);
   scene.remove(modelGroup);
   modelGroup = new THREE.Group();
@@ -1330,6 +1354,7 @@ const fpToggle = document.getElementById('fpToggle');
 const fpGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const fpRaycaster = new THREE.Raycaster();
 let firstPerson = false;
+let fpMarkerSprite = null; // "여기 서 있다" 카메라 아이콘 마커
 
 function fpGroundPoint(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
@@ -1352,12 +1377,24 @@ canvas.addEventListener('click', (e) => {
   camera.position.set(pt.x, EYE_HEIGHT, pt.z);
   controls.target.copy(camera.position).addScaledVector(dir, 10);
   status('이 위치에서 둘러보는 중 — 드래그로 시선 회전, 바닥을 다시 클릭하면 이동합니다.', 'info');
+
+  if (fpMarkerSprite) {
+    scene.remove(fpMarkerSprite);
+    fpMarkerSprite.material.map?.dispose();
+    fpMarkerSprite.material.dispose();
+  }
+  const markerH = Math.min(700, Math.max(180, Math.max(lastSize.x, lastSize.z) / 20));
+  fpMarkerSprite = makeLabel('📷', markerH);
+  fpMarkerSprite.position.set(pt.x, markerH * 0.6, pt.z);
+  scene.add(fpMarkerSprite);
 });
 
+const fpHint = document.getElementById('fpHint');
 fpToggle.addEventListener('click', () => {
   firstPerson = !firstPerson;
   fpToggle.classList.toggle('on', firstPerson);
   fpToggle.textContent = firstPerson ? '🚶 기본 시점으로' : '🚶 1인칭 시점';
+  fpHint.classList.toggle('show', firstPerson);
   canvas.style.cursor = firstPerson ? 'crosshair' : '';
   controls.enableZoom = !firstPerson;
   controls.enablePan = !firstPerson;
