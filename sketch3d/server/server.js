@@ -165,6 +165,11 @@ const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국�
 - 입력으로 현재 벽 JSON(unit/wallHeight/wallThickness/walls/notes)을 받습니다.
 - 좌표계는 그대로 유지합니다: 단위 mm, 원점 좌하단, x는 오른쪽(+), y는 위쪽(+). 각 벽은 중심선 start[x,y]~end[x,y].
 - "왼쪽/오른쪽/위쪽/아래쪽 벽"은 현재 좌표상의 위치로 식별합니다. 벽 추가/삭제/이동/길이변경/두께·높이 변경 등을 반영합니다.
+- "동쪽/서쪽/남쪽/북쪽 벽" 같은 방위 지시는 현재 north 값(JSON에 없으면 'up')을 기준으로 반드시 아래 표로 좌표 방향을 환산합니다(절대 임의로 추측하지 마세요):
+  · north='up': 북=+y(위) 남=-y(아래) 동=+x(오른쪽) 서=-x(왼쪽)
+  · north='down': 북=-y(아래) 남=+y(위) 동=-x(왼쪽) 서=+x(오른쪽)
+  · north='right': 북=+x(오른쪽) 남=-x(왼쪽) 동=-y(아래) 서=+y(위)
+  · north='left': 북=-x(왼쪽) 남=+x(오른쪽) 동=+y(위) 서=-y(아래)
 - 벽별 옵션 필드로 높이/개구부를 다룰 수 있습니다: height(벽 높이), thickness(두께), sill(소벽=바닥~개구부 하단), lintel(인방=개구부 상단~천장). 개구부 높이 = height - sill - lintel. 문은 sill=0.
 - 가로 위치·폭이 있는 창/문은 openings 배열로 다룹니다: [{offset(벽 시작점~개구부 시작), width(폭), sill, height, type:'window'|'door'}]. "폭 1600 창을 오른쪽에" 같은 지시는 openings로 반영하고, "창 없애줘"는 openings/sill/lintel을 제거합니다.
 - north(도면 북쪽: 'up'|'down'|'left'|'right')도 지시에 따라 설정/변경합니다. 예: "북쪽을 오른쪽으로" → north:'right'.
