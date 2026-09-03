@@ -411,6 +411,7 @@
       <div class="vp-bar">
         <span class="stat">벽 <b id="wallCount">0</b>개 · 크기 <b id="dims">—</b></span>
         <div class="vp-right">
+          <button id="fpToggle" class="dim-btn">🚶 1인칭 시점</button>
           <label class="sun-ctl" title="시간대별 태양·그림자">☀
             <input id="sunTime" type="range" min="0" max="24" step="0.5" value="12" />
             <span id="sunLabel">12:00</span>
@@ -599,6 +600,8 @@ let currentNorth = 'up';
 let sunHour = 12;
 const lastCenter = new THREE.Vector3(0, 0, 0);
 const lastSize = new THREE.Vector3(3000, 2700, 3000);
+const savedCamPos = new THREE.Vector3();
+const savedCamTarget = new THREE.Vector3();
 
 // 시간대(0~24h)에 따른 태양 방향 + 그림자 카메라
 function updateSun() {
@@ -1079,6 +1082,8 @@ function buildModel(data) {
     controls.target.copy(new THREE.Vector3(center.x, H / 2, center.z));
     camera.position.set(center.x + r, H + r * 0.9, center.z + r);
     camera.near = r / 100; camera.far = r * 50; camera.updateProjectionMatrix();
+    savedCamPos.copy(camera.position);
+    savedCamTarget.copy(controls.target);
   } else {
     document.getElementById('dims').textContent = '—';
   }
@@ -1317,6 +1322,51 @@ document.getElementById('shadowToggle').addEventListener('click', () => {
   sun.castShadow = showShadow;
   ground.visible = showShadow;
   document.getElementById('shadowToggle').classList.toggle('on', showShadow);
+});
+
+/* ---------- 1인칭 시점 (바닥 클릭 → 눈높이 이동, 짧은 타겟거리로 제자리 회전 근사) ---------- */
+const EYE_HEIGHT = 1600; // mm, 성인 평균 눈높이
+const fpToggle = document.getElementById('fpToggle');
+const fpGroundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const fpRaycaster = new THREE.Raycaster();
+let firstPerson = false;
+
+function fpGroundPoint(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((clientX - rect.left) / rect.width) * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1
+  );
+  fpRaycaster.setFromCamera(ndc, camera);
+  const pt = new THREE.Vector3();
+  return fpRaycaster.ray.intersectPlane(fpGroundPlane, pt) ? pt : null;
+}
+
+canvas.addEventListener('click', (e) => {
+  if (!firstPerson) return;
+  const pt = fpGroundPoint(e.clientX, e.clientY);
+  if (!pt) { status('바닥 쪽을 클릭하세요.', 'err'); return; }
+  const dir = new THREE.Vector3(lastCenter.x - pt.x, 0, lastCenter.z - pt.z);
+  if (dir.lengthSq() < 1) dir.set(0, 0, -1);
+  dir.normalize();
+  camera.position.set(pt.x, EYE_HEIGHT, pt.z);
+  controls.target.copy(camera.position).addScaledVector(dir, 10);
+  status('이 위치에서 둘러보는 중 — 드래그로 시선 회전, 바닥을 다시 클릭하면 이동합니다.', 'info');
+});
+
+fpToggle.addEventListener('click', () => {
+  firstPerson = !firstPerson;
+  fpToggle.classList.toggle('on', firstPerson);
+  fpToggle.textContent = firstPerson ? '🚶 기본 시점으로' : '🚶 1인칭 시점';
+  canvas.style.cursor = firstPerson ? 'crosshair' : '';
+  controls.enableZoom = !firstPerson;
+  controls.enablePan = !firstPerson;
+  if (firstPerson) {
+    status('실내 바닥을 클릭하면 그 자리, 눈높이(1.6m)에서 둘러봅니다.', 'info');
+  } else {
+    camera.position.copy(savedCamPos);
+    controls.target.copy(savedCamTarget);
+  }
 });
 
 /* ---------- 색상 지정 (벽/지붕) ---------- */
