@@ -342,7 +342,9 @@
     <!-- LEFT: controls -->
     <div>
       <div class="card">
-        <h2><span class="step">1</span> 스케치 업로드</h2>
+        <h2><span class="step">1</span> 스케치 업로드
+          <button id="btnAddMore" class="dim-btn" style="margin-left:auto">+ 추가</button>
+        </h2>
         <div id="drop" class="drop">
           <div id="dropText">이미지를 끌어놓거나 클릭해서 선택 (여러 장 가능)</div>
           <div id="thumbs" class="thumbs"></div>
@@ -381,6 +383,7 @@
       <div class="card">
         <h2><span class="step">2</span> 대화로 수정 <span class="note" style="font-size:11px;font-weight:600;color:var(--text-secondary)">(API 필요)</span>
           <button id="chatUndo" class="dim-btn" style="margin-left:auto" disabled>↩ 되돌리기</button>
+          <button id="chatRedo" class="dim-btn" disabled>↪ 다시하기</button>
         </h2>
         <div id="chatLog" class="chat-log">
           <div class="chat-empty">현재 3D 모델을 말로 고칩니다. 우측 화면을 보며 조정하세요.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”</div>
@@ -1161,6 +1164,7 @@ drop.addEventListener('drop', e => {
   handleFiles(e.dataTransfer.files);
 });
 fileInput.addEventListener('change', () => { handleFiles(fileInput.files); fileInput.value = ''; });
+document.getElementById('btnAddMore').addEventListener('click', () => fileInput.click());
 
 function loadImageEl(src) {
   return new Promise((resolve, reject) => {
@@ -1224,18 +1228,24 @@ const apiSecretInput = document.getElementById('apiSecret');
 apiSecretInput.value = localStorage.getItem('sketch3d_secret') || '';
 apiSecretInput.addEventListener('change', () => localStorage.setItem('sketch3d_secret', apiSecretInput.value.trim()));
 
-/* ---------- 되돌리기 (AI 응답 적용 전 스냅샷) ---------- */
+/* ---------- 되돌리기/다시하기 (AI 응답 적용 전 스냅샷) ---------- */
 let undoStack = [];
+let redoStack = [];
 const chatUndoBtn = document.getElementById('chatUndo');
+const chatRedoBtn = document.getElementById('chatRedo');
 function pushUndo() {
   const cur = jsonBox.value.trim();
   if (!cur) return;
   undoStack.push(cur);
   if (undoStack.length > 20) undoStack.shift();
+  redoStack.length = 0; // 새 AI 응답이 오면 이전 다시하기 기록은 무효화
   chatUndoBtn.disabled = false;
+  chatRedoBtn.disabled = true;
 }
 chatUndoBtn.addEventListener('click', () => {
   if (!undoStack.length) return;
+  const cur = jsonBox.value.trim();
+  if (cur) { redoStack.push(cur); if (redoStack.length > 20) redoStack.shift(); }
   const prev = undoStack.pop();
   try {
     const data = JSON.parse(prev);
@@ -1244,6 +1254,21 @@ chatUndoBtn.addEventListener('click', () => {
     status(`이전 상태로 되돌렸습니다. (벽 ${n}개)`, 'ok');
   } catch { status('되돌리기 실패: 저장된 상태가 손상됨', 'err'); }
   chatUndoBtn.disabled = undoStack.length === 0;
+  chatRedoBtn.disabled = redoStack.length === 0;
+});
+chatRedoBtn.addEventListener('click', () => {
+  if (!redoStack.length) return;
+  const cur = jsonBox.value.trim();
+  if (cur) { undoStack.push(cur); if (undoStack.length > 20) undoStack.shift(); }
+  const next = redoStack.pop();
+  try {
+    const data = JSON.parse(next);
+    jsonBox.value = next;
+    const n = buildModel(data);
+    status(`다시 실행했습니다. (벽 ${n}개)`, 'ok');
+  } catch { status('다시하기 실패: 저장된 상태가 손상됨', 'err'); }
+  chatUndoBtn.disabled = undoStack.length === 0;
+  chatRedoBtn.disabled = redoStack.length === 0;
 });
 
 function usageText(res) {
