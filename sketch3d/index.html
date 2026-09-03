@@ -325,7 +325,16 @@
   .msg.bot { align-self: flex-start; background: var(--field-bg); border: 1px solid var(--field-border); color: var(--text-primary); border-bottom-left-radius: 4px; }
   .msg.bot.err { border-color: rgba(239,68,68,.4); color: var(--danger); }
   .chat-empty { color: var(--text-secondary); font-size: 12px; text-align: center; padding: 14px 6px; line-height: 1.6; }
-  .chat-row { display: flex; gap: 8px; margin-top: 10px; }
+  .chat-row { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }
+  #chatInput {
+    flex: 1;
+    resize: vertical;
+    min-height: 40px;
+    max-height: 160px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    line-height: 1.5;
+  }
   .chat-row input { flex: 1; }
 
   details.adv { margin-top: 14px; }
@@ -402,7 +411,7 @@
           <div class="chat-empty">현재 3D 모델을 말로 고칩니다. 우측 화면을 보며 조정하세요.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”</div>
         </div>
         <div class="chat-row">
-          <input id="chatInput" type="text" placeholder="수정 지시를 입력…" />
+          <textarea id="chatInput" rows="1" placeholder="수정 지시를 입력… (Shift+Enter로 줄바꿈)"></textarea>
           <button id="chatSend" class="btn" style="width:auto;padding:11px 16px">보내기</button>
           <button id="chatCancel" class="btn ghost" style="width:auto;padding:11px 16px;display:none">취소</button>
         </div>
@@ -457,7 +466,7 @@
         </div>
       </div>
       <canvas id="viewport"></canvas>
-      <div id="fpHint" class="fp-hint">🖱️ 드래그: 시선 회전 · 바닥 클릭: 그 위치로 이동</div>
+      <div id="fpHint" class="fp-hint">🖱️ 드래그: 시선 회전 · 스크롤: 확대/축소 · 바닥 클릭: 그 위치로 이동</div>
       </div>
 
       <div class="card views-card">
@@ -1474,8 +1483,19 @@ fpToggle.addEventListener('click', () => {
   } else {
     camera.position.copy(savedCamPos);
     controls.target.copy(savedCamTarget);
+    camera.zoom = 1;
+    camera.updateProjectionMatrix();
   }
 });
+
+// 1인칭 모드에선 OrbitControls 줌(카메라 위치 이동)을 꺼뒀으므로,
+// 대신 카메라 렌즈 줌(위치 고정, 화각만 확대)으로 스크롤 확대/축소를 제공
+canvas.addEventListener('wheel', (e) => {
+  if (!firstPerson) return;
+  e.preventDefault();
+  camera.zoom = Math.min(4, Math.max(1, camera.zoom - e.deltaY * 0.001));
+  camera.updateProjectionMatrix();
+}, { passive: false });
 
 /* ---------- 색상 지정 (벽/지붕) ---------- */
 document.getElementById('wallColor').addEventListener('input', e => wallMat.color.set(e.target.value));
@@ -1789,7 +1809,9 @@ async function sendChat() {
 }
 
 chatSend.addEventListener('click', sendChat);
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
 
 /* ---------- 태양 시간 ---------- */
 const sunTime = document.getElementById('sunTime');
