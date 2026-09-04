@@ -1,0 +1,1213 @@
+<title>에세이식 스무고개</title>
+<style>
+  :root{
+    --ink:#1E2420; --ink-soft:#4B564E; --ink-faint:#7C877E;
+    --paper:#F1F1EA; --surface:#FFFFFF; --surface-2:#F7F6F0;
+    --line:#DCDDD2; --line-soft:#E8E8DF;
+    --accent:#3E6B52; --accent-strong:#2A4D3B; --accent-tint:#E4EDE6; --accent-strong-tint:#D2E2D7;
+    --amber:#B8842E; --amber-tint:#F5E8CE;
+    --rose:#A15C4B; --rose-tint:#F1E2DC;
+    --shadow: 0 1px 2px rgba(30,36,32,.06), 0 6px 20px -8px rgba(30,36,32,.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#ECEAE1; --ink-soft:#B7BDB2; --ink-faint:#7E8A80;
+      --paper:#121613; --surface:#181F1A; --surface-2:#1D251F;
+      --line:#2B332D; --line-soft:#243029;
+      --accent:#6FAE8B; --accent-strong:#8FCBAA; --accent-tint:#1E2F26; --accent-strong-tint:#28392F;
+      --amber:#D9A548; --amber-tint:#2E2717;
+      --rose:#C98872; --rose-tint:#2E211C;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 30px -10px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#ECEAE1; --ink-soft:#B7BDB2; --ink-faint:#7E8A80;
+    --paper:#121613; --surface:#181F1A; --surface-2:#1D251F;
+    --line:#2B332D; --line-soft:#243029;
+    --accent:#6FAE8B; --accent-strong:#8FCBAA; --accent-tint:#1E2F26; --accent-strong-tint:#28392F;
+    --amber:#D9A548; --amber-tint:#2E2717;
+    --rose:#C98872; --rose-tint:#2E211C;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 30px -10px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;}
+  [hidden]{ display:none !important; }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"IBM Plex Sans KR","Noto Sans KR",system-ui,sans-serif;
+    font-size:15.5px; line-height:1.65;
+  }
+  .serif{ font-family:"Gowun Batang","Noto Serif KR",serif; }
+  .mono{ font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric: tabular-nums; }
+
+  a{ color:var(--accent-strong); }
+  h1,h2,h3{ text-wrap:balance; margin:0; }
+  ::selection{ background:var(--accent-tint); }
+
+  .page{ max-width:760px; margin:0 auto; padding:28px 20px 80px; }
+
+  /* ---------- header / progress rail ---------- */
+  .top{ margin-bottom:22px; }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-mark{ flex:0 0 auto; width:40px; height:40px; color:var(--accent-strong); }
+  .brand h1{ font-size:22px; font-weight:700; letter-spacing:-.2px; }
+  .tagline{ margin:3px 0 0; color:var(--ink-soft); font-size:13.5px; }
+
+  .rail{ margin-top:18px; padding:14px 16px 10px; background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
+  .rail svg{ display:block; width:100%; height:46px; }
+  .rail-meta{ display:flex; align-items:center; gap:10px; margin-top:2px; }
+  .rail-meta .mono{ font-size:12.5px; color:var(--ink-soft); }
+  .phase-pill{
+    font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:999px;
+    letter-spacing:.3px; margin-left:auto;
+  }
+  .phase-pill[data-phase="탐색"]{ background:var(--accent-tint); color:var(--accent-strong); }
+  .phase-pill[data-phase="전환"]{ background:var(--amber-tint); color:var(--amber); }
+  .phase-pill[data-phase="수렴"]{ background:var(--accent-strong-tint); color:var(--accent-strong); }
+
+  /* ---------- resume banner ---------- */
+  .resume-banner{
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px;
+    background:var(--amber-tint); border:1px solid var(--amber);
+    color:var(--ink); padding:12px 16px; border-radius:12px; margin-bottom:20px; font-size:14px;
+  }
+  .resume-banner strong{ font-weight:700; }
+  .resume-actions{ display:flex; gap:8px; margin-left:auto; }
+
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:16px;
+    padding:22px 24px; margin-bottom:16px;
+  }
+  .card h2{ font-size:17px; font-weight:700; }
+  .card > h2 + p{ margin-top:8px; }
+  .card p{ color:var(--ink-soft); margin:8px 0 0; }
+  .card p:first-child{ margin-top:0; }
+
+  .intro .steps{ list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .intro .steps li{ display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border-radius:10px; background:var(--surface-2); }
+  .step-tag{ flex:0 0 auto; font-size:11px; font-weight:700; letter-spacing:.4px; padding:3px 8px; border-radius:999px; }
+  .step-tag.explore{ background:var(--accent-tint); color:var(--accent-strong); }
+  .step-tag.pivot{ background:var(--amber-tint); color:var(--amber); }
+  .step-tag.converge{ background:var(--accent-strong-tint); color:var(--accent-strong); }
+  .intro .steps b{ display:block; font-size:14.5px; margin-bottom:2px; }
+  .intro .steps span{ color:var(--ink-soft); font-size:13.5px; }
+  .note-line{
+    margin-top:16px; padding-top:14px; border-top:1px solid var(--line-soft);
+    font-size:13px; color:var(--ink-faint);
+  }
+  .note-line + .note-line{ border-top:none; padding-top:6px; margin-top:6px; }
+
+  /* ---------- fields ---------- */
+  label.field-label{ display:block; font-weight:600; font-size:14.5px; margin-bottom:6px; }
+  textarea{
+    width:100%; resize:vertical; border:1px solid var(--line); border-radius:12px;
+    background:var(--surface-2); color:var(--ink); padding:12px 14px; font:inherit;
+    font-size:14.5px; line-height:1.6;
+  }
+  textarea:focus-visible, .chip:focus-visible, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent-strong); outline-offset:2px;
+  }
+  .example{ font-size:13px; color:var(--ink-faint); margin-top:6px; }
+  .counter{ display:flex; justify-content:flex-end; font-size:12px; color:var(--ink-faint); margin-top:5px; }
+
+  .start-row{ display:flex; align-items:center; gap:14px; margin:6px 4px 22px; flex-wrap:wrap; }
+  .hint{ color:var(--ink-faint); font-size:13px; }
+
+  .example-row{ display:flex; align-items:center; gap:10px 14px; margin:0 4px 14px; flex-wrap:wrap; }
+  .example-row .btn{ padding:8px 16px; font-size:13.5px; }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    font:inherit; font-weight:600; font-size:14.5px; padding:11px 20px; border-radius:11px;
+    border:1px solid transparent; cursor:pointer; transition:transform .08s ease, opacity .15s ease;
+  }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn:not(:disabled):active{ transform:translateY(1px); }
+  .btn.primary{ background:var(--accent-strong); color:var(--surface); }
+  .btn.primary:not(:disabled):hover{ background:var(--accent); }
+  .btn.ghost{ background:transparent; border-color:var(--line); color:var(--ink); }
+  .btn.ghost:not(:disabled):hover{ border-color:var(--accent-strong); }
+  .btn.quiet{ background:var(--surface-2); border-color:var(--line); color:var(--ink-soft); }
+  .link-btn{
+    background:none; border:none; padding:0; color:var(--accent-strong); font:inherit;
+    text-decoration:underline; cursor:pointer; font-size:inherit;
+  }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+  /* ---------- result card ---------- */
+  .result-card{ min-height:120px; }
+  #resultIdle{ color:var(--ink-faint); font-size:14.5px; }
+  .loading{ display:flex; align-items:center; gap:14px; }
+  .pulse{ width:14px; height:14px; border-radius:50%; background:var(--accent); flex:0 0 auto; }
+  @media (prefers-reduced-motion: no-preference){
+    .pulse{ animation:breathe 1.6s ease-in-out infinite; }
+  }
+  @keyframes breathe{ 0%,100%{ transform:scale(.7); opacity:.55;} 50%{ transform:scale(1); opacity:1;} }
+  .loading-text{ font-size:14.5px; color:var(--ink-soft); }
+  .loading-time{ font-size:12.5px; color:var(--ink-faint); margin-left:auto; }
+
+  .error-box{ background:var(--rose-tint); border:1px solid var(--rose); border-radius:12px; padding:14px 16px; }
+  .error-box p{ color:var(--ink); margin:0; }
+
+  .q-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .q-num{ font-size:13px; }
+  .flip-badge{ font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-tint); padding:2px 8px; border-radius:999px; }
+  .q-note{ font-style:italic; color:var(--ink-faint); font-size:13.5px; margin-top:10px; }
+  .q-text{ font-size:19px; line-height:1.55; margin-top:10px; }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .chip{
+    font:inherit; font-size:13.5px; padding:9px 14px; border-radius:999px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--ink); cursor:pointer;
+  }
+  .chip[data-state="like"]{ background:var(--accent-strong); border-color:var(--accent-strong); color:var(--surface); }
+  .chip[data-state="dislike"]{ background:var(--rose-tint); border-color:var(--rose); color:var(--rose); text-decoration:line-through; }
+  .chip-hint{ font-size:12px; color:var(--ink-faint); margin-top:8px; }
+
+  .dontknow-row{ margin-top:10px; }
+
+  /* ---------- synthesis ---------- */
+  .round-tag{ font-size:12px; font-weight:700; color:var(--ink-soft); }
+  .converged-tag{ font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; margin-left:8px; }
+  .converged-tag.yes{ background:var(--accent-tint); color:var(--accent-strong); }
+  .converged-tag.no{ background:var(--amber-tint); color:var(--amber); }
+  .synth-summary{ font-size:15px; margin-top:12px; }
+  .synth-h{ font-size:13px; font-weight:700; letter-spacing:.3px; color:var(--ink-soft); margin:20px 0 8px; text-transform:uppercase; }
+  .goal-list{ margin:0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .goal-list li{ display:flex; gap:10px; align-items:flex-start; font-size:14.5px; }
+  .goal-list li::before{ content:""; width:6px; height:6px; margin-top:8px; border-radius:50%; background:var(--accent-strong); flex:0 0 auto; }
+
+  .plan-item{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; background:var(--surface-2); }
+  .plan-item .plan-head{ display:flex; gap:10px; align-items:baseline; }
+  .plan-idx{ font-size:12px; color:var(--accent-strong); font-weight:700; }
+  .plan-step{ font-weight:700; font-size:14.5px; }
+  .plan-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px 16px; margin-top:10px; }
+  .plan-grid div{ font-size:13px; }
+  .plan-grid b{ display:block; font-size:11px; color:var(--ink-faint); font-weight:600; margin-bottom:2px; text-transform:uppercase; letter-spacing:.3px; }
+
+  .missing-box{ background:var(--amber-tint); border:1px solid var(--amber); border-radius:12px; padding:12px 16px; margin-top:16px; }
+  .missing-box b{ display:block; font-size:13px; margin-bottom:6px; color:var(--ink); }
+  .missing-box ul{ margin:0; padding-left:18px; font-size:13.5px; color:var(--ink-soft); }
+  .synth-message{ margin-top:16px; font-size:14px; color:var(--ink-soft); }
+
+  /* ---------- transcript log ---------- */
+  details.transcript-log{ margin-top:8px; }
+  details.transcript-log summary{ cursor:pointer; font-size:13.5px; color:var(--ink-soft); padding:8px 4px; }
+  #logList{ list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  #logList li{ font-size:13.5px; border-left:2px solid var(--line); padding:2px 0 2px 12px; }
+  #logList .logq{ color:var(--ink); }
+  #logList .loga{ color:var(--ink-soft); margin-top:2px; }
+
+  .prior-round-item{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-top:10px; background:var(--surface-2); }
+  .prior-round-item:first-child{ margin-top:8px; }
+  .prior-round-item h4{ font-size:13.5px; margin:0 0 6px; }
+  .prior-round-item p{ font-size:13.5px; margin:0 0 8px; color:var(--ink-soft); }
+  .prior-round-item .goal-list li{ font-size:13.5px; }
+  .prior-round-item details{ margin-top:8px; }
+  .prior-round-item details summary{ cursor:pointer; font-size:12.5px; color:var(--ink-faint); }
+
+  footer{ margin-top:30px; text-align:center; font-size:12.5px; color:var(--ink-faint); }
+
+  @media (max-width:520px){
+    .page{ padding:18px 14px 60px; }
+    .card{ padding:18px; }
+    .q-text{ font-size:17.5px; }
+  }
+</style>
+
+<div class="page">
+
+  <div class="resume-banner" id="resumeBanner" hidden>
+    <span><strong>이어서 진행 중이던 세션이 있어요.</strong> 계속 진행할까요?</span>
+    <div class="resume-actions">
+      <button class="btn ghost" id="resumeDiscardBtn">새로 시작</button>
+      <button class="btn primary" id="resumeContinueBtn">이어하기</button>
+    </div>
+  </div>
+
+  <header class="top">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <path d="M4 36 L18 14 L24 24 L30 10 L44 36 Z" fill="currentColor" opacity=".9"/>
+      </svg>
+      <div>
+        <h1 class="serif">에세이식 스무고개</h1>
+        <p class="tagline">질문 하나, 답변 하나로 생각을 끝까지 밀고 가는 대화형 정리 도구</p>
+      </div>
+    </div>
+
+    <div class="rail" id="rail" hidden>
+      <svg id="railSvg" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="railGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="var(--accent)"/>
+            <stop offset="35%" stop-color="var(--accent)"/>
+            <stop offset="55%" stop-color="var(--amber)"/>
+            <stop offset="72%" stop-color="var(--amber)"/>
+            <stop offset="100%" stop-color="var(--accent-strong)"/>
+          </linearGradient>
+        </defs>
+        <path id="railBase" d="M0,95 C220,95 260,25 500,25 C740,25 780,95 1000,95" fill="none" stroke="var(--line)" stroke-width="6" stroke-linecap="round"/>
+        <path id="railProgress" d="M0,95 C220,95 260,25 500,25 C740,25 780,95 1000,95" fill="none" stroke="url(#railGrad)" stroke-width="6" stroke-linecap="round"/>
+        <circle id="railMarker" r="7" fill="var(--surface)" stroke="var(--accent-strong)" stroke-width="3"/>
+      </svg>
+      <div class="rail-meta">
+        <span class="mono" id="railRound">1라운드</span>
+        <span class="mono" id="railCount">0 / 20</span>
+        <span class="phase-pill" data-phase="탐색" id="railPhase">탐색</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="card intro">
+      <h2>이렇게 진행돼요</h2>
+      <p>정해진 질문지가 아니라, 방금 남긴 답변을 읽고 그때그때 다음 질문을 만듭니다.<br>총 20개의 질문이 한 라운드이며, 진행은 세 단계를 거칩니다.</p>
+      <ul class="steps">
+        <li><span class="step-tag explore">탐색 1~7</span><span><b>지금 상황을 넓게 살펴봅니다</b><span>처한 상황, 동기, 문제를 폭넓게 묻습니다.</span></span></li>
+        <li><span class="step-tag pivot">전환 8~14</span><span><b>당연하게 여긴 전제를 한 번은 뒤집습니다</b><span>반례, 반대 입장, 다른 제약 조건을 통해 스스로 놓친 부분을 찾습니다.</span></span></li>
+        <li><span class="step-tag converge">수렴 15~20</span><span><b>구체적으로 좁혀갑니다</b><span>대상·방법·수량·기간·우선순위·검증 방법·실행 계획을 정합니다.</span></span></li>
+      </ul>
+      <div class="note-line">20문항이 끝나면 지금까지의 답변을 목표와 실행 계획으로 종합합니다.<br>숫자·이름·기간처럼 구체적인 사실이 아직 부족하면, 그 결과를 씨앗 삼아 2라운드·3라운드로 스무고개를 이어갑니다.</div>
+      <div class="note-line">※ 이 페이지는 실시간으로 웹을 검색하지 않습니다.<br>판단할 자료가 부족하면 추측 대신, 필요한 정보를 직접 물어보는 질문을 드립니다.</div>
+      <div class="note-line">질문을 만드는 데 이 화면을 보고 계신 Claude 계정의 사용량이 쓰입니다.<br>첫 질문을 요청할 때 한 번 허용 여부를 물어봅니다.</div>
+    </section>
+
+    <div class="example-row" id="exampleRow">
+      <span class="hint">빠르게 살펴보고 싶다면 예시로 채워볼 수 있어요.</span>
+      <button class="btn ghost" id="exampleFillBtn" type="button">예시 제시</button>
+      <button class="btn ghost" id="exampleClearBtn" type="button">예시 지우기</button>
+    </div>
+
+    <section class="card field-card" id="topicCard">
+      <h2>Topic — 하고 싶은 일 · 목표 · 고민</h2>
+      <p>지금 이루고 싶은 일, 도달하고 싶은 목표, 마음에 걸리는 고민을 한두 문장으로 적어주세요.<br>완벽하게 정리된 문장이 아니어도 됩니다 — 이어지는 질문들이 함께 다듬어 줍니다.</p>
+      <div style="margin-top:14px">
+        <label class="field-label" for="topicInput">Topic</label>
+        <textarea id="topicInput" rows="2" maxlength="600" placeholder="예: 올해 안에 사이드 프로젝트를 수익화하고 싶은데, 어디서부터 시작해야 할지 막막하다."></textarea>
+        <div class="counter"><span id="topicCount">0</span> / 600자</div>
+      </div>
+    </section>
+
+    <section class="card field-card" id="backgroundCard">
+      <h2>Background — 현재 상황 · 조사한 정보 · 제약 조건</h2>
+      <p>지금까지 파악한 상황, 이미 조사해 둔 정보나 갖고 있는 데이터, 시간·예산·인력 같은 제약 조건을 적어주세요.<br>참고할 자료가 있다면 핵심 내용을 옮겨 붙여넣으셔도 됩니다.</p>
+      <div style="margin-top:14px">
+        <label class="field-label" for="backgroundInput">Background</label>
+        <textarea id="backgroundInput" rows="6" maxlength="2000" placeholder="예: 주중 저녁 2시간, 주말 반나절 정도 시간을 낼 수 있음. 예산은 200만 원 이내. 비슷한 서비스 A, B를 조사했지만 차별점을 못 찾음."></textarea>
+        <div class="counter"><span id="backgroundCount">0</span> / 2000자</div>
+      </div>
+    </section>
+
+    <div class="start-row" id="startRow">
+      <button class="btn primary" id="startBtn" disabled>스무고개 시작하기</button>
+      <span class="hint" id="startHint">주제와 배경을 입력하면 활성화됩니다.</span>
+    </div>
+
+    <section class="card result-card" id="resultCard" aria-live="polite">
+      <div id="resultIdle">주제와 배경을 입력하고 시작하면 여기에 질문이 하나씩 나타납니다.</div>
+
+      <div id="resultLoading" hidden class="loading">
+        <span class="pulse" aria-hidden="true"></span>
+        <span class="loading-text" id="loadingText">다음 질문을 준비하고 있어요…</span>
+        <span class="loading-time mono" id="loadingTime">0:00</span>
+        <button class="btn quiet" id="stopBtn">중단</button>
+      </div>
+
+      <div id="resultError" hidden>
+        <div class="error-box">
+          <p id="errorText"></p>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="retryBtn">다시 시도</button>
+        </div>
+      </div>
+
+      <div id="resultQuestion" hidden>
+        <div class="q-head">
+          <span class="mono q-num" id="qNumLabel">(1/20)</span>
+          <span class="phase-pill" id="qPhasePill" data-phase="탐색">탐색</span>
+          <span class="flip-badge" id="qFlipBadge" hidden>전제 뒤집기</span>
+        </div>
+        <p class="q-note" id="qNote" hidden></p>
+        <p class="q-text serif" id="qText"></p>
+
+        <div id="qOpenBlock">
+          <textarea id="answerInput" rows="4" maxlength="700" placeholder="떠오르는 대로, 한두 문단 정도로 적어보세요."></textarea>
+          <div class="counter"><span id="answerCount">0</span> / 700자</div>
+          <div class="btn-row">
+            <button class="btn primary" id="submitAnswerBtn" disabled>답변 제출</button>
+            <button class="btn ghost" id="dontKnowBtn">잘 모르겠어요 — 후보 제안받기</button>
+          </div>
+        </div>
+
+        <div id="qChoiceBlock" hidden>
+          <div class="chips" id="chipRow"></div>
+          <p class="chip-hint">후보를 눌러 끌리면 한 번, 별로면 한 번 더 눌러보세요.<br>다시 누르면 선택이 풀립니다.</p>
+          <div style="margin-top:14px">
+            <label class="field-label" for="choiceFreeText">덧붙이고 싶은 말 (선택)</label>
+            <textarea id="choiceFreeText" rows="2" maxlength="400" placeholder="추가로 하고 싶은 말이 있다면 적어주세요."></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="submitChoiceBtn" disabled>다음</button>
+          </div>
+        </div>
+
+        <div class="btn-row" id="earlyStopRow" hidden>
+          <button class="link-btn" id="earlyStopBtn">지금까지 답변만으로 결과 정리하기</button>
+        </div>
+      </div>
+
+      <div id="resultSynthesis" hidden>
+        <span class="round-tag mono" id="synthRoundTag">1라운드 종합</span>
+        <span class="converged-tag" id="synthConvergedTag">완료</span>
+        <p class="synth-summary" id="synthSummary"></p>
+
+        <div class="synth-h">목표</div>
+        <ul class="goal-list" id="synthGoals"></ul>
+
+        <div class="synth-h">실행 계획</div>
+        <div id="synthPlan"></div>
+
+        <div class="missing-box" id="synthMissingBox" hidden>
+          <b>아직 구체적으로 정해지지 않은 것들</b>
+          <ul id="synthMissingList"></ul>
+        </div>
+
+        <p class="synth-message" id="synthMessage"></p>
+
+        <div class="btn-row" id="synthActions"></div>
+      </div>
+    </section>
+
+    <details class="transcript-log" id="priorRoundsWrap" hidden>
+      <summary id="priorRoundsSummary">지난 라운드 결과 보기</summary>
+      <div id="priorRoundsList"></div>
+    </details>
+
+    <details class="transcript-log" id="logWrap" hidden>
+      <summary>지금 라운드 문답 기록 보기</summary>
+      <ol id="logList"></ol>
+    </details>
+
+  </main>
+
+  <footer>
+    이 페이지의 진행 상황은 이 브라우저에만 저장됩니다 · <button class="link-btn" id="resetBtn">새로 시작하기</button>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOTAL_Q = 20;
+  var STORAGE_KEY = 'essay20q_v1';
+  var MAX_TRANSCRIPT_BYTES = 30000;
+  var MAX_SYNTH_TRANSCRIPT_BYTES = 35000;
+  var SAMPLE_TOPIC = '올해 안에 사이드 프로젝트를 수익화하고 싶은데, 어디서부터 시작해야 할지 막막하다.';
+  var SAMPLE_BACKGROUND = '주중 저녁 2시간, 주말 반나절 정도 시간을 낼 수 있음. 예산은 200만 원 이내. 비슷한 서비스 A, B를 조사했지만 차별점을 못 찾음.';
+
+  // ---------------------------------------------------------------- utils
+
+  function utf8Len(s) { return new TextEncoder().encode(s || '').length; }
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+  /* 문장이 끝나는 마침표(. ! ?) 뒤에서 줄을 바꾼다 — 소수점(2.5)처럼 뒤에 공백이 없는
+     경우는 건드리지 않는다. 여러 문장이 이어진 라벨·AI 응답을 읽기 쉽게 끊어 보여주는 데 쓴다. */
+  function breakSentences(s) {
+    s = s == null ? '' : String(s);
+    var parts = s.split(/(?<=[.!?])\s+(?=\S)/);
+    return parts.map(esc).join('<br>');
+  }
+  function setBrokenText(id, s) { document.getElementById(id).innerHTML = breakSentences(s); }
+  function fmtTime(ms) {
+    var s = Math.floor(ms / 1000);
+    var m = Math.floor(s / 60);
+    s = s % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function phaseOf(idx) { return idx <= 7 ? '탐색' : (idx <= 14 ? '전환' : '수렴'); }
+  function tierFor(idx) { return idx <= 7 ? 'default' : 'complex'; }
+
+  // ---------------------------------------------------------------- state
+
+  var state = null;
+
+  function freshState() {
+    return {
+      v: 1,
+      topic: '', background: '',
+      round: 1, index: 1,
+      status: 'intro',            // intro | asking | question | synthesizing | synthesis | error
+      transcript: [],             // this round's {n,phase,isFlip,note,question,answerType,choices,answer}
+      priorRounds: [],            // [{round,summary,goals,missingFacts}]
+      currentQuestion: null,
+      lastSynthesis: null,
+      lastErrorCode: null,
+      pendingAction: null,        // 'question' | 'synthesis' -- what a retry should re-request
+      earlyStop: false,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return freshState();
+      var parsed = JSON.parse(raw);
+      if (!parsed || parsed.v !== 1) return freshState();
+      return parsed;
+    } catch (e) { return freshState(); }
+  }
+
+  function saveState() {
+    state.updatedAt = new Date().toISOString();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignore quota errors */ }
+  }
+
+  function hasProgress(s) {
+    return s.transcript.length > 0 || s.round > 1 || s.status === 'synthesis' || s.status === 'question';
+  }
+
+  // ---------------------------------------------------------------- prompt building
+
+  function rulesHeader(round, idx, phaseLabel) {
+    return '당신은 "에세이식 스무고개"의 질문자입니다. 사용자가 제시한 주제와 배경을 바탕으로,\n' +
+      '직전 답변을 반영해 다음 질문을 그때그때 하나만 만듭니다. 질문을 미리 정해두지 마세요.\n\n' +
+      '[진행 규칙]\n' +
+      '- 한 라운드는 20개 질문입니다. 지금은 ' + round + '라운드 ' + idx + '번째 질문이며, 단계는 "' + phaseLabel + '"입니다.\n' +
+      '- 1~7번째: 상황·동기·문제를 폭넓게 탐색하는 질문.\n' +
+      '- 8~14번째: 이 구간 전체에서 반드시 최소 한 번은, 사용자가 당연하게 여기는 전제를 반례·반대 입장·\n' +
+      '  제약 조건 바꾸기 같은 방법으로 뒤집어보는 질문을 포함하세요(isAssumptionFlip: true로 표시). 이미\n' +
+      '  이번 라운드 문답 기록에 뒤집기 질문이 있었다면 반복하지 말고 다음 단계로 넘어가세요.\n' +
+      '- 15~20번째: 대상, 방법, 수량, 기간, 우선순위, 검증 방법, 실행 계획이 구체적으로 정해지도록 좁혀가는 질문.\n' +
+      '- 질문은 한 번에 하나만, 에세이(서술형) 톤으로 2~4문장 이내로 작성하세요.\n' +
+      '- 직전 답변이 "잘 모르겠다"는 뜻이면, 구체적인 후보 3~5개를 제시하고 각각 끌리는지 아닌지 고르게\n' +
+      '  하세요(answerType: "choice").\n' +
+      '- 이 페이지는 실시간 웹 검색을 할 수 없습니다. 판단할 근거가 부족해도 추측하지 말고, 부족한 정보를\n' +
+      '  사용자에게 직접 묻는 질문으로 다음 질문을 구성하세요.\n' +
+      '- 이미 나온 질문이나 이미 답변된 내용을 반복하지 마세요.';
+  }
+
+  function formatTurn(t) {
+    var flip = t.isFlip ? ' [전제 뒤집기]' : '';
+    return 'Q' + t.n + '(' + t.phase + flip + '): ' + t.question + '\nA' + t.n + ': ' + t.answer;
+  }
+
+  function serializeTranscript(list, maxBytes) {
+    if (!list.length) return '(아직 없음 — 이번이 이 라운드의 첫 질문)';
+    var out = [];
+    var used = 0;
+    var truncatedFlag = false;
+    for (var i = list.length - 1; i >= 0; i--) {
+      var block = formatTurn(list[i]);
+      var blen = utf8Len(block) + 2;
+      if (used + blen > maxBytes && out.length > 0) { truncatedFlag = true; break; }
+      out.unshift(block);
+      used += blen;
+    }
+    return (truncatedFlag ? '(그 이전 문답은 길이 제한으로 생략됨)\n\n' : '') + out.join('\n\n');
+  }
+
+  function priorRoundsBlock(priorRounds) {
+    if (!priorRounds.length) return '';
+    var parts = priorRounds.map(function (r) {
+      return r.round + '라운드 종합: ' + r.summary + '\n목표: ' + (r.goals || []).join(', ') +
+        '\n아직 부족했던 점: ' + ((r.missingFacts || []).join(', ') || '없음');
+    });
+    return '\n[이전 라운드 요약 — 이번 라운드의 씨앗]\n' + parts.join('\n\n');
+  }
+
+  function buildQuestionPrompt(s) {
+    var idx = s.index;
+    var phaseLabel = phaseOf(idx);
+    var prior = priorRoundsBlock(s.priorRounds);
+    var transcript = '\n[이번 라운드 지금까지의 문답]\n' + serializeTranscript(s.transcript, MAX_TRANSCRIPT_BYTES);
+    return rulesHeader(s.round, idx, phaseLabel) +
+      '\n\n[주제]\n' + s.topic +
+      '\n\n[배경]\n' + s.background +
+      prior + transcript +
+      '\n\n이제 위 내용을 모두 반영해 ' + s.round + '라운드의 ' + idx + '번째 질문을 만드세요.\n' +
+      '아래 JSON 형식으로만 답하세요. 다른 말은 하지 마세요.\n' +
+      '{"kind":"question","phase":"탐색|전환|수렴","isAssumptionFlip":true 또는 false,' +
+      '"note":"(짧은 코멘트, 없으면 빈 문자열)","question":"(질문 내용)",' +
+      '"answerType":"open 또는 choice","choices":["...", "..."]}\n' +
+      'choices는 answerType이 "choice"일 때만 3~5개 채우고, 아니면 빈 배열 []로 두세요.';
+  }
+
+  function buildSynthesisPrompt(s, earlyStop) {
+    var reason = earlyStop
+      ? '사용자가 이번 라운드의 20문항을 다 채우지 않고, 지금까지 답변만으로 정리해 달라고 요청했습니다.'
+      : '사용자가 이번 라운드의 20개 질문에 모두 답했습니다.';
+    var prior = priorRoundsBlock(s.priorRounds);
+    return '당신은 "에세이식 스무고개"의 질문자입니다. ' + reason + '\n' +
+      '지금까지의 모든 답변을 종합해 사용자의 목표와 실행 계획으로 정리하세요. 숫자·이름·기간 같은\n' +
+      '구체적 사실이 부족하면 아직 수렴하지 않은 것으로 판단하고 converged를 false로 표시하고,\n' +
+      '다음 라운드에서 무엇을 더 물어야 하는지 missingFacts에 적으세요.\n\n' +
+      '[주제]\n' + s.topic + '\n\n[배경]\n' + s.background + prior +
+      '\n\n[이번 라운드 문답]\n' + serializeTranscript(s.transcript, MAX_SYNTH_TRANSCRIPT_BYTES) +
+      '\n\n아래 JSON 형식으로만 답하세요. 다른 말은 하지 마세요.\n' +
+      '{"kind":"synthesis","round":' + s.round + ',"converged":true 또는 false,' +
+      '"summary":"(3~6문장 상황 요약)","goals":["목표1","목표2"],' +
+      '"actionPlan":[{"step":"...","target":"...","period":"...","how":"...","verify":"..."}],' +
+      '"missingFacts":["..."],"message":"(사용자에게 보여줄 2~4문장 코멘트)"}';
+  }
+
+  function compileChoiceAnswer(choices, states, freeText) {
+    var liked = [], disliked = [];
+    choices.forEach(function (c, i) {
+      if (states[i] === 'like') liked.push(c);
+      else if (states[i] === 'dislike') disliked.push(c);
+    });
+    var parts = [];
+    parts.push(liked.length ? '끌리는 후보: ' + liked.join(', ') : '끌리는 후보 없음');
+    parts.push(disliked.length ? '끌리지 않는 후보: ' + disliked.join(', ') : '끌리지 않는 후보 없음');
+    if (freeText && freeText.trim()) parts.push('추가 의견: ' + freeText.trim());
+    return parts.join(' / ');
+  }
+
+  // ---------------------------------------------------------------- capability wiring
+
+  var sampleFn = null;
+  var downloadsCap = null;
+  var currentAbort = null;
+  var loadingTimer = null;
+  var loadingStart = 0;
+
+  async function initCapabilities() {
+    try { sampleFn = await claude.use('sample'); } catch (e) { sampleFn = null; }
+    try { downloadsCap = await claude.use('downloads'); } catch (e) { downloadsCap = null; }
+    refreshStartAvailability();
+  }
+
+  function refreshStartAvailability() {
+    var hint = document.getElementById('startHint');
+    if (sampleFn === null) {
+      document.getElementById('startBtn').disabled = true;
+      hint.textContent = '이 화면에서는 AI 질문 기능을 불러오지 못했습니다. Claude 아티팩트로 열람 중인지 확인해 주세요.';
+      return;
+    }
+    evaluateStartButton();
+  }
+
+  // ---------------------------------------------------------------- error copy
+
+  function errorCopy(code) {
+    switch (code) {
+      case 'not_granted': return { msg: 'AI 질문 기능 사용이 허용되지 않아 더 진행할 수 없습니다.', retry: false };
+      case 'sampling_disabled': return { msg: '현재 계정에서는 Claude를 사용할 수 없습니다.', retry: false };
+      case 'not_declared':
+      case 'capability_disabled':
+      case 'capability_removed': return { msg: '이 화면에서는 AI 질문 기능을 쓸 수 없습니다.', retry: false };
+      case 'rate_limited': return { msg: '요청이 몰려 잠시 제한됐습니다. 잠시 후 다시 시도해 주세요.', retry: true };
+      case 'session_expired': return { msg: '로그인이 만료됐습니다. 다시 로그인한 뒤 시도해 주세요.', retry: true };
+      case 'refused': return { msg: '이번 요청은 처리되지 않았습니다. 답변을 조금 다르게 표현해 다시 시도해 주세요.', retry: true };
+      case 'empty_completion': return { msg: '응답을 받지 못했습니다. 다시 시도해 주세요.', retry: true };
+      case 'invalid_json': return { msg: '응답 형식을 읽지 못했습니다. 다시 시도해 주세요.', retry: true };
+      case 'prompt_too_large': return { msg: '지금까지 쌓인 내용이 많아 요청이 너무 커졌습니다. 답변을 조금 더 짧게 적고 다시 시도해 주세요.', retry: true };
+      case 'cancelled': return { msg: '', retry: false };
+      default: return { msg: '일시적인 오류가 발생했습니다. 다시 시도해 주세요.', retry: true };
+    }
+  }
+
+  // ---------------------------------------------------------------- core flow
+
+  async function runSample(prompt, tier, loadingMsg, pendingAction) {
+    showLoading(loadingMsg);
+    state.pendingAction = pendingAction;
+    saveState();
+    currentAbort = new AbortController();
+    try {
+      var data = await sampleFn.json(prompt, { modelTier: tier, cache: false, signal: currentAbort.signal });
+      return data;
+    } finally {
+      currentAbort = null;
+      stopLoadingTimer();
+    }
+  }
+
+  async function askNextQuestion() {
+    state.status = 'asking';
+    render();
+    var idx = state.index;
+    var tier = tierFor(idx);
+    try {
+      var data = await runSample(buildQuestionPrompt(state), tier, '다음 질문을 준비하고 있어요…', 'question');
+      if (!data || data.kind !== 'question' || typeof data.question !== 'string' || !data.question.trim() ||
+          (data.answerType !== 'open' && data.answerType !== 'choice') ||
+          (data.answerType === 'choice' && (!Array.isArray(data.choices) || data.choices.length < 2))) {
+        throw { code: 'invalid_json', message: '질문 형식이 올바르지 않습니다.' };
+      }
+      state.currentQuestion = {
+        n: idx,
+        phase: (data.phase === '탐색' || data.phase === '전환' || data.phase === '수렴') ? data.phase : phaseOf(idx),
+        isFlip: !!data.isAssumptionFlip,
+        note: typeof data.note === 'string' ? data.note : '',
+        question: data.question.trim(),
+        answerType: data.answerType,
+        choices: data.answerType === 'choice' ? data.choices.slice(0, 5).map(String) : []
+      };
+      state.status = 'question';
+      state.lastErrorCode = null;
+      saveState();
+      render();
+    } catch (e) {
+      handleFailure(e);
+    }
+  }
+
+  async function requestSynthesis(earlyStop) {
+    state.status = 'synthesizing';
+    state.earlyStop = !!earlyStop;
+    render();
+    try {
+      var data = await runSample(
+        buildSynthesisPrompt(state, !!earlyStop), 'complex',
+        earlyStop ? '지금까지의 답변을 종합하고 있어요…' : '20개 답변을 종합하고 있어요…', 'synthesis'
+      );
+      if (!data || data.kind !== 'synthesis' || typeof data.converged !== 'boolean' ||
+          typeof data.summary !== 'string' || !Array.isArray(data.goals) || !Array.isArray(data.actionPlan)) {
+        throw { code: 'invalid_json', message: '종합 결과 형식이 올바르지 않습니다.' };
+      }
+      state.lastSynthesis = {
+        round: state.round,
+        converged: !!data.converged,
+        summary: data.summary,
+        goals: data.goals.map(String),
+        actionPlan: data.actionPlan.map(function (p) {
+          p = p || {};
+          return { step: String(p.step || ''), target: String(p.target || ''), period: String(p.period || ''), how: String(p.how || ''), verify: String(p.verify || '') };
+        }),
+        missingFacts: Array.isArray(data.missingFacts) ? data.missingFacts.map(String) : [],
+        message: typeof data.message === 'string' ? data.message : ''
+      };
+      state.status = 'synthesis';
+      state.lastErrorCode = null;
+      saveState();
+      render();
+    } catch (e) {
+      handleFailure(e);
+    }
+  }
+
+  function handleFailure(e) {
+    var code = (e && e.code) || 'upstream_error';
+    if (code === 'cancelled') {
+      state.status = state.pendingAction === 'synthesis' ? (state.transcript.length ? 'question' : 'intro') : (state.currentQuestion ? 'question' : 'intro');
+      render();
+      return;
+    }
+    state.status = 'error';
+    state.lastErrorCode = code;
+    state.lastErrorText = (e && e.text) || '';
+    saveState();
+    render();
+  }
+
+  function retryPending() {
+    if (state.pendingAction === 'synthesis') requestSynthesis(state.earlyStop);
+    else askNextQuestion();
+  }
+
+  function submitOpenAnswer(answerText) {
+    var q = state.currentQuestion;
+    state.transcript.push({
+      n: q.n, phase: q.phase, isFlip: q.isFlip, note: q.note,
+      question: q.question, answerType: 'open', choices: [], answer: answerText
+    });
+    advanceAfterAnswer();
+  }
+
+  function submitChoiceAnswer(answerText) {
+    var q = state.currentQuestion;
+    state.transcript.push({
+      n: q.n, phase: q.phase, isFlip: q.isFlip, note: q.note,
+      question: q.question, answerType: 'choice', choices: q.choices, answer: answerText
+    });
+    advanceAfterAnswer();
+  }
+
+  function advanceAfterAnswer() {
+    state.currentQuestion = null;
+    state.index += 1;
+    saveState();
+    if (state.index > TOTAL_Q) requestSynthesis(false);
+    else askNextQuestion();
+  }
+
+  function startNextRound() {
+    var syn = state.lastSynthesis;
+    state.priorRounds.push({
+      round: syn.round, summary: syn.summary, goals: syn.goals, missingFacts: syn.missingFacts,
+      transcript: state.transcript.slice()
+    });
+    state.round += 1;
+    state.index = 1;
+    state.transcript = [];
+    state.currentQuestion = null;
+    state.lastSynthesis = null;
+    state.earlyStop = false;
+    saveState();
+    askNextQuestion();
+  }
+
+  function finishHere() {
+    saveState();
+    render();
+  }
+
+  function startFlow() {
+    state.topic = document.getElementById('topicInput').value.trim();
+    state.background = document.getElementById('backgroundInput').value.trim();
+    state.round = 1; state.index = 1; state.transcript = []; state.priorRounds = [];
+    state.currentQuestion = null; state.lastSynthesis = null; state.earlyStop = false;
+    saveState();
+    askNextQuestion();
+  }
+
+  function resetAll() {
+    if (hasProgress(state) && !confirm('지금까지의 진행 상황을 모두 지우고 새로 시작할까요?')) return;
+    state = freshState();
+    saveState();
+    document.getElementById('topicInput').value = '';
+    document.getElementById('backgroundInput').value = '';
+    document.getElementById('resumeBanner').hidden = true;
+    updateCounters();
+    render();
+  }
+
+  // ---------------------------------------------------------------- loading UI
+
+  function showLoading(msg) {
+    document.getElementById('loadingText').textContent = msg;
+    loadingStart = Date.now();
+    updateLoadingTime();
+    loadingTimer = setInterval(updateLoadingTime, 500);
+    render();
+  }
+  function updateLoadingTime() {
+    var el = document.getElementById('loadingTime');
+    if (el) el.textContent = fmtTime(Date.now() - loadingStart);
+  }
+  function stopLoadingTimer() {
+    if (loadingTimer) { clearInterval(loadingTimer); loadingTimer = null; }
+  }
+
+  // ---------------------------------------------------------------- rail
+
+  var railBase, railProgress, railMarker, railLen;
+
+  function initRail() {
+    railBase = document.getElementById('railBase');
+    railProgress = document.getElementById('railProgress');
+    railMarker = document.getElementById('railMarker');
+    railLen = railBase.getTotalLength();
+    railProgress.style.strokeDasharray = railLen;
+  }
+
+  function updateRail() {
+    var done = Math.min(state.transcript.length, TOTAL_Q);
+    var frac = done / TOTAL_Q;
+    if (state.status === 'question' || state.status === 'asking') {
+      frac = Math.min((state.index - (state.status === 'asking' ? 0.5 : 1)) / TOTAL_Q, 1);
+    } else if (state.status === 'synthesis' || state.status === 'synthesizing') {
+      frac = 1;
+    }
+    frac = Math.max(0, Math.min(1, frac));
+    railProgress.style.strokeDashoffset = railLen * (1 - frac);
+    var pt = railBase.getPointAtLength(railLen * frac);
+    railMarker.setAttribute('cx', pt.x);
+    railMarker.setAttribute('cy', pt.y);
+
+    document.getElementById('railRound').textContent = state.round + '라운드';
+    document.getElementById('railCount').textContent = Math.min(state.transcript.length, TOTAL_Q) + ' / ' + TOTAL_Q;
+    var phase = (state.currentQuestion && state.currentQuestion.phase) || phaseOf(Math.min(state.index, TOTAL_Q));
+    var pill = document.getElementById('railPhase');
+    pill.textContent = phase; pill.setAttribute('data-phase', phase);
+  }
+
+  // ---------------------------------------------------------------- render
+
+  function setHidden(id, hidden) { document.getElementById(id).hidden = hidden; }
+
+  function render() {
+    var started = state.status !== 'intro';
+    setHidden('rail', !started);
+    if (started) updateRail();
+
+    document.getElementById('topicCard').style.opacity = started ? '.7' : '1';
+    document.getElementById('backgroundCard').style.opacity = started ? '.7' : '1';
+    document.getElementById('topicInput').disabled = started;
+    document.getElementById('backgroundInput').disabled = started;
+    setHidden('startRow', started);
+    setHidden('exampleRow', started);
+
+    setHidden('resultIdle', true);
+    setHidden('resultLoading', true);
+    setHidden('resultError', true);
+    setHidden('resultQuestion', true);
+    setHidden('resultSynthesis', true);
+
+    if (state.status === 'intro') {
+      setHidden('resultIdle', false);
+    } else if (state.status === 'asking' || state.status === 'synthesizing') {
+      setHidden('resultLoading', false);
+    } else if (state.status === 'error') {
+      setHidden('resultError', false);
+      var cp = errorCopy(state.lastErrorCode);
+      document.getElementById('errorText').textContent = cp.msg || '일시적인 오류가 발생했습니다.';
+      document.getElementById('retryBtn').hidden = !cp.retry;
+    } else if (state.status === 'question') {
+      renderQuestion();
+    } else if (state.status === 'synthesis') {
+      renderSynthesis();
+    }
+
+    renderLog();
+    renderPriorRounds();
+  }
+
+  function renderQuestion() {
+    setHidden('resultQuestion', false);
+    var q = state.currentQuestion;
+    document.getElementById('qNumLabel').textContent = '(' + q.n + '/' + TOTAL_Q + ')';
+    var pill = document.getElementById('qPhasePill');
+    pill.textContent = q.phase; pill.setAttribute('data-phase', q.phase);
+    document.getElementById('qFlipBadge').hidden = !q.isFlip;
+    var noteEl = document.getElementById('qNote');
+    if (q.note) { noteEl.hidden = false; noteEl.innerHTML = breakSentences(q.note); } else { noteEl.hidden = true; }
+    setBrokenText('qText', q.question);
+
+    var isOpen = q.answerType === 'open';
+    setHidden('qOpenBlock', !isOpen);
+    setHidden('qChoiceBlock', isOpen);
+
+    if (isOpen) {
+      var ta = document.getElementById('answerInput');
+      ta.value = '';
+      document.getElementById('answerCount').textContent = '0';
+      document.getElementById('submitAnswerBtn').disabled = true;
+    } else {
+      renderChips(q.choices);
+      document.getElementById('choiceFreeText').value = '';
+      document.getElementById('submitChoiceBtn').disabled = true;
+    }
+
+    setHidden('earlyStopRow', q.n < 5);
+  }
+
+  var chipStates = [];
+  function renderChips(choices) {
+    chipStates = choices.map(function () { return 'neutral'; });
+    var row = document.getElementById('chipRow');
+    row.innerHTML = '';
+    choices.forEach(function (c, i) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'chip'; btn.textContent = c; btn.dataset.state = 'neutral';
+      btn.addEventListener('click', function () {
+        chipStates[i] = chipStates[i] === 'neutral' ? 'like' : (chipStates[i] === 'like' ? 'dislike' : 'neutral');
+        btn.dataset.state = chipStates[i];
+        evaluateChoiceSubmit();
+      });
+      row.appendChild(btn);
+    });
+    evaluateChoiceSubmit();
+  }
+  function evaluateChoiceSubmit() {
+    var anyPicked = chipStates.some(function (s) { return s !== 'neutral'; });
+    var free = document.getElementById('choiceFreeText').value.trim();
+    document.getElementById('submitChoiceBtn').disabled = !(anyPicked || free);
+  }
+
+  function renderSynthesis() {
+    setHidden('resultSynthesis', false);
+    var syn = state.lastSynthesis;
+    document.getElementById('synthRoundTag').textContent = syn.round + '라운드 종합';
+    var ct = document.getElementById('synthConvergedTag');
+    ct.textContent = syn.converged ? '수렴 완료' : '조금 더 필요';
+    ct.className = 'converged-tag ' + (syn.converged ? 'yes' : 'no');
+    setBrokenText('synthSummary', syn.summary);
+
+    var gl = document.getElementById('synthGoals');
+    gl.innerHTML = '';
+    syn.goals.forEach(function (g) { var li = document.createElement('li'); li.innerHTML = breakSentences(g); gl.appendChild(li); });
+
+    var planEl = document.getElementById('synthPlan');
+    planEl.innerHTML = '';
+    syn.actionPlan.forEach(function (p, i) {
+      var div = document.createElement('div');
+      div.className = 'plan-item';
+      div.innerHTML =
+        '<div class="plan-head"><span class="plan-idx mono">STEP ' + (i + 1) + '</span>' +
+        '<span class="plan-step">' + breakSentences(p.step) + '</span></div>' +
+        '<div class="plan-grid">' +
+        '<div><b>대상</b>' + breakSentences(p.target || '—') + '</div>' +
+        '<div><b>기간</b>' + breakSentences(p.period || '—') + '</div>' +
+        '<div><b>방법</b>' + breakSentences(p.how || '—') + '</div>' +
+        '<div><b>검증</b>' + breakSentences(p.verify || '—') + '</div>' +
+        '</div>';
+      planEl.appendChild(div);
+    });
+
+    var mb = document.getElementById('synthMissingBox');
+    if (!syn.converged && syn.missingFacts.length) {
+      mb.hidden = false;
+      var ml = document.getElementById('synthMissingList');
+      ml.innerHTML = '';
+      syn.missingFacts.forEach(function (m) { var li = document.createElement('li'); li.innerHTML = breakSentences(m); ml.appendChild(li); });
+    } else { mb.hidden = true; }
+
+    setBrokenText('synthMessage', syn.message || '');
+
+    var actions = document.getElementById('synthActions');
+    actions.innerHTML = '';
+    if (!syn.converged) {
+      var cont = document.createElement('button');
+      cont.className = 'btn primary'; cont.textContent = '다음 라운드 계속하기';
+      cont.addEventListener('click', startNextRound);
+      actions.appendChild(cont);
+
+      var enough = document.createElement('button');
+      enough.className = 'btn ghost'; enough.textContent = '여기까지 결과로 충분해요';
+      enough.addEventListener('click', function () { syn.converged = true; finishHere(); });
+      actions.appendChild(enough);
+    }
+    if (downloadsCap) {
+      var dl = document.createElement('button');
+      dl.className = 'btn ghost'; dl.textContent = '결과 다운로드(.md)';
+      dl.addEventListener('click', downloadResult);
+      actions.appendChild(dl);
+    }
+    var restart = document.createElement('button');
+    restart.className = 'btn quiet'; restart.textContent = '새로 시작하기';
+    restart.addEventListener('click', resetAll);
+    actions.appendChild(restart);
+  }
+
+  function renderLog() {
+    var wrap = document.getElementById('logWrap');
+    var list = document.getElementById('logList');
+    if (!state.transcript.length) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    list.innerHTML = '';
+    state.transcript.forEach(function (t) {
+      var li = document.createElement('li');
+      li.innerHTML = '<div class="logq mono">(' + t.n + '/' + TOTAL_Q + ') ' + breakSentences(t.question) + '</div>' +
+        '<div class="loga">' + breakSentences(t.answer) + '</div>';
+      list.appendChild(li);
+    });
+  }
+
+  function renderPriorRounds() {
+    var wrap = document.getElementById('priorRoundsWrap');
+    if (!state.priorRounds.length) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    document.getElementById('priorRoundsSummary').textContent = '지난 라운드 결과 보기 (' + state.priorRounds.length + '개)';
+    var box = document.getElementById('priorRoundsList');
+    box.innerHTML = '';
+    state.priorRounds.forEach(function (r) {
+      var item = document.createElement('div');
+      item.className = 'prior-round-item';
+      var goalsHtml = (r.goals || []).map(function (g) { return '<li>' + breakSentences(g) + '</li>'; }).join('');
+      var qaHtml = (r.transcript || []).map(function (t) {
+        return '<div class="logq mono">(' + t.n + '/' + TOTAL_Q + ') ' + breakSentences(t.question) + '</div><div class="loga">' + breakSentences(t.answer) + '</div>';
+      }).join('');
+      item.innerHTML =
+        '<h4 class="mono">' + r.round + '라운드 종합</h4>' +
+        '<p>' + breakSentences(r.summary) + '</p>' +
+        '<ul class="goal-list">' + goalsHtml + '</ul>' +
+        '<details><summary>' + r.round + '라운드 문답 ' + (r.transcript || []).length + '개 보기</summary>' +
+        '<div style="margin-top:8px">' + qaHtml + '</div></details>';
+      box.appendChild(item);
+    });
+  }
+
+  // ---------------------------------------------------------------- downloads
+
+  async function downloadResult() {
+    if (!downloadsCap || !state.lastSynthesis) return;
+    var syn = state.lastSynthesis;
+    var lines = [];
+    lines.push('# 에세이식 스무고개 — 결과');
+    lines.push('');
+    lines.push('- 라운드: ' + syn.round);
+    lines.push('- 수렴 여부: ' + (syn.converged ? '완료' : '추가 진행 필요'));
+    lines.push('- 정리한 날짜: ' + new Date().toLocaleString('ko-KR'));
+    lines.push('');
+    lines.push('## Topic');
+    lines.push(state.topic);
+    lines.push('');
+    lines.push('## Background');
+    lines.push(state.background);
+    lines.push('');
+    if (state.priorRounds.length) {
+      lines.push('## 이전 라운드 기록');
+      state.priorRounds.forEach(function (r) {
+        lines.push('### ' + r.round + '라운드 종합');
+        lines.push(r.summary);
+        lines.push('');
+        lines.push('목표: ' + (r.goals || []).join(', '));
+        if ((r.missingFacts || []).length) lines.push('그때 부족했던 점: ' + r.missingFacts.join(', '));
+        lines.push('');
+        lines.push('<details><summary>' + r.round + '라운드 문답 기록 보기</summary>');
+        lines.push('');
+        (r.transcript || []).forEach(function (t) {
+          lines.push('**(' + t.n + '/' + TOTAL_Q + ', ' + t.phase + ') ' + t.question + '**');
+          lines.push(t.answer);
+          lines.push('');
+        });
+        lines.push('</details>');
+        lines.push('');
+      });
+    }
+    lines.push('## 최종 요약 (' + syn.round + '라운드)');
+    lines.push(syn.summary);
+    lines.push('');
+    lines.push('## 목표');
+    syn.goals.forEach(function (g) { lines.push('- ' + g); });
+    lines.push('');
+    lines.push('## 실행 계획');
+    syn.actionPlan.forEach(function (p, i) {
+      lines.push((i + 1) + '. ' + p.step);
+      lines.push('   - 대상: ' + (p.target || '—'));
+      lines.push('   - 기간: ' + (p.period || '—'));
+      lines.push('   - 방법: ' + (p.how || '—'));
+      lines.push('   - 검증: ' + (p.verify || '—'));
+    });
+    if (!syn.converged && syn.missingFacts.length) {
+      lines.push('');
+      lines.push('## 아직 필요한 것');
+      syn.missingFacts.forEach(function (m) { lines.push('- ' + m); });
+    }
+    lines.push('');
+    lines.push('## ' + syn.round + '라운드 문답 기록');
+    state.transcript.forEach(function (t) {
+      lines.push('**(' + t.n + '/' + TOTAL_Q + ', ' + t.phase + ') ' + t.question + '**');
+      lines.push(t.answer);
+      lines.push('');
+    });
+
+    try {
+      await downloadsCap.save({ filename: '에세이식_스무고개_' + syn.round + '라운드.md', data: lines.join('\n') });
+    } catch (e) { /* declined or rate_limited -- no retry, viewer can click again */ }
+  }
+
+  // ---------------------------------------------------------------- input wiring
+
+  function updateCounters() {
+    document.getElementById('topicCount').textContent = document.getElementById('topicInput').value.length;
+    document.getElementById('backgroundCount').textContent = document.getElementById('backgroundInput').value.length;
+  }
+
+  function evaluateStartButton() {
+    if (sampleFn === null) return;
+    var topic = document.getElementById('topicInput').value.trim();
+    var bg = document.getElementById('backgroundInput').value.trim();
+    var ok = topic.length >= 4 && bg.length >= 10;
+    document.getElementById('startBtn').disabled = !ok;
+    document.getElementById('startHint').textContent = ok
+      ? '준비됐어요. 시작하면 첫 질문을 요청합니다.'
+      : '주제는 4자, 배경은 10자 이상 적어주세요.';
+  }
+
+  function wireInputs() {
+    document.getElementById('topicInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
+    document.getElementById('backgroundInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
+
+    document.getElementById('startBtn').addEventListener('click', startFlow);
+
+    document.getElementById('exampleFillBtn').addEventListener('click', function () {
+      document.getElementById('topicInput').value = SAMPLE_TOPIC;
+      document.getElementById('backgroundInput').value = SAMPLE_BACKGROUND;
+      updateCounters(); evaluateStartButton(); saveState();
+    });
+    document.getElementById('exampleClearBtn').addEventListener('click', function () {
+      document.getElementById('topicInput').value = '';
+      document.getElementById('backgroundInput').value = '';
+      updateCounters(); evaluateStartButton(); saveState();
+    });
+
+    document.getElementById('answerInput').addEventListener('input', function (e) {
+      document.getElementById('answerCount').textContent = e.target.value.length;
+      document.getElementById('submitAnswerBtn').disabled = e.target.value.trim().length < 2;
+    });
+    document.getElementById('submitAnswerBtn').addEventListener('click', function () {
+      var v = document.getElementById('answerInput').value.trim();
+      if (v.length < 2) return;
+      submitOpenAnswer(v);
+    });
+    document.getElementById('dontKnowBtn').addEventListener('click', function () {
+      var draft = document.getElementById('answerInput').value.trim();
+      var ans = (draft ? draft + '\n' : '') + '(사용자: 이 질문에 대해 아직 잘 모르겠다고 답함 — 다음 질문에서 구체적인 후보를 제안해 주세요.)';
+      submitOpenAnswer(ans);
+    });
+
+    document.getElementById('choiceFreeText').addEventListener('input', evaluateChoiceSubmit);
+    document.getElementById('submitChoiceBtn').addEventListener('click', function () {
+      var q = state.currentQuestion;
+      var free = document.getElementById('choiceFreeText').value;
+      var ans = compileChoiceAnswer(q.choices, chipStates, free);
+      submitChoiceAnswer(ans);
+    });
+
+    document.getElementById('earlyStopBtn').addEventListener('click', function () {
+      if (!confirm('지금까지 답변만으로 결과를 정리할까요?')) return;
+      requestSynthesis(true);
+    });
+
+    document.getElementById('retryBtn').addEventListener('click', retryPending);
+    document.getElementById('stopBtn').addEventListener('click', function () { if (currentAbort) currentAbort.abort(); });
+
+    document.getElementById('resetBtn').addEventListener('click', resetAll);
+    document.getElementById('resumeDiscardBtn').addEventListener('click', function () {
+      document.getElementById('resumeBanner').hidden = true;
+      resetAll();
+    });
+    document.getElementById('resumeContinueBtn').addEventListener('click', function () {
+      document.getElementById('resumeBanner').hidden = true;
+      document.getElementById('topicInput').value = state.topic;
+      document.getElementById('backgroundInput').value = state.background;
+      updateCounters();
+      if (state.status === 'question' && state.currentQuestion) { render(); }
+      else if (state.status === 'synthesis' && state.lastSynthesis) { render(); }
+      else if (state.status === 'error') { render(); }
+      else if (state.status === 'asking' || state.status === 'synthesizing') { askNextQuestionOrSynthesisResume(); }
+      else { render(); }
+    });
+  }
+
+  function askNextQuestionOrSynthesisResume() {
+    if (state.index > TOTAL_Q && !state.lastSynthesis) requestSynthesis(state.earlyStop);
+    else askNextQuestion();
+  }
+
+  // ---------------------------------------------------------------- boot
+
+  document.addEventListener('DOMContentLoaded', function () {
+    state = loadState();
+    document.getElementById('topicInput').value = state.topic || '';
+    document.getElementById('backgroundInput').value = state.background || '';
+    updateCounters();
+    initRail();
+    wireInputs();
+
+    if (hasProgress(state)) {
+      document.getElementById('resumeBanner').hidden = false;
+      // keep visual state at rest (intro-like) until the viewer decides
+      var shown = state.status; state.status = 'intro'; render(); state.status = shown;
+    } else {
+      render();
+    }
+    evaluateStartButton();
+    document.getElementById('startHint').textContent = 'AI 질문 기능을 확인하는 중…';
+    initCapabilities();
+  });
+})();
+</script>
