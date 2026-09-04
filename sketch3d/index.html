@@ -1509,7 +1509,7 @@ fpToggle.addEventListener('click', () => {
 canvas.addEventListener('wheel', (e) => {
   if (!firstPerson) return;
   e.preventDefault();
-  camera.zoom = Math.min(3, Math.max(0.4, camera.zoom - e.deltaY * 0.001));
+  camera.zoom = Math.min(3, Math.max(0.25, camera.zoom - e.deltaY * 0.001));
   camera.updateProjectionMatrix();
 }, { passive: false });
 
