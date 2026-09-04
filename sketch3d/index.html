@@ -1491,7 +1491,7 @@ fpToggle.addEventListener('click', () => {
   controls.enableZoom = !firstPerson;
   controls.enablePan = !firstPerson;
   if (firstPerson) {
-    camera.fov = 75; // 오비트용 45도는 실내에서 너무 좁게(확대되어) 보여 1인칭 전용으로 넓힘
+    camera.fov = 60; // 75는 화면 가장자리 원근 왜곡(늘어나 보임)이 심해 60으로 완화
     camera.zoom = 1;
     camera.updateProjectionMatrix();
     status('실내 바닥을 클릭하면 그 자리, 눈높이(1.6m)에서 둘러봅니다.', 'info');
