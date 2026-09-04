@@ -7,6 +7,10 @@ import Anthropic from '@anthropic-ai/sdk';
 const PORT = process.env.PORT || 8787;
 const MODEL = process.env.VISION_MODEL || 'claude-opus-5';
 const APP_SHARED_SECRET = process.env.APP_SHARED_SECRET;
+// 테스터 초대 등으로 한시적 인증 생략이 필요할 때만 설정 (ISO 시각).
+// FROM은 생략하면 즉시 시작. UNTIL이 지나면 코드 재배포 없이 자동으로 다시 인증이 걸림 — 깜빡할 걱정 없음.
+const TEMP_AUTH_BYPASS_FROM = process.env.TEMP_AUTH_BYPASS_FROM ? new Date(process.env.TEMP_AUTH_BYPASS_FROM) : null;
+const TEMP_AUTH_BYPASS_UNTIL = process.env.TEMP_AUTH_BYPASS_UNTIL ? new Date(process.env.TEMP_AUTH_BYPASS_UNTIL) : null;
 
 if (!APP_SHARED_SECRET) {
   console.error('[설정 오류] APP_SHARED_SECRET이 비어있습니다. 외부(클라우드) 배포 시 이 값이 없으면 누구나 이 서버로 비전 API 요금을 발생시킬 수 있습니다. .env에 임의의 긴 문자열을 넣어주세요.');
@@ -23,7 +27,15 @@ app.get('/', (_req, res) => res.send('sketch3d extract API OK'));
 app.get('/health', (_req, res) => res.json({ ok: true, model: MODEL }));
 
 // /api/* 는 Vision API 호출(과금)을 트리거하므로 공유 비밀키가 일치해야 통과.
+// [TEMP_AUTH_BYPASS_FROM, TEMP_AUTH_BYPASS_UNTIL) 구간에서만 이 검사를 건너뜀.
 app.use('/api', (req, res, next) => {
+  const now = Date.now();
+  const afterStart = !TEMP_AUTH_BYPASS_FROM || now >= TEMP_AUTH_BYPASS_FROM.getTime();
+  const beforeEnd = TEMP_AUTH_BYPASS_UNTIL && now < TEMP_AUTH_BYPASS_UNTIL.getTime();
+  if (afterStart && beforeEnd) {
+    console.warn(`[임시 인증 생략] ${TEMP_AUTH_BYPASS_UNTIL.toISOString()}까지 X-App-Secret 검사 없이 통과 중`);
+    return next();
+  }
   if (req.get('X-App-Secret') !== APP_SHARED_SECRET) {
     return res.status(401).json({ error: 'unauthorized' });
   }
