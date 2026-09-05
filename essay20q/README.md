@@ -28,6 +28,23 @@ AI가 직전 답변을 읽고 그때그때 다음 질문을 하나씩 던지는 
 어느 backend 도 없으면(예: `window.claude` 도 없고 키도 저장 안 함) "스무고개 시작하기"
 버튼이 계속 비활성 상태로 남는다.
 
+## 옵시디언으로 결과 보내기
+
+종합 결과 화면에서 **"옵시디언으로 보내기"** 버튼을 누르면, 옵시디언의
+[Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) 커뮤니티
+플러그인이 여는 로컬 서버(기본 `http://127.0.0.1:27123`)로 최종 결과 마크다운을
+`PUT /vault/{경로}` 요청 한 번으로 직접 저장한다(서버 주소·폴더·API 키는 옵시디언
+플러그인 설정 화면에서 그대로 복사해 오면 된다). 저장되는 파일은 옵시디언 쪽 frontmatter
+(`topic`/`round`/`converged`/`saved`/`source`)가 앞에 붙은 `.md` 로, 파일명은
+`에세이식_스무고개_{라운드}라운드_{저장시각}.md` 형식이다. 연결 정보(서버 주소·폴더·키)는
+이 브라우저의 localStorage에만 남고 옵시디언 외 다른 곳으로는 전송되지 않는다.
+
+**이 버튼은 개인 API 키 모드에서만 나타난다.** Artifact 모드에서는 뷰어의 CSP가
+`127.0.0.1` 을 포함한 모든 비허용 호스트로의 fetch 를 조용히 막기 때문에(에러조차
+안 남고 그냥 요청이 나가지 않음) 옵시디언 저장이 원천적으로 불가능하다 — 그래서
+`backend === 'apikey'` 일 때만 버튼을 만든다. GitHub Pages 등 Artifact 밖에서 열었지만
+아직 API 키를 저장하지 않은 상태에서도 마찬가지로 버튼이 없다.
+
 ## 로컬에서 회귀 테스트 돌리기
 
 두 backend 를 각각 흉내 낸 두 개의 독립된 테스트가 있다.
@@ -38,6 +55,7 @@ python3 -m playwright install chromium   # 이미 설치된 Chromium이 있으�
                                           # CHROMIUM_PATH=/path/to/chrome 환경변수로 지정해도 됨
 python3 test/drive_rounds.py             # Artifact 모드 (window.claude 모의)
 python3 test/drive_apikey.py             # 개인 API 키 모드 (window.fetch 모의)
+python3 test/drive_obsidian.py           # 옵시디언으로 보내기 (버튼 게이팅 + 실제 저장 흐름)
 ```
 
 - `drive_rounds.py` — `test/mock_claude.js` 로 `window.claude.use('sample'|'downloads')` 를
@@ -49,8 +67,13 @@ python3 test/drive_apikey.py             # 개인 API 키 모드 (window.fetch �
   URL·헤더(x-api-key/anthropic-version/anthropic-dangerous-direct-browser-access)·바디가
   맞는지, 마크다운 코드펜스로 감싼 응답도 파싱되는지, 401 에러 후 재시도가 복구되는지,
   토큰 사용량 표시, blob 다운로드까지 확인한다.
+- `drive_obsidian.py` — Artifact 모드에서는 옵시디언 버튼이 아예 안 만들어지는지, 개인
+  API 키 모드에서는 종합 화면에 버튼이 나타나는지 확인한 뒤, `test/mock_fetch.js` 가
+  추가로 가로채는 `127.0.0.1:2712x` 로의 PUT 요청(URL·Authorization 헤더·frontmatter
+  포함 바디)과 빈 키 검증·성공 상태·HTTP 에러·연결 실패(TypeError) 각각의 상태 표시
+  문구까지 확인한다.
 
-둘 다 마지막 줄에 `ALL ... CHECKS PASSED` 가 찍히면 통과.
+셋 다 마지막 줄에 `ALL ... CHECKS PASSED` 가 찍히면 통과.
 
 ## 알려진 제약
 - AI가 직접 웹 검색을 하지는 못한다(두 backend 모두 브라우징 기능이 없음) — 판단 근거가
