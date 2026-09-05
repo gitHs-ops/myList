@@ -275,6 +275,29 @@
       <div class="note-line">질문을 만드는 데 이 화면을 보고 계신 Claude 계정의 사용량이 쓰입니다.<br>첫 질문을 요청할 때 한 번 허용 여부를 물어봅니다.</div>
     </section>
 
+    <section class="card field-card" id="apiKeyCard" hidden>
+      <h2>개인 API 키로 사용하기</h2>
+      <p>이 화면은 Claude 아티팩트 밖(예: GitHub Pages)에서 열려 있어서, 계정 사용량 대신 <b>본인의 Anthropic API 키</b>로 직접 호출합니다.<br>이 키는 <b>이 브라우저에만</b> 저장되고, 이 페이지에서 Anthropic API로 곧바로 전송됩니다 — 개인 용도로만 쓰시고, 공용 PC나 공개 데모에는 쓰지 마세요.</p>
+      <div style="margin-top:14px">
+        <label class="field-label" for="apiKeyInput">Anthropic API 키</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:12px 14px;font:inherit;font-size:14.5px;">
+      </div>
+      <div style="margin-top:14px">
+        <label class="field-label" for="apiModelSelect">모델</label>
+        <select id="apiModelSelect" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:10px 14px;font:inherit;font-size:14.5px;">
+          <option value="claude-opus-5">Claude Opus 5 (기본 · 가장 성능 좋음)</option>
+          <option value="claude-sonnet-5">Claude Sonnet 5 (더 저렴)</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5 (가장 저렴 · 빠름)</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="apiKeySaveBtn" type="button">저장하고 사용하기</button>
+        <button class="btn ghost" id="apiKeyClearBtn" type="button">키 지우기</button>
+      </div>
+      <p class="example" id="apiKeyStatus" style="margin-top:10px"></p>
+      <p class="example" id="usageInfo" style="margin-top:2px"></p>
+    </section>
+
     <div class="example-row" id="exampleRow">
       <span class="hint">빠르게 살펴보고 싶다면 예시로 채워볼 수 있어요.</span>
       <button class="btn ghost" id="exampleFillBtn" type="button">예시 제시</button>
@@ -434,7 +457,7 @@
   }
 
   function phaseOf(idx) { return idx <= 7 ? '탐색' : (idx <= 14 ? '전환' : '수렴'); }
-  function tierFor(idx) { return idx <= 7 ? 'default' : 'complex'; }
+  function tierFor(idx) { return idx <= 7 ? 'normal' : 'deep'; }
 
   // ---------------------------------------------------------------- state
 
@@ -453,6 +476,7 @@
       lastErrorCode: null,
       pendingAction: null,        // 'question' | 'synthesis' -- what a retry should re-request
       earlyStop: false,
+      usage: { inputTokens: 0, outputTokens: 0 },
       updatedAt: new Date().toISOString()
     };
   }
@@ -574,27 +598,101 @@
   }
 
   // ---------------------------------------------------------------- capability wiring
+  //
+  // 두 backend 중 하나로 동작한다.
+  // - 'artifact': claude.ai Artifact 뷰어 안. window.claude.use('sample') 로 뷰어 본인
+  //   계정의 사용량을 쓴다. 키 입력 없음, 다운로드도 Artifact 캡ability 로.
+  // - 'apikey'  : Artifact 뷰어 밖(예: GitHub Pages). 사용자 본인의 Anthropic API 키로
+  //   브라우저에서 직접 https://api.anthropic.com 을 호출한다(개인 용도 전제).
+  //   anthropic-dangerous-direct-browser-access 헤더가 있어야 CORS 를 허용한다 —
+  //   실측: 이 헤더 없이 preflight(OPTIONS) 하면 400, 있으면 200 + access-control-allow-origin:*.
 
   var sampleFn = null;
   var downloadsCap = null;
+  var backend = null;           // 'artifact' | 'apikey' | null
   var currentAbort = null;
   var loadingTimer = null;
   var loadingStart = 0;
 
+  var APIKEY_STORAGE_KEY = 'essay20q_apikey_v1';
+  var API_MODELS = {
+    'claude-opus-5':   { label: 'Claude Opus 5 (기본 · 가장 성능 좋음)',  inPrice: 5,  outPrice: 25 },
+    'claude-sonnet-5': { label: 'Claude Sonnet 5 (더 저렴)',             inPrice: 2,  outPrice: 10 },
+    'claude-haiku-4-5':{ label: 'Claude Haiku 4.5 (가장 저렴 · 빠름)',    inPrice: 1,  outPrice: 5  }
+  };
+
+  function loadApiKeyConfig() {
+    try {
+      var raw = localStorage.getItem(APIKEY_STORAGE_KEY);
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.key) return null;
+      if (!API_MODELS[parsed.model]) parsed.model = 'claude-opus-5';
+      return parsed;
+    } catch (e) { return null; }
+  }
+  function saveApiKeyConfig(cfg) {
+    try { localStorage.setItem(APIKEY_STORAGE_KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ }
+  }
+  function clearApiKeyConfig() {
+    try { localStorage.removeItem(APIKEY_STORAGE_KEY); } catch (e) { /* ignore */ }
+  }
+
   async function initCapabilities() {
     try { sampleFn = await claude.use('sample'); } catch (e) { sampleFn = null; }
     try { downloadsCap = await claude.use('downloads'); } catch (e) { downloadsCap = null; }
+
+    if (sampleFn) {
+      backend = 'artifact';
+    } else {
+      document.getElementById('apiKeyCard').hidden = false;
+      var saved = loadApiKeyConfig();
+      backend = saved ? 'apikey' : null;
+      renderApiKeyCard(saved);
+    }
     refreshStartAvailability();
   }
 
   function refreshStartAvailability() {
     var hint = document.getElementById('startHint');
-    if (sampleFn === null) {
+    if (backend === null) {
       document.getElementById('startBtn').disabled = true;
-      hint.textContent = '이 화면에서는 AI 질문 기능을 불러오지 못했습니다. Claude 아티팩트로 열람 중인지 확인해 주세요.';
+      hint.textContent = '이 화면에서는 AI 질문 기능을 불러오지 못했습니다. 아래에서 개인 API 키를 등록하거나, Claude 아티팩트로 열람해 주세요.';
       return;
     }
     evaluateStartButton();
+  }
+
+  function renderApiKeyCard(saved) {
+    document.getElementById('apiKeyInput').value = saved ? saved.key : '';
+    document.getElementById('apiModelSelect').value = (saved && saved.model) || 'claude-opus-5';
+    document.getElementById('apiKeyStatus').textContent = saved
+      ? '저장된 키를 사용합니다 (' + (API_MODELS[saved.model] || {}).label + ').'
+      : '키를 입력하고 저장하면 이 화면에서 바로 시작할 수 있습니다.';
+    updateUsageDisplay();
+  }
+
+  function updateUsageDisplay() {
+    var el = document.getElementById('usageInfo');
+    if (!el) return;
+    if (backend !== 'apikey' || !state || !state.usage || (!state.usage.inputTokens && !state.usage.outputTokens)) {
+      el.textContent = '';
+      return;
+    }
+    var cfg = loadApiKeyConfig();
+    var price = API_MODELS[(cfg && cfg.model) || 'claude-opus-5'];
+    var cost = (state.usage.inputTokens / 1e6) * price.inPrice + (state.usage.outputTokens / 1e6) * price.outPrice;
+    el.textContent = '이번 세션 사용량 — 입력 ' + state.usage.inputTokens.toLocaleString() + ' · 출력 ' +
+      state.usage.outputTokens.toLocaleString() + ' 토큰 (약 $' + cost.toFixed(3) + ', ' + price.label + ' 기준)';
+  }
+
+  function recordUsage(usage) {
+    if (!usage || !state) return;
+    state.usage = state.usage || { inputTokens: 0, outputTokens: 0 };
+    state.usage.inputTokens += (usage.input_tokens || 0) + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0);
+    state.usage.outputTokens += (usage.output_tokens || 0);
+    saveState();
+    updateUsageDisplay();
   }
 
   // ---------------------------------------------------------------- error copy
@@ -606,6 +704,7 @@
       case 'not_declared':
       case 'capability_disabled':
       case 'capability_removed': return { msg: '이 화면에서는 AI 질문 기능을 쓸 수 없습니다.', retry: false };
+      case 'bad_api_key': return { msg: 'API 키가 올바르지 않거나 만료됐습니다. 위 설정에서 키를 다시 확인한 뒤 다시 시도해 주세요.', retry: true };
       case 'rate_limited': return { msg: '요청이 몰려 잠시 제한됐습니다. 잠시 후 다시 시도해 주세요.', retry: true };
       case 'session_expired': return { msg: '로그인이 만료됐습니다. 다시 로그인한 뒤 시도해 주세요.', retry: true };
       case 'refused': return { msg: '이번 요청은 처리되지 않았습니다. 답변을 조금 다르게 표현해 다시 시도해 주세요.', retry: true };
@@ -619,13 +718,80 @@
 
   // ---------------------------------------------------------------- core flow
 
-  async function runSample(prompt, tier, loadingMsg, pendingAction) {
+  function tolerantJsonParse(text) {
+    text = (text || '').trim();
+    try { return JSON.parse(text); } catch (e) { /* fall through */ }
+    var fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence) { try { return JSON.parse(fence[1].trim()); } catch (e) { /* fall through */ } }
+    var start = -1, end = -1, i, j;
+    for (i = 0; i < text.length; i++) { if (text[i] === '{' || text[i] === '[') { start = i; break; } }
+    for (j = text.length - 1; j >= 0; j--) { if (text[j] === '}' || text[j] === ']') { end = j; break; } }
+    if (start >= 0 && end > start) { try { return JSON.parse(text.slice(start, end + 1)); } catch (e) { /* fall through */ } }
+    return undefined;
+  }
+
+  function mapApiHttpError(status, data) {
+    var apiMsg = (data && data.error && data.error.message) || ('HTTP ' + status);
+    if (status === 401 || status === 403) return { code: 'bad_api_key', message: apiMsg };
+    if (status === 429) return { code: 'rate_limited', message: apiMsg };
+    return { code: 'upstream_error', message: apiMsg };
+  }
+
+  async function askViaApiKey(promptText, level, signal) {
+    var cfg = loadApiKeyConfig();
+    if (!cfg) throw { code: 'not_granted', message: 'no api key configured' };
+    var effort = level === 'deep' ? 'high' : 'medium';
+    var res;
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': cfg.key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: cfg.model,
+          max_tokens: 4096,
+          output_config: { effort: effort },
+          messages: [{ role: 'user', content: promptText }]
+        }),
+        signal: signal
+      });
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw { code: 'cancelled', message: 'aborted' };
+      throw { code: 'upstream_error', message: (e && e.message) || 'network error' };
+    }
+    var data;
+    try { data = await res.json(); } catch (e) { throw { code: 'upstream_error', message: '응답을 읽지 못했습니다.' }; }
+    if (!res.ok) { throw mapApiHttpError(res.status, data); }
+    recordUsage(data.usage);
+    var text = (data.content || []).filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('');
+    if (!text.trim()) throw { code: 'empty_completion', message: 'empty response' };
+    var parsed = tolerantJsonParse(text);
+    if (parsed === undefined) throw { code: 'invalid_json', message: 'no JSON found in response', text: text };
+    return parsed;
+  }
+
+  async function askClaude(promptText, level, signal) {
+    if (backend === 'artifact') {
+      var tier = level === 'deep' ? 'complex' : 'default';
+      return sampleFn.json(promptText, { modelTier: tier, cache: false, signal: signal });
+    }
+    if (backend === 'apikey') {
+      return askViaApiKey(promptText, level, signal);
+    }
+    throw { code: 'not_granted', message: 'no backend available' };
+  }
+
+  async function runSample(prompt, level, loadingMsg, pendingAction) {
     showLoading(loadingMsg);
     state.pendingAction = pendingAction;
     saveState();
     currentAbort = new AbortController();
     try {
-      var data = await sampleFn.json(prompt, { modelTier: tier, cache: false, signal: currentAbort.signal });
+      var data = await askClaude(prompt, level, currentAbort.signal);
       return data;
     } finally {
       currentAbort = null;
@@ -669,7 +835,7 @@
     render();
     try {
       var data = await runSample(
-        buildSynthesisPrompt(state, !!earlyStop), 'complex',
+        buildSynthesisPrompt(state, !!earlyStop), 'deep',
         earlyStop ? '지금까지의 답변을 종합하고 있어요…' : '20개 답변을 종합하고 있어요…', 'synthesis'
       );
       if (!data || data.kind !== 'synthesis' || typeof data.converged !== 'boolean' ||
@@ -841,6 +1007,7 @@
     var started = state.status !== 'intro';
     setHidden('rail', !started);
     if (started) updateRail();
+    updateUsageDisplay();
 
     document.getElementById('topicCard').style.opacity = started ? '.7' : '1';
     document.getElementById('backgroundCard').style.opacity = started ? '.7' : '1';
@@ -979,7 +1146,7 @@
       enough.addEventListener('click', function () { syn.converged = true; finishHere(); });
       actions.appendChild(enough);
     }
-    if (downloadsCap) {
+    if (downloadsCap || backend === 'apikey') {
       var dl = document.createElement('button');
       dl.className = 'btn ghost'; dl.textContent = '결과 다운로드(.md)';
       dl.addEventListener('click', downloadResult);
@@ -1031,8 +1198,7 @@
 
   // ---------------------------------------------------------------- downloads
 
-  async function downloadResult() {
-    if (!downloadsCap || !state.lastSynthesis) return;
+  function buildResultMarkdown() {
     var syn = state.lastSynthesis;
     var lines = [];
     lines.push('# 에세이식 스무고개 — 결과');
@@ -1094,9 +1260,31 @@
       lines.push('');
     });
 
-    try {
-      await downloadsCap.save({ filename: '에세이식_스무고개_' + syn.round + '라운드.md', data: lines.join('\n') });
-    } catch (e) { /* declined or rate_limited -- no retry, viewer can click again */ }
+    return lines.join('\n');
+  }
+
+  /* Artifact 뷰어 안에서는 <a download>/blob 링크가 sandbox 에서 죽어 있어(플랫폼 제약)
+     downloadsCap.save() 로만 저장할 수 있다. Artifact 밖(개인 API 키 모드, 일반 브라우저
+     탭)에서는 그 제약이 없으므로 blob 다운로드가 정상 동작한다 — 그래서 backend 로 갈린다. */
+  function downloadPlain(filename, text) {
+    var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  async function downloadResult() {
+    if (!state.lastSynthesis) return;
+    var filename = '에세이식_스무고개_' + state.lastSynthesis.round + '라운드.md';
+    var text = buildResultMarkdown();
+    if (downloadsCap) {
+      try { await downloadsCap.save({ filename: filename, data: text }); }
+      catch (e) { /* declined or rate_limited -- no retry, viewer can click again */ }
+    } else {
+      downloadPlain(filename, text);
+    }
   }
 
   // ---------------------------------------------------------------- input wiring
@@ -1107,7 +1295,7 @@
   }
 
   function evaluateStartButton() {
-    if (sampleFn === null) return;
+    if (backend === null) return;
     var topic = document.getElementById('topicInput').value.trim();
     var bg = document.getElementById('backgroundInput').value.trim();
     var ok = topic.length >= 4 && bg.length >= 10;
@@ -1132,6 +1320,23 @@
       document.getElementById('topicInput').value = '';
       document.getElementById('backgroundInput').value = '';
       updateCounters(); evaluateStartButton(); saveState();
+    });
+
+    document.getElementById('apiKeySaveBtn').addEventListener('click', function () {
+      var key = document.getElementById('apiKeyInput').value.trim();
+      if (!key) { alert('API 키를 입력해 주세요.'); return; }
+      var model = document.getElementById('apiModelSelect').value;
+      saveApiKeyConfig({ key: key, model: model });
+      backend = 'apikey';
+      renderApiKeyCard({ key: key, model: model });
+      refreshStartAvailability();
+    });
+    document.getElementById('apiKeyClearBtn').addEventListener('click', function () {
+      if (!confirm('저장된 API 키를 지울까요?')) return;
+      clearApiKeyConfig();
+      backend = null;
+      renderApiKeyCard(null);
+      refreshStartAvailability();
     });
 
     document.getElementById('answerInput').addEventListener('input', function (e) {
