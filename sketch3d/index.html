@@ -1365,6 +1365,7 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
       }),
       signal: extractController.signal
     });
+    if (res.status === 401) { status('접근 코드가 비어있거나 틀렸습니다. "백엔드 설정 > 접근 코드"에 입력하세요.', 'err'); return; }
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
     const usage = usageText(res);
     addUsage(res);
@@ -1837,6 +1838,7 @@ async function sendChat() {
       body: JSON.stringify({ walls: base, instruction: text }),
       signal: editController.signal
     });
+    if (res.status === 401) { typing.className = 'msg bot err'; typing.setText('접근 코드가 비어있거나 틀렸습니다. "백엔드 설정 > 접근 코드"에 입력하세요.'); return; }
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()).slice(0, 200));
     const usage = usageText(res);
     addUsage(res);
