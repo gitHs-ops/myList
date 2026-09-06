@@ -299,26 +299,31 @@
     </section>
 
     <section class="card field-card" id="apiKeyCard" hidden>
-      <h2>개인 API 키로 사용하기</h2>
-      <p>이 화면은 Claude 아티팩트 밖(예: GitHub Pages)에서 열려 있어서, 계정 사용량 대신 <b>본인의 Anthropic API 키</b>로 직접 호출합니다.<br>이 키는 <b>이 브라우저에만</b> 저장되고, 이 페이지에서 Anthropic API로 곧바로 전송됩니다 — 개인 용도로만 쓰시고, 공용 PC나 공개 데모에는 쓰지 마세요.</p>
-      <div style="margin-top:14px">
-        <label class="field-label" for="apiKeyInput">Anthropic API 키</label>
-        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:12px 14px;font:inherit;font-size:14.5px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h2>개인 API 키로 사용하기</h2>
+        <button type="button" class="link-btn" id="apiKeyToggleBtn">간략히 보기</button>
       </div>
-      <div style="margin-top:14px">
-        <label class="field-label" for="apiModelSelect">모델</label>
-        <select id="apiModelSelect" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:10px 14px;font:inherit;font-size:14.5px;">
-          <option value="claude-opus-5">Claude Opus 5 (기본 · 가장 성능 좋음)</option>
-          <option value="claude-sonnet-5">Claude Sonnet 5 (더 저렴)</option>
-          <option value="claude-haiku-4-5">Claude Haiku 4.5 (가장 저렴 · 빠름)</option>
-        </select>
-      </div>
-      <div class="btn-row">
-        <button class="btn primary" id="apiKeySaveBtn" type="button">저장하고 사용하기</button>
-        <button class="btn ghost" id="apiKeyClearBtn" type="button">키 지우기</button>
-      </div>
-      <p class="example" id="apiKeyStatus" style="margin-top:10px"></p>
+      <p class="example" id="apiKeyStatus" style="margin-top:8px"></p>
       <p class="example" id="usageInfo" style="margin-top:2px"></p>
+      <div id="apiKeyCardBody">
+        <p>이 화면은 Claude 아티팩트 밖(예: GitHub Pages)에서 열려 있어서, 계정 사용량 대신 <b>본인의 Anthropic API 키</b>로 직접 호출합니다.<br>이 키는 <b>이 브라우저에만</b> 저장되고, 이 페이지에서 Anthropic API로 곧바로 전송됩니다 — 개인 용도로만 쓰시고, 공용 PC나 공개 데모에는 쓰지 마세요.</p>
+        <div style="margin-top:14px">
+          <label class="field-label" for="apiKeyInput">Anthropic API 키</label>
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:12px 14px;font:inherit;font-size:14.5px;">
+        </div>
+        <div style="margin-top:14px">
+          <label class="field-label" for="apiModelSelect">모델</label>
+          <select id="apiModelSelect" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:10px 14px;font:inherit;font-size:14.5px;">
+            <option value="claude-opus-5">Claude Opus 5 (기본 · 가장 성능 좋음)</option>
+            <option value="claude-sonnet-5">Claude Sonnet 5 (더 저렴)</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 (가장 저렴 · 빠름)</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="apiKeySaveBtn" type="button">저장하고 사용하기</button>
+          <button class="btn ghost" id="apiKeyClearBtn" type="button">키 지우기</button>
+        </div>
+      </div>
     </section>
 
     <div class="example-row" id="exampleRow">
@@ -698,6 +703,7 @@
       backend = 'artifact';
     } else {
       document.getElementById('apiKeyCard').hidden = false;
+      applyApiKeyCardCollapse(getApiKeyCardCollapsed());
       var saved = loadApiKeyConfig();
       backend = saved ? 'apikey' : null;
       renderApiKeyCard(saved);
@@ -722,6 +728,24 @@
       ? '저장된 키를 사용합니다 (' + (API_MODELS[saved.model] || {}).label + ').'
       : '키를 입력하고 저장하면 이 화면에서 바로 시작할 수 있습니다.';
     updateUsageDisplay();
+  }
+
+  var APIKEY_CARD_COLLAPSE_KEY = 'essay20q_apikeycard_collapsed_v1';
+
+  function getApiKeyCardCollapsed() {
+    try { return localStorage.getItem(APIKEY_CARD_COLLAPSE_KEY) === '1'; } catch (e) { return false; }
+  }
+  function setApiKeyCardCollapsed(collapsed) {
+    try { localStorage.setItem(APIKEY_CARD_COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (e) { /* ignore */ }
+  }
+  function applyApiKeyCardCollapse(collapsed) {
+    document.getElementById('apiKeyCardBody').hidden = collapsed;
+    document.getElementById('apiKeyToggleBtn').textContent = collapsed ? '자세히 보기' : '간략히 보기';
+  }
+  function toggleApiKeyCard() {
+    var collapsed = !document.getElementById('apiKeyCardBody').hidden;
+    applyApiKeyCardCollapse(collapsed);
+    setApiKeyCardCollapsed(collapsed);
   }
 
   function updateUsageDisplay() {
@@ -1475,6 +1499,7 @@
       updateCounters(); evaluateStartButton(); saveState();
     });
 
+    document.getElementById('apiKeyToggleBtn').addEventListener('click', toggleApiKeyCard);
     document.getElementById('apiKeySaveBtn').addEventListener('click', function () {
       var key = document.getElementById('apiKeyInput').value.trim();
       if (!key) { alert('API 키를 입력해 주세요.'); return; }

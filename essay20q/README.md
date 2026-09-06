@@ -24,6 +24,9 @@ AI가 직전 답변을 읽고 그때그때 다음 질문을 하나씩 던지는 
    전송된다 — 공용 PC나 공개 데모에는 쓰지 말 것. 모델(Opus 5/Sonnet 5/Haiku 4.5)을
    고를 수 있고, 화면에 누적 토큰·예상 비용이 표시된다. 결과 다운로드는 Artifact capability
    대신 일반 `<a download>` blob 방식을 쓴다(Artifact sandbox 밖이라 이 방식이 정상 동작함).
+   카드 오른쪽 위 **"간략히 보기"/"자세히 보기"** 토글로 설명·입력창을 접을 수 있다(상태
+   문구·사용량은 접혀 있어도 계속 보임) — 매번 다시 열 때마다 큰 카드가 눈에 걸리지 않도록.
+   접힘 여부는 이 브라우저에 기억된다.
 
 어느 backend 도 없으면(예: `window.claude` 도 없고 키도 저장 안 함) "스무고개 시작하기"
 버튼이 계속 비활성 상태로 남는다.
@@ -56,6 +59,7 @@ python3 -m playwright install chromium   # 이미 설치된 Chromium이 있으�
 python3 test/drive_rounds.py             # Artifact 모드 (window.claude 모의)
 python3 test/drive_apikey.py             # 개인 API 키 모드 (window.fetch 모의)
 python3 test/drive_obsidian.py           # 옵시디언으로 보내기 (버튼 게이팅 + 실제 저장 흐름)
+python3 test/drive_apikey_toggle.py      # 개인 API 키 카드 접기/펼치기 토글
 ```
 
 - `drive_rounds.py` — `test/mock_claude.js` 로 `window.claude.use('sample'|'downloads')` 를
@@ -72,8 +76,11 @@ python3 test/drive_obsidian.py           # 옵시디언으로 보내기 (버튼 
   추가로 가로채는 `127.0.0.1:2712x` 로의 PUT 요청(URL·Authorization 헤더·frontmatter
   포함 바디)과 빈 키 검증·성공 상태·HTTP 에러·연결 실패(TypeError) 각각의 상태 표시
   문구까지 확인한다.
+- `drive_apikey_toggle.py` — "개인 API 키로 사용하기" 카드의 접기/펼치기 토글을 확인한다.
+  기본은 펼침, 토글 클릭 시 본문이 접히면서 버튼 문구가 바뀌는지, 접혀 있어도 상태 문구는
+  계속 보이는지, 새로고침 후에도 접힌 상태가 localStorage 로 유지되는지 확인한다.
 
-셋 다 마지막 줄에 `ALL ... CHECKS PASSED` 가 찍히면 통과.
+넷 다 마지막 줄에 `ALL ... CHECKS PASSED` 가 찍히면 통과.
 
 ## 알려진 제약
 - AI가 직접 웹 검색을 하지는 못한다(두 backend 모두 브라우징 기능이 없음) — 판단 근거가
