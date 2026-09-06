@@ -36,6 +36,11 @@ with sync_playwright() as p:
     page.goto(url)
     page.wait_for_timeout(400)
 
+    # ---- 소개 페이지 -> 설정 페이지로 넘어가기 (apiKeyCard 는 설정 페이지 안에 있다) ----
+    page.click("#introStartBtn")
+    page.wait_for_timeout(100)
+    assert page.locator("#setupPage").is_visible(), "시작하기 클릭 후 설정 페이지가 보여야 한다"
+
     # ---- 기본 상태: 저장된 설정 없음 -> 펼쳐져 있어야 한다 ----
     assert page.locator("#apiKeyCard").is_visible()
     assert not page.locator("#apiKeyCardBody").is_hidden(), "저장된 설정이 없으면 기본은 펼침 상태여야 한다"
@@ -61,8 +66,13 @@ with sync_playwright() as p:
     log("토글 클릭: 본문 접힘 + 버튼 문구 전환 + 접힌 채로도 상태 문구 노출 확인")
 
     # ---- 새로고침 후에도 접힌 상태가 localStorage 로 유지되는지 ----
+    # (새로고침하면 진행 상황이 없으므로 다시 소개 페이지부터 시작한다 -- 설정 페이지로 한 번
+    #  더 넘어가야 apiKeyCardBody 의 실제 접힘 상태를 볼 수 있다. 이 단계가 없으면 상위
+    #  setupPage 자체가 숨어 있어 "접혀 있다"는 판정이 우연히 통과해 버려 검증 의미가 없다.)
     page.reload()
     page.wait_for_timeout(400)
+    page.click("#introStartBtn")
+    page.wait_for_timeout(100)
     assert page.locator("#apiKeyCardBody").is_hidden(), "새로고침 후에도 접힌 상태가 유지돼야 한다"
     assert page.locator("#apiKeyToggleBtn").inner_text() == "자세히 보기"
     log("새로고침 후 접힘 상태 유지(localStorage) 확인")

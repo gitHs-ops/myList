@@ -285,18 +285,26 @@
 
   <main>
 
-    <section class="card intro">
-      <h2>이렇게 진행돼요</h2>
-      <p>정해진 질문지가 아니라, 방금 남긴 답변을 읽고 그때그때 다음 질문을 만듭니다.<br>총 20개의 질문이 한 라운드이며, 진행은 세 단계를 거칩니다.</p>
-      <ul class="steps">
-        <li><span class="step-tag explore">탐색 1~7</span><span><b>지금 상황을 넓게 살펴봅니다</b><span>처한 상황, 동기, 문제를 폭넓게 묻습니다.</span></span></li>
-        <li><span class="step-tag pivot">전환 8~14</span><span><b>당연하게 여긴 전제를 한 번은 뒤집습니다</b><span>반례, 반대 입장, 다른 제약 조건을 통해 스스로 놓친 부분을 찾습니다.</span></span></li>
-        <li><span class="step-tag converge">수렴 15~20</span><span><b>구체적으로 좁혀갑니다</b><span>대상·방법·수량·기간·우선순위·검증 방법·실행 계획을 정합니다.</span></span></li>
-      </ul>
-      <div class="note-line">20문항이 끝나면 지금까지의 답변을 목표와 실행 계획으로 종합합니다.<br>숫자·이름·기간처럼 구체적인 사실이 아직 부족하면, 그 결과를 씨앗 삼아 2라운드·3라운드로 스무고개를 이어갑니다.</div>
-      <div class="note-line">※ 이 페이지는 실시간으로 웹을 검색하지 않습니다.<br>판단할 자료가 부족하면 추측 대신, 필요한 정보를 직접 물어보는 질문을 드립니다.</div>
-      <div class="note-line">질문을 만드는 데 이 화면을 보고 계신 Claude 계정의 사용량이 쓰입니다.<br>첫 질문을 요청할 때 한 번 허용 여부를 물어봅니다.</div>
+    <section id="introPage">
+      <section class="card intro">
+        <h2>이렇게 진행돼요</h2>
+        <p>정해진 질문지가 아니라, 방금 남긴 답변을 읽고 그때그때 다음 질문을 만듭니다.<br>총 20개의 질문이 한 라운드이며, 진행은 세 단계를 거칩니다.</p>
+        <ul class="steps">
+          <li><span class="step-tag explore">탐색 1~7</span><span><b>지금 상황을 넓게 살펴봅니다</b><span>처한 상황, 동기, 문제를 폭넓게 묻습니다.</span></span></li>
+          <li><span class="step-tag pivot">전환 8~14</span><span><b>당연하게 여긴 전제를 한 번은 뒤집습니다</b><span>반례, 반대 입장, 다른 제약 조건을 통해 스스로 놓친 부분을 찾습니다.</span></span></li>
+          <li><span class="step-tag converge">수렴 15~20</span><span><b>구체적으로 좁혀갑니다</b><span>대상·방법·수량·기간·우선순위·검증 방법·실행 계획을 정합니다.</span></span></li>
+        </ul>
+        <div class="note-line">20문항이 끝나면 지금까지의 답변을 목표와 실행 계획으로 종합합니다.<br>숫자·이름·기간처럼 구체적인 사실이 아직 부족하면, 그 결과를 씨앗 삼아 2라운드·3라운드로 스무고개를 이어갑니다.</div>
+        <div class="note-line">※ 이 페이지는 실시간으로 웹을 검색하지 않습니다.<br>판단할 자료가 부족하면 추측 대신, 필요한 정보를 직접 물어보는 질문을 드립니다.</div>
+        <div class="note-line">질문을 만드는 데 이 화면을 보고 계신 Claude 계정의 사용량이 쓰입니다.<br>첫 질문을 요청할 때 한 번 허용 여부를 물어봅니다.</div>
+      </section>
+
+      <div class="start-row">
+        <button class="btn primary" id="introStartBtn" type="button">시작하기</button>
+      </div>
     </section>
+
+    <section id="setupPage" hidden>
 
     <section class="card field-card" id="apiKeyCard" hidden>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -443,6 +451,8 @@
       <summary>지금 라운드 문답 기록 보기</summary>
       <ol id="logList"></ol>
     </details>
+
+    </section>
 
   </main>
 
@@ -1482,7 +1492,13 @@
       : '주제는 4자, 배경은 10자 이상 적어주세요.';
   }
 
+  function showSetupPage() {
+    document.getElementById('introPage').hidden = true;
+    document.getElementById('setupPage').hidden = false;
+  }
+
   function wireInputs() {
+    document.getElementById('introStartBtn').addEventListener('click', showSetupPage);
     document.getElementById('topicInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
     document.getElementById('backgroundInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
 
@@ -1602,6 +1618,7 @@
     wireInputs();
 
     if (hasProgress(state)) {
+      showSetupPage();
       document.getElementById('resumeBanner').hidden = false;
       // keep visual state at rest (intro-like) until the viewer decides
       var shown = state.status; state.status = 'intro'; render(); state.status = shown;

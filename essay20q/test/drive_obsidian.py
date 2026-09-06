@@ -64,8 +64,16 @@ def answer_current_question(page):
         page.click("#submitAnswerBtn")
 
 
+def enter_setup_page(page):
+    """소개 페이지가 아직 보이면 시작하기를 눌러 설정 페이지로 넘어간다 (이미 넘어갔으면 아무것도 안 함)."""
+    if page.locator("#introPage").is_visible():
+        page.click("#introStartBtn")
+        page.wait_for_timeout(100)
+
+
 def drive_to_early_stop_synthesis(page):
     """Q5까지 답하고 earlyStopBtn 으로 조기 종합에 도달한다 (두 backend 공통)."""
+    enter_setup_page(page)
     page.click("#exampleFillBtn")
     page.wait_for_timeout(100)
     page.click("#startBtn")
@@ -90,6 +98,7 @@ with sync_playwright() as p:
 with sync_playwright() as p:
     browser, page = launch_page(p, "mock_fetch.js")
 
+    enter_setup_page(page)
     page.fill("#apiKeyInput", "sk-ant-test-fake-key-for-testing-only")
     page.select_option("#apiModelSelect", "claude-sonnet-5")
     page.click("#apiKeySaveBtn")
