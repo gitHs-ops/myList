@@ -9,10 +9,34 @@ window.__fetchLog = [];
 window.__forceStatus = null;   // 테스트가 다음 호출 1회만 강제로 에러 상태를 내게 함
 window.__downloadLog = [];     // downloadPlain() 이 만드는 blob 다운로드 기록
 
+window.__obsidianLog = [];         // 옵시디언 vault PUT 요청 기록 (URL/헤더/바디)
+window.__obsForceStatus = null;    // 다음 호출 1회만 강제로 이 HTTP 상태를 내게 함
+window.__obsForceNetworkError = false; // true 면 다음 호출 1회를 TypeError(연결 실패)로 만듦
+
 (function () {
   var realFetch = window.fetch.bind(window);
 
   window.fetch = function (url, opts) {
+    if (typeof url === 'string' && url.indexOf('127.0.0.1:2712') >= 0) {
+      opts = opts || {};
+      window.__obsidianLog.push({ url: url, method: opts.method, headers: opts.headers, body: opts.body });
+      return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+          if (window.__obsForceNetworkError) {
+            window.__obsForceNetworkError = false;
+            reject(new TypeError('Failed to fetch'));
+            return;
+          }
+          if (window.__obsForceStatus) {
+            var st = window.__obsForceStatus;
+            window.__obsForceStatus = null;
+            resolve({ ok: false, status: st, text: function () { return Promise.resolve('mock vault error body'); } });
+            return;
+          }
+          resolve({ ok: true, status: 204, text: function () { return Promise.resolve(''); } });
+        }, 5);
+      });
+    }
     if (typeof url === 'string' && url.indexOf('api.anthropic.com') >= 0) {
       opts = opts || {};
       window.__fetchLog.push({ url: url, headers: opts.headers, body: opts.body });

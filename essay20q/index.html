@@ -209,6 +209,29 @@
 
   footer{ margin-top:30px; text-align:center; font-size:12.5px; color:var(--ink-faint); }
 
+  /* ---------- 옵시디언 연결 모달 ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(20,22,20,.5); display:flex;
+    align-items:center; justify-content:center; padding:20px; z-index:50;
+    opacity:0; pointer-events:none; transition:opacity .15s ease;
+  }
+  .modal-backdrop.show{ opacity:1; pointer-events:auto; }
+  .modal{
+    background:var(--surface); border-radius:16px; padding:26px 26px 22px;
+    max-width:420px; width:100%; position:relative; box-shadow:var(--shadow);
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal-close{
+    position:absolute; top:14px; right:14px; background:none; border:none;
+    font-size:15px; color:var(--ink-faint); cursor:pointer; padding:6px; line-height:1;
+  }
+  .modal h2{ font-size:17px; font-weight:700; margin:0 0 6px; padding-right:24px; }
+  .modal-field{ width:100%; border:1px solid var(--line); border-radius:12px; background:var(--surface-2);
+    color:var(--ink); padding:11px 14px; font:inherit; font-size:14.5px; }
+  .banner{ display:none; font-size:13px; padding:10px 12px; border-radius:10px; margin:10px 0 0; }
+  .banner.show.error{ display:block; background:var(--rose-tint); color:var(--rose); }
+  .banner.show.ok{ display:block; background:var(--accent-tint); color:var(--accent-strong); }
+
   @media (max-width:520px){
     .page{ padding:18px 14px 60px; }
     .card{ padding:18px; }
@@ -305,20 +328,20 @@
     </div>
 
     <section class="card field-card" id="topicCard">
-      <h2>Topic — 하고 싶은 일 · 목표 · 고민</h2>
+      <h2>주제 — 하고 싶은 일 · 목표 · 고민</h2>
       <p>지금 이루고 싶은 일, 도달하고 싶은 목표, 마음에 걸리는 고민을 한두 문장으로 적어주세요.<br>완벽하게 정리된 문장이 아니어도 됩니다 — 이어지는 질문들이 함께 다듬어 줍니다.</p>
       <div style="margin-top:14px">
-        <label class="field-label" for="topicInput">Topic</label>
+        <label class="field-label" for="topicInput">주제</label>
         <textarea id="topicInput" rows="2" maxlength="600" placeholder="예: 올해 안에 사이드 프로젝트를 수익화하고 싶은데, 어디서부터 시작해야 할지 막막하다."></textarea>
         <div class="counter"><span id="topicCount">0</span> / 600자</div>
       </div>
     </section>
 
     <section class="card field-card" id="backgroundCard">
-      <h2>Background — 현재 상황 · 조사한 정보 · 제약 조건</h2>
+      <h2>배경 설명 — 현재 상황 · 조사한 정보 · 제약 조건</h2>
       <p>지금까지 파악한 상황, 이미 조사해 둔 정보나 갖고 있는 데이터, 시간·예산·인력 같은 제약 조건을 적어주세요.<br>참고할 자료가 있다면 핵심 내용을 옮겨 붙여넣으셔도 됩니다.</p>
       <div style="margin-top:14px">
-        <label class="field-label" for="backgroundInput">Background</label>
+        <label class="field-label" for="backgroundInput">배경 설명</label>
         <textarea id="backgroundInput" rows="6" maxlength="2000" placeholder="예: 주중 저녁 2시간, 주말 반나절 정도 시간을 낼 수 있음. 예산은 200만 원 이내. 비슷한 서비스 A, B를 조사했지만 차별점을 못 찾음."></textarea>
         <div class="counter"><span id="backgroundCount">0</span> / 2000자</div>
       </div>
@@ -402,6 +425,7 @@
         <p class="synth-message" id="synthMessage"></p>
 
         <div class="btn-row" id="synthActions"></div>
+        <p class="example" id="obsStatus" style="margin-top:8px"></p>
       </div>
     </section>
 
@@ -420,6 +444,34 @@
   <footer>
     이 페이지의 진행 상황은 이 브라우저에만 저장됩니다 · <button class="link-btn" id="resetBtn">새로 시작하기</button>
   </footer>
+</div>
+
+<div class="modal-backdrop" id="obsModal" role="dialog" aria-modal="true" aria-labelledby="obsTitle">
+  <div class="modal">
+    <button type="button" class="modal-close" id="obsModalClose" aria-label="닫기">✕</button>
+    <h2 id="obsTitle">옵시디언 연결 정보</h2>
+    <p class="example">옵시디언의 <b>Local REST API</b> 플러그인 설정에서 API 키를 복사해 넣으세요.<br>이 값은 이 브라우저에만 저장됩니다.</p>
+    <div class="banner" id="obsBanner" role="alert"></div>
+    <div style="margin-top:12px">
+      <label class="field-label" for="obsBase">서버 주소</label>
+      <select id="obsBase" class="modal-field">
+        <option value="http://127.0.0.1:27123">http://127.0.0.1:27123 (기본 · 비암호화)</option>
+        <option value="https://127.0.0.1:27124">https://127.0.0.1:27124 (자체서명 — 브라우저가 막을 수 있음)</option>
+      </select>
+    </div>
+    <div style="margin-top:14px">
+      <label class="field-label" for="obsFolder">폴더</label>
+      <input type="text" id="obsFolder" class="modal-field" placeholder="예: 스무고개" autocomplete="off">
+    </div>
+    <div style="margin-top:14px">
+      <label class="field-label" for="obsKey">API 키</label>
+      <input type="password" id="obsKey" class="modal-field" placeholder="플러그인 설정에서 복사" autocomplete="off">
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn ghost" id="obsCancelBtn">취소</button>
+      <button type="button" class="btn primary" id="obsSaveBtn">저장하고 내보내기</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1095,6 +1147,7 @@
 
   function renderSynthesis() {
     setHidden('resultSynthesis', false);
+    setObsStatus('', false);
     var syn = state.lastSynthesis;
     document.getElementById('synthRoundTag').textContent = syn.round + '라운드 종합';
     var ct = document.getElementById('synthConvergedTag');
@@ -1152,6 +1205,12 @@
       dl.addEventListener('click', downloadResult);
       actions.appendChild(dl);
     }
+    if (backend === 'apikey') {
+      var obs = document.createElement('button');
+      obs.className = 'btn ghost'; obs.id = 'obsExportBtn'; obs.textContent = '옵시디언으로 보내기';
+      obs.addEventListener('click', openObsModal);
+      actions.appendChild(obs);
+    }
     var restart = document.createElement('button');
     restart.className = 'btn quiet'; restart.textContent = '새로 시작하기';
     restart.addEventListener('click', resetAll);
@@ -1207,10 +1266,10 @@
     lines.push('- 수렴 여부: ' + (syn.converged ? '완료' : '추가 진행 필요'));
     lines.push('- 정리한 날짜: ' + new Date().toLocaleString('ko-KR'));
     lines.push('');
-    lines.push('## Topic');
+    lines.push('## 주제');
     lines.push(state.topic);
     lines.push('');
-    lines.push('## Background');
+    lines.push('## 배경 설명');
     lines.push(state.background);
     lines.push('');
     if (state.priorRounds.length) {
@@ -1285,6 +1344,100 @@
     } else {
       downloadPlain(filename, text);
     }
+  }
+
+  // ---------------------------------------------------------------- obsidian export
+  /* Artifact sandbox 는 127.0.0.1 을 포함한 모든 비허용 호스트로의 fetch 를 막는다 —
+     그래서 이 기능은 개인 API 키 모드(backend === 'apikey', Artifact 밖)에서만 켠다. */
+
+  var OBSIDIAN_STORAGE_KEY = 'essay20q_obsidian_v1';
+
+  function getObsidianConfig() {
+    try { return JSON.parse(localStorage.getItem(OBSIDIAN_STORAGE_KEY) || 'null'); }
+    catch (e) { return null; }
+  }
+  function setObsidianConfig(cfg) {
+    try { localStorage.setItem(OBSIDIAN_STORAGE_KEY, JSON.stringify(cfg)); } catch (e) { /* ignore */ }
+  }
+
+  function obsidianFileName(round) {
+    var d = new Date();
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return '에세이식_스무고개_' + round + '라운드_' +
+      d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes()) + '.md';
+  }
+
+  function withObsidianFrontMatter(md) {
+    var syn = state.lastSynthesis;
+    return ['---',
+      'topic: ' + JSON.stringify(state.topic).slice(0, 200),
+      'round: ' + syn.round,
+      'converged: ' + syn.converged,
+      'saved: ' + new Date().toISOString(),
+      'source: essay20q (에세이식 스무고개)',
+      '---', '', md, ''].join('\n');
+  }
+
+  function sendToObsidian(filename, md) {
+    var cfg = getObsidianConfig();
+    if (!cfg || !cfg.base || !cfg.key) {
+      return Promise.reject(new Error('옵시디언 연결 정보가 없습니다. 서버 주소·API 키를 먼저 입력하십시오.'));
+    }
+    var path = (cfg.folder ? cfg.folder.replace(/^\/+|\/+$/g, '') + '/' : '') + filename;
+    var url = cfg.base + '/vault/' + encodeURI(path);
+    return fetch(url, {
+      method: 'PUT', mode: 'cors',
+      headers: { 'Authorization': 'Bearer ' + cfg.key, 'Content-Type': 'text/markdown; charset=utf-8' },
+      body: withObsidianFrontMatter(md)
+    }).then(function (r) {
+      if (r.ok || r.status === 204) return { path: path };
+      return r.text().then(function (tx) {
+        throw new Error('옵시디언 저장 실패 (HTTP ' + r.status + ')' + (tx ? ' — ' + tx.slice(0, 200) : ''));
+      });
+    }).catch(function (e) {
+      if (e instanceof TypeError) {
+        throw new Error('옵시디언에 연결하지 못했습니다 — Local REST API 플러그인이 켜져 있는지, ' +
+          '자체서명 인증서를 신뢰했는지 확인하십시오.');
+      }
+      throw e;
+    });
+  }
+
+  function hideObsBanner() {
+    var b = document.getElementById('obsBanner');
+    b.className = 'banner'; b.textContent = '';
+  }
+  function showObsBanner(msg, kind) {
+    var b = document.getElementById('obsBanner');
+    b.textContent = msg; b.className = 'banner show ' + (kind || 'error');
+  }
+  function openObsModal() {
+    hideObsBanner();
+    var cfg = getObsidianConfig() || {};
+    document.getElementById('obsBase').value = cfg.base || 'http://127.0.0.1:27123';
+    document.getElementById('obsFolder').value = cfg.folder || '';
+    document.getElementById('obsKey').value = cfg.key || '';
+    document.getElementById('obsModal').classList.add('show');
+  }
+  function closeObsModal() {
+    document.getElementById('obsModal').classList.remove('show');
+  }
+  function setObsStatus(msg, isError) {
+    var el = document.getElementById('obsStatus');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isError ? 'var(--rose)' : 'var(--ink-faint)';
+  }
+  function exportToObsidian() {
+    if (!state.lastSynthesis) return;
+    var btn = document.getElementById('obsExportBtn');
+    if (btn) btn.disabled = true;
+    setObsStatus('옵시디언에 저장하는 중…', false);
+    var filename = obsidianFileName(state.lastSynthesis.round);
+    sendToObsidian(filename, buildResultMarkdown())
+      .then(function (r) { setObsStatus('✓ 옵시디언에 저장했습니다 — ' + r.path, false); })
+      .catch(function (e) { setObsStatus(e.message, true); })
+      .then(function () { if (btn) btn.disabled = false; });
   }
 
   // ---------------------------------------------------------------- input wiring
@@ -1385,6 +1538,26 @@
       else if (state.status === 'error') { render(); }
       else if (state.status === 'asking' || state.status === 'synthesizing') { askNextQuestionOrSynthesisResume(); }
       else { render(); }
+    });
+
+    document.getElementById('obsModalClose').addEventListener('click', closeObsModal);
+    document.getElementById('obsCancelBtn').addEventListener('click', closeObsModal);
+    document.getElementById('obsModal').addEventListener('click', function (e) {
+      if (e.target === document.getElementById('obsModal')) closeObsModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.getElementById('obsModal').classList.contains('show')) closeObsModal();
+    });
+    document.getElementById('obsSaveBtn').addEventListener('click', function () {
+      var key = document.getElementById('obsKey').value.trim();
+      if (!key) { showObsBanner('API 키를 입력하십시오.', 'error'); return; }
+      setObsidianConfig({
+        base: document.getElementById('obsBase').value,
+        folder: document.getElementById('obsFolder').value.trim(),
+        key: key
+      });
+      closeObsModal();
+      exportToObsidian();
     });
   }
 
