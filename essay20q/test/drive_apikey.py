@@ -38,6 +38,12 @@ with sync_playwright() as p:
     page.goto(url)
     page.wait_for_timeout(400)  # initCapabilities() 는 claude.use() 실패를 기다렸다 확정한다
 
+    # ---- 소개 페이지 -> 설정 페이지 (백엔드가 없어도 넘어갈 수 있어야 API 키를 등록할 수 있다) ----
+    page.click("#introStartBtn")
+    page.wait_for_timeout(100)
+    assert page.locator("#setupPage").is_visible(), "시작하기 클릭 후 설정 페이지가 보여야 한다"
+    log("소개 페이지 -> 설정 페이지 전환 확인 (백엔드 미확정 상태에서도 진입 가능)")
+
     # ---- window.claude 가 없을 때 API 키 카드가 실제로 나타나는지 ----
     apikey_hidden = page.get_attribute("#apiKeyCard", "hidden")
     assert apikey_hidden is None, "apiKeyCard should be visible when window.claude is absent"

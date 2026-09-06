@@ -42,6 +42,15 @@ with sync_playwright() as p:
     page.goto(url)
     page.wait_for_timeout(200)
 
+    # ---- 소개 페이지 -> 설정 페이지로 넘어가기 ----
+    assert page.locator("#introPage").is_visible(), "처음에는 소개 페이지가 보여야 한다"
+    assert page.get_attribute("#setupPage", "hidden") is not None, "설정 페이지는 처음엔 숨어 있어야 한다"
+    page.click("#introStartBtn")
+    page.wait_for_timeout(100)
+    assert page.get_attribute("#introPage", "hidden") is not None, "시작하기 클릭 후 소개 페이지는 숨어야 한다"
+    assert page.locator("#setupPage").is_visible(), "시작하기 클릭 후 설정 페이지가 보여야 한다"
+    log("소개 페이지 -> 설정 페이지 전환 확인")
+
     # ---- example fill / clear buttons ----
     assert page.locator("#topicInput").input_value() == ""
     page.click("#exampleFillBtn")
