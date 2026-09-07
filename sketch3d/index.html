@@ -77,13 +77,13 @@
   .hero-actions { flex: 0 0 auto; }
   .btn-row.hero-actions { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
   .btn-row.hero-actions .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
-  .hero-samples { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
-  .hero-samples .chk-btn { flex: 0 0 auto; }
+  .btn-row.hero-actions .chk-btn { flex: 0 0 auto; white-space: nowrap; }
   .sample-select {
-    flex: 1 1 auto; min-width: 0;
+    flex: 0 0 auto; width: 110px;
     font-family: var(--font-main); font-weight: 600; font-size: 12.5px; cursor: pointer;
     border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
     border-radius: 10px; padding: 7px 10px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .sample-select:disabled { opacity: .55; cursor: not-allowed; }
   .backend-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 14px; }
@@ -189,6 +189,10 @@
   }
   textarea { resize: vertical; min-height: 120px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 1.5; }
   .num-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .permit-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .permit-row h2 { margin: 0; flex: 0 0 auto; }
+  .permit-row input { flex: 1 1 160px; min-width: 120px; }
+  .permit-row .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
 
   .drop {
     margin-top: 4px;
@@ -286,7 +290,8 @@
   .clr input[type="color"] { width: 26px; height: 22px; border: 1px solid var(--field-border); border-radius: 6px; padding: 0; background: none; cursor: pointer; }
   .views { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
   .views figure { margin: 0; }
-  .views img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 10px; }
+  .views img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 10px; cursor: zoom-in; }
+  .views img:hover { border-color: var(--accent-primary); }
   .views figcaption { text-align: center; font-size: 11px; color: var(--text-secondary); margin-top: 4px; font-weight: 600; }
   .view-dl-btn { margin-left: 6px; border: 1px solid var(--field-border); background: var(--field-bg); border-radius: 6px; padding: 1px 6px; cursor: pointer; font-size: 11px; line-height: 1.6; }
   .view-dl-btn:hover { border-color: var(--accent-primary); }
@@ -298,6 +303,7 @@
   .dim-btn:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
   .dim-btn.on { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: #fff; border-color: transparent; }
   .dim-btn:disabled { opacity: .5; cursor: default; background: var(--field-bg); color: var(--text-secondary); border-color: var(--field-border); }
+  .intro-help-btn { vertical-align: middle; font-size: 14px; padding: 3px 10px; }
   .chk-btn {
     display: inline-flex; align-items: center; gap: 6px;
     font-family: var(--font-main); font-weight: 700; font-size: 12px; cursor: pointer;
@@ -358,6 +364,9 @@
   .help-dialog li { margin-bottom: 8px; font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); }
   .help-dialog p { font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 10px; }
   .help-dialog code { font-size: 11.5px; }
+  .view-enlarge-dialog { max-width: 900px; }
+  .view-enlarge-dialog img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 10px; }
+  .view-enlarge-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
   .chat-log {
     display: flex; flex-direction: column; gap: 8px;
@@ -395,27 +404,29 @@
   <div id="statusToast" class="status-toast"></div>
   <header class="hero">
     <div class="hero-top">
-      <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입</h1>
+      <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입 <button id="btnIntroHelp" class="dim-btn intro-help-btn" title="소개">ⓘ</button></h1>
       <div class="btn-row hero-actions">
         <button id="btnLoadTestImage" class="btn ghost" title="스케치 업로드 칸에 테스트용 샘플 이미지를 바로 채워 넣습니다">🧪 테스트이미지 불러오기</button>
         <button id="btnLoadProject" class="btn ghost">📂 불러오기</button>
         <button id="btnSaveProject" class="btn ghost">💾 저장</button>
         <input id="projectFileInput" type="file" accept="application/json" style="display:none" />
+        <select id="sampleSelect" class="sample-select" disabled>
+          <option value="" selected>샘플로 테스트… (API 불필요)</option>
+          <option value="room">단일 객실</option>
+          <option value="two">투룸 + 복도</option>
+          <option value="L">L자 스튜디오</option>
+          <option value="win">창·문 개구부</option>
+          <option value="gable">박공 지붕</option>
+          <option value="openings">가로 개구부(창·문)</option>
+        </select>
+        <label class="chk-btn"><input type="checkbox" id="sampleLockToggle" /> 샘플 잠금 해제</label>
       </div>
     </div>
-    <div class="hero-samples">
-      <label class="chk-btn"><input type="checkbox" id="sampleLockToggle" /> 샘플 잠금 해제</label>
-      <select id="sampleSelect" class="sample-select" disabled>
-        <option value="" selected>샘플로 테스트… (API 불필요)</option>
-        <option value="room">단일 객실</option>
-        <option value="two">투룸 + 복도</option>
-        <option value="L">L자 스튜디오</option>
-        <option value="win">창·문 개구부</option>
-        <option value="gable">박공 지붕</option>
-        <option value="openings">가로 개구부(창·문)</option>
-      </select>
-    </div>
-    <p class="hero-sub">치수가 적힌 손그림 스케치를 올리면 벽체를 3D로 세워줍니다. 비전 API 없이도 아래 <b>샘플/JSON</b>으로 파이프라인을 바로 확인할 수 있습니다.</p>
+    <dialog id="introHelpDialog" class="help-dialog">
+      <h3>손그림 → 3D 도면 프로토타입 — 소개</h3>
+      <p>치수가 적힌 손그림 스케치를 첨부하여 올리면 벽체를 분석하여 3D로 조합하여 표현합니다. 만약 비전 API 없을 경우엔 샘플 도면이나 JSON으로 도면 만들 수 있고 대화창으로 수정가능합니다.</p>
+      <button id="btnIntroHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
+    </dialog>
     <div id="usageBadge" class="usage-badge" hidden>💰 이번 세션 비전 API ≈ $<span id="usageCost">0</span> · 토큰 입력<span id="usageIn">0</span>/출력<span id="usageOut">0</span></div>
   </header>
 
@@ -495,23 +506,6 @@
         <button id="btnJsonHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
       </dialog>
 
-      <div class="card">
-        <h2><span class="step">4</span> 인허가용 정식 도면
-          <button id="btnPermitHelp" class="dim-btn" style="margin-left:auto">ⓘ 설명</button>
-        </h2>
-        <div class="num-row">
-          <input id="permitProject" type="text" placeholder="프로젝트명 (예: 영덕감성산장 객실동)" />
-          <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
-        </div>
-        <button id="btnPermitPdf" class="btn" style="margin-top:10px">📐 인허가용 정식 도면 세트 생성 (인쇄 → PDF)</button>
-      </div>
-
-      <dialog id="permitHelpDialog" class="help-dialog">
-        <h3>인허가용 정식 도면 — 설명</h3>
-        <p>평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.</p>
-        <p><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
-        <button id="btnPermitHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
-      </dialog>
     </div>
 
     <!-- RIGHT: 3D + 도면 -->
@@ -537,24 +531,49 @@
       <div id="fpHint" class="fp-hint">🖱️ 드래그: 시선 회전 · 스크롤: 확대/축소 · 바닥 클릭: 그 위치로 이동</div>
       </div>
 
+      <div class="card permit-card">
+        <div class="permit-row">
+          <h2><span class="step">4</span> 인허가용 정식 도면
+            <button id="btnPermitHelp" class="dim-btn" style="margin-left:8px">ⓘ 설명</button>
+          </h2>
+          <input id="permitProject" type="text" placeholder="프로젝트명 (예: 영덕감성산장 객실동)" />
+          <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
+          <button id="btnPermitPdf" class="btn">📐 인허가용 정식 도면 세트 생성 (인쇄 → PDF)</button>
+        </div>
+      </div>
+
+      <dialog id="permitHelpDialog" class="help-dialog">
+        <h3>인허가용 정식 도면 — 설명</h3>
+        <p>평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.</p>
+        <p><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
+        <button id="btnPermitHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
+      </dialog>
+
       <div class="card views-card">
         <h2>평면도 · 입면도
-          <label class="chk-btn" style="margin-left:auto"><input type="checkbox" id="viewsDimToggle" /> 수치 표시</label>
-          <label class="chk-btn" style="margin-left:8px"><input type="checkbox" id="viewsRoofToggle" checked /> 지붕 포함</label>
-          <label class="chk-btn" style="margin-left:8px"><input type="checkbox" id="viewsRoomToggle" checked /> 방 이름 포함</label>
-          <button id="viewsRefresh" class="dim-btn" style="margin-left:8px;background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">📐 도면 생성</button>
-          <button id="viewsSaveAll" class="dim-btn" style="margin-left:8px">💾 개별 파일로 저장</button>
+          <button id="viewsRefresh" class="dim-btn" style="margin-left:auto;background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">📐 도면 생성</button>
         </h2>
-        <p class="hint">수치·지붕·방 이름 체크박스를 바꾸거나 모델을 다시 만들면 <b>도면 생성</b> 버튼이 활성화됩니다. 눌러야 아래 평면도·입면도에 반영됩니다.</p>
+        <p class="hint">도면을 클릭하면 확대해서 볼 수 있고, 그 안에서 수치·지붕·방 이름 표시를 바꿀 수 있습니다. 바꾼 뒤 모델을 다시 만들면 <b>도면 생성</b> 버튼이 활성화됩니다. 눌러야 반영됩니다.</p>
         <div class="views">
-          <figure><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서) <button class="view-dl-btn" data-view="Top" data-label="평면도" title="파일로 저장">💾</button></figcaption></figure>
-          <figure><img id="viewN" alt="북측 입면" /><figcaption>북측 입면 <button class="view-dl-btn" data-view="N" data-label="북측입면" title="파일로 저장">💾</button></figcaption></figure>
-          <figure><img id="viewE" alt="동측 입면" /><figcaption>동측 입면 <button class="view-dl-btn" data-view="E" data-label="동측입면" title="파일로 저장">💾</button></figcaption></figure>
-          <figure><img id="viewS" alt="남측 입면" /><figcaption>남측 입면 <button class="view-dl-btn" data-view="S" data-label="남측입면" title="파일로 저장">💾</button></figcaption></figure>
-          <figure><img id="viewW" alt="서측 입면" /><figcaption>서측 입면 <button class="view-dl-btn" data-view="W" data-label="서측입면" title="파일로 저장">💾</button></figcaption></figure>
+          <figure data-view="Top"><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서) <button class="view-dl-btn" data-view="Top" data-label="평면도" title="파일로 저장">💾</button></figcaption></figure>
+          <figure data-view="N"><img id="viewN" alt="북측 입면" /><figcaption>북측 입면 <button class="view-dl-btn" data-view="N" data-label="북측입면" title="파일로 저장">💾</button></figcaption></figure>
+          <figure data-view="E"><img id="viewE" alt="동측 입면" /><figcaption>동측 입면 <button class="view-dl-btn" data-view="E" data-label="동측입면" title="파일로 저장">💾</button></figcaption></figure>
+          <figure data-view="S"><img id="viewS" alt="남측 입면" /><figcaption>남측 입면 <button class="view-dl-btn" data-view="S" data-label="남측입면" title="파일로 저장">💾</button></figcaption></figure>
+          <figure data-view="W"><img id="viewW" alt="서측 입면" /><figcaption>서측 입면 <button class="view-dl-btn" data-view="W" data-label="서측입면" title="파일로 저장">💾</button></figcaption></figure>
         </div>
       </div>
     </div>
+
+    <dialog id="viewEnlargeDialog" class="help-dialog view-enlarge-dialog">
+      <h3 id="viewEnlargeTitle">평면도</h3>
+      <img id="viewEnlargeImg" alt="" />
+      <div class="view-enlarge-controls">
+        <label class="chk-btn"><input type="checkbox" id="viewsDimToggle" /> 수치 표시</label>
+        <label class="chk-btn"><input type="checkbox" id="viewsRoofToggle" checked /> 지붕 포함</label>
+        <label class="chk-btn"><input type="checkbox" id="viewsRoomToggle" checked /> 방 이름 포함</label>
+      </div>
+      <button id="viewEnlargeClose" class="btn ghost" style="margin-top:14px">닫기</button>
+    </dialog>
   </div>
 </div>
 
@@ -1298,6 +1317,7 @@ function wireHelpDialog(openBtnId, dialogId, closeBtnId) {
 }
 wireHelpDialog('btnJsonHelp', 'jsonHelpDialog', 'btnJsonHelpClose');
 wireHelpDialog('btnPermitHelp', 'permitHelpDialog', 'btnPermitHelpClose');
+wireHelpDialog('btnIntroHelp', 'introHelpDialog', 'btnIntroHelpClose');
 
 const sampleSelect = document.getElementById('sampleSelect');
 sampleSelect.addEventListener('change', () => {
@@ -1595,17 +1615,26 @@ document.querySelectorAll('.view-dl-btn').forEach(btn => {
     downloadDataUrl(img.src, `sketch3d-${btn.dataset.label}-${ts}.png`);
   });
 });
-document.getElementById('viewsSaveAll').addEventListener('click', () => {
-  if (!hasGeneratedViews) { status('먼저 "도면 생성"을 눌러주세요.', 'err'); return; }
-  const defs = [
-    { view: 'Top', label: '평면도' }, { view: 'N', label: '북측입면' },
-    { view: 'E', label: '동측입면' }, { view: 'S', label: '남측입면' }, { view: 'W', label: '서측입면' }
-  ];
-  const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  defs.forEach((d, i) => {
-    setTimeout(() => downloadDataUrl(document.getElementById('view' + d.view).src, `sketch3d-${d.label}-${ts}.png`), i * 200);
+/* ---------- 도면 클릭 -> 확대 팝업 (수치·지붕·방 이름 설정도 이 안에서 바꾼다) ---------- */
+const viewLabels = { Top: '평면도 (위에서)', N: '북측 입면', E: '동측 입면', S: '남측 입면', W: '서측 입면' };
+const viewEnlargeDialog = document.getElementById('viewEnlargeDialog');
+const viewEnlargeImg = document.getElementById('viewEnlargeImg');
+const viewEnlargeTitle = document.getElementById('viewEnlargeTitle');
+document.querySelectorAll('.views img').forEach(img => {
+  img.addEventListener('click', () => {
+    if (!hasGeneratedViews) { status('먼저 "도면 생성"을 눌러주세요.', 'err'); return; }
+    const key = img.closest('figure').dataset.view;
+    viewEnlargeTitle.textContent = viewLabels[key];
+    viewEnlargeImg.src = img.src;
+    viewEnlargeImg.alt = img.alt;
+    viewEnlargeDialog.showModal();
   });
-  status(`평면도·입면도 ${defs.length}장을 개별 파일로 저장했습니다.`, 'ok');
+});
+document.getElementById('viewEnlargeClose').addEventListener('click', () => viewEnlargeDialog.close());
+viewEnlargeDialog.addEventListener('click', (e) => {
+  const r = viewEnlargeDialog.getBoundingClientRect();
+  const inside = r.top <= e.clientY && e.clientY <= r.bottom && r.left <= e.clientX && e.clientX <= r.right;
+  if (!inside) viewEnlargeDialog.close();
 });
 
 document.getElementById('viewsRoofToggle').addEventListener('change', e => {
