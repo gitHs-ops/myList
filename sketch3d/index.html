@@ -525,9 +525,11 @@
         </div>
       </div>
       <div class="vp-bar furniture-bar">
-        <span class="stat">🛋️ 가구 배치 <small>(버튼 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거)</small></span>
+        <span class="stat">🛋️ 가구 배치 <small>(드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거)</small></span>
         <div class="vp-right">
-          <div id="furnitureButtons" style="display:contents"></div>
+          <select id="furnitureSelect" class="sample-select">
+            <option value="" selected>가구 선택…</option>
+          </select>
           <button id="btnFurnitureDisarm" class="dim-btn" title="가구 배치 모드를 끕니다">✋ 배치 해제</button>
           <button id="btnFurnitureClearAll" class="dim-btn" title="배치한 가구를 전체 삭제합니다">🗑 전체 삭제</button>
         </div>
@@ -1776,37 +1778,29 @@ canvas.addEventListener('wheel', (e) => {
 /* ---------- 가구 배치 (3D 뷰에서 직접: 타입 선택 -> 바닥 클릭 -> 배치, 배치된 가구 클릭 -> 제거) ---------- */
 let armedFurnitureType = null; // 지금 배치 대기 중인 타입 (null = 배치 대기 없음 -> 클릭 시 제거 모드)
 const furnitureHint = document.getElementById('furnitureHint');
-const furnitureButtonsEl = document.getElementById('furnitureButtons');
+const furnitureSelect = document.getElementById('furnitureSelect');
 
 Object.entries(FURNITURE_TYPES).forEach(([type, f]) => {
-  const b = document.createElement('button');
-  b.className = 'dim-btn furniture-btn';
-  b.dataset.type = type;
-  b.textContent = `${f.icon || '🛋️'} ${f.label}`;
-  b.title = `${f.label} 배치 (${f.width}×${f.depth}×${f.height}mm)`;
-  furnitureButtonsEl.appendChild(b);
+  const opt = document.createElement('option');
+  opt.value = type;
+  opt.textContent = `${f.icon || '🛋️'} ${f.label}`;
+  furnitureSelect.appendChild(opt);
 });
 
 function disarmFurniture() {
   armedFurnitureType = null;
-  furnitureButtonsEl.querySelectorAll('.furniture-btn').forEach(b => b.classList.remove('on'));
+  furnitureSelect.value = '';
   furnitureHint.classList.remove('show');
   canvas.style.cursor = '';
 }
 
-furnitureButtonsEl.addEventListener('click', (e) => {
-  const btn = e.target.closest('.furniture-btn');
-  if (!btn) return;
-  const type = btn.dataset.type;
-  const wasArmed = armedFurnitureType === type;
+furnitureSelect.addEventListener('change', () => {
+  const type = furnitureSelect.value;
+  if (!type) { disarmFurniture(); return; }
   if (firstPerson) fpToggle.click(); // 1인칭 시점 중이었다면 먼저 끄고 배치 모드로 전환
-  disarmFurniture();
-  if (!wasArmed) {
-    armedFurnitureType = type;
-    btn.classList.add('on');
-    furnitureHint.classList.add('show');
-    canvas.style.cursor = 'crosshair';
-  }
+  armedFurnitureType = type;
+  furnitureHint.classList.add('show');
+  canvas.style.cursor = 'crosshair';
 });
 
 document.getElementById('btnFurnitureDisarm').addEventListener('click', () => {
@@ -1824,9 +1818,12 @@ document.getElementById('btnFurnitureClearAll').addEventListener('click', () => 
 // 건물 바깥(벽 두께 안쪽까지 포함해서)에는 가구를 놓을 수 없음 -- 정확한 방 폴리곤이 아니라
 // 전체 벽 바운딩박스(외곽 기준)를 벽 두께만큼 안으로 줄인 사각형으로 근사한다. 오목한(L자)
 // 평면에서는 완벽하지 않지만, "건물 밖 클릭"을 막는다는 목적에는 충분하다.
-function isInsideBuilding(x, z) {
-  const halfX = Math.max(0, lastSize.x / 2 - lastWallThickness);
-  const halfZ = Math.max(0, lastSize.z / 2 - lastWallThickness);
+// halfW/halfD(가구 폭·깊이의 절반)를 함께 받아, 중심점이 아니라 가구 전체 외곽이
+// 벽 안쪽에 다 들어오는지를 판정한다(중심점만 보면 큰 가구는 벽을 뚫고 나갈 수 있었음).
+function isInsideBuilding(x, z, halfW = 0, halfD = 0) {
+  const halfX = Math.max(0, lastSize.x / 2 - lastWallThickness) - halfW;
+  const halfZ = Math.max(0, lastSize.z / 2 - lastWallThickness) - halfD;
+  if (halfX < 0 || halfZ < 0) return false; // 가구가 실내보다 커서 애초에 안 들어감
   return Math.abs(x - lastCenter.x) <= halfX && Math.abs(z - lastCenter.z) <= halfZ;
 }
 
@@ -1839,9 +1836,9 @@ function placeFurniture(type, x, z) {
   mesh.receiveShadow = true;
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), furnitureEdgeMat);
 
-  const labelH = Math.max(200, f.height * 0.45);
+  const labelH = 220; // 가구 종류(높이)와 무관하게 이름표 글자 크기는 고정
   const label = makeLabel(f.label, labelH, 'rgba(92,67,38,0.94)');
-  label.position.y = f.height / 2 + labelH * 0.6;
+  label.position.y = f.height / 2 + labelH * 0.6; // 가구 상단 바로 위, 고정 간격
 
   const item = new THREE.Group();
   item.add(mesh, edges, label);
@@ -1895,7 +1892,11 @@ canvas.addEventListener('pointerup', (e) => {
   if (armedFurnitureType) {
     const pt = fpGroundPoint(e.clientX, e.clientY);
     if (!pt) { status('바닥 쪽을 클릭하세요.', 'err'); return; }
-    if (!isInsideBuilding(pt.x, pt.z)) { status('벽 안쪽 바닥을 클릭하세요.', 'err'); return; }
+    const f = FURNITURE_TYPES[armedFurnitureType];
+    if (!isInsideBuilding(pt.x, pt.z, f.width / 2, f.depth / 2)) {
+      status('가구 전체가 벽 안쪽에 들어오는 위치를 클릭하세요.', 'err');
+      return;
+    }
     placeFurniture(armedFurnitureType, pt.x, pt.z);
     status(`${FURNITURE_TYPES[armedFurnitureType].label} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
   }
