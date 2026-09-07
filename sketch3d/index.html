@@ -77,7 +77,6 @@
   .hero-actions { flex: 0 0 auto; }
   .btn-row.hero-actions { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
   .btn-row.hero-actions .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
-  .btn-row.hero-actions .chk-btn { flex: 0 0 auto; white-space: nowrap; }
   .sample-select {
     flex: 0 0 auto; width: 110px;
     font-family: var(--font-main); font-weight: 600; font-size: 12.5px; cursor: pointer;
@@ -85,7 +84,6 @@
     border-radius: 10px; padding: 7px 10px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .sample-select:disabled { opacity: .55; cursor: not-allowed; }
   .backend-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 14px; }
   .backend-line .adv { flex: 1; margin-top: 0; }
   .usage-badge {
@@ -283,9 +281,6 @@
   .sun-ctl input[type="range"] { width: 110px; accent-color: var(--accent-primary); }
   #sunLabel { font-family: var(--font-accent); font-weight: 600; color: var(--text-primary); min-width: 40px; }
 
-  .views-card { margin-top: 16px; }
-  .views-card h2 { display: flex; align-items: center; }
-  .views-card h2 .dim-btn { margin-left: auto; }
   .clr { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
   .clr input[type="color"] { width: 26px; height: 22px; border: 1px solid var(--field-border); border-radius: 6px; padding: 0; background: none; cursor: pointer; }
   .views { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
@@ -410,7 +405,7 @@
         <button id="btnLoadProject" class="btn ghost">📂 불러오기</button>
         <button id="btnSaveProject" class="btn ghost">💾 저장</button>
         <input id="projectFileInput" type="file" accept="application/json" style="display:none" />
-        <select id="sampleSelect" class="sample-select" disabled>
+        <select id="sampleSelect" class="sample-select">
           <option value="" selected>샘플로 테스트… (API 불필요)</option>
           <option value="room">단일 객실</option>
           <option value="two">투룸 + 복도</option>
@@ -419,7 +414,6 @@
           <option value="gable">박공 지붕</option>
           <option value="openings">가로 개구부(창·문)</option>
         </select>
-        <label class="chk-btn"><input type="checkbox" id="sampleLockToggle" /> 샘플 잠금 해제</label>
       </div>
     </div>
     <dialog id="introHelpDialog" class="help-dialog">
@@ -531,28 +525,17 @@
       <div id="fpHint" class="fp-hint">🖱️ 드래그: 시선 회전 · 스크롤: 확대/축소 · 바닥 클릭: 그 위치로 이동</div>
       </div>
 
-      <div class="card permit-card">
+      <div class="card permit-views-card">
         <div class="permit-row">
           <h2><span class="step">4</span> 인허가용 정식 도면
             <button id="btnPermitHelp" class="dim-btn" style="margin-left:8px">ⓘ 설명</button>
           </h2>
-          <input id="permitProject" type="text" placeholder="프로젝트명 (예: 영덕감성산장 객실동)" />
+          <input id="permitProject" type="text" placeholder="프로젝트명" />
           <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
-          <button id="btnPermitPdf" class="btn">📐 인허가용 정식 도면 세트 생성 (인쇄 → PDF)</button>
+          <button id="btnPermitPdf" class="btn" title="인허가용 정식 도면 세트 생성 (인쇄 → PDF)">📐 PDF 생성</button>
+          <h2 style="margin-left:16px">평면도 · 입면도</h2>
+          <button id="viewsRefresh" class="dim-btn" style="background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">📐 도면 생성</button>
         </div>
-      </div>
-
-      <dialog id="permitHelpDialog" class="help-dialog">
-        <h3>인허가용 정식 도면 — 설명</h3>
-        <p>평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.</p>
-        <p><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
-        <button id="btnPermitHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
-      </dialog>
-
-      <div class="card views-card">
-        <h2>평면도 · 입면도
-          <button id="viewsRefresh" class="dim-btn" style="margin-left:auto;background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">📐 도면 생성</button>
-        </h2>
         <p class="hint">도면을 클릭하면 확대해서 볼 수 있고, 그 안에서 수치·지붕·방 이름 표시를 바꿀 수 있습니다. 바꾼 뒤 모델을 다시 만들면 <b>도면 생성</b> 버튼이 활성화됩니다. 눌러야 반영됩니다.</p>
         <div class="views">
           <figure data-view="Top"><img id="viewTop" alt="평면도" /><figcaption>평면도 (위에서) <button class="view-dl-btn" data-view="Top" data-label="평면도" title="파일로 저장">💾</button></figcaption></figure>
@@ -562,6 +545,13 @@
           <figure data-view="W"><img id="viewW" alt="서측 입면" /><figcaption>서측 입면 <button class="view-dl-btn" data-view="W" data-label="서측입면" title="파일로 저장">💾</button></figcaption></figure>
         </div>
       </div>
+
+      <dialog id="permitHelpDialog" class="help-dialog">
+        <h3>인허가용 정식 도면 — 설명</h3>
+        <p>평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.</p>
+        <p><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
+        <button id="btnPermitHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
+      </dialog>
     </div>
 
     <dialog id="viewEnlargeDialog" class="help-dialog view-enlarge-dialog">
@@ -1326,12 +1316,6 @@ sampleSelect.addEventListener('change', () => {
   sampleSelect.value = '';  // 먼저 플레이스홀더로 되돌려 같은 항목도 재선택 시 다시 change 가 뜨도록
   loadIntoBoxAndBuild(SAMPLES[key]);
 });
-
-/* ---------- 샘플 선택 실수 방지 잠금 (기본 잠김) ---------- */
-const sampleLockToggle = document.getElementById('sampleLockToggle');
-function applySampleLock() { sampleSelect.disabled = !sampleLockToggle.checked; }
-sampleLockToggle.addEventListener('change', applySampleLock);
-applySampleLock();
 
 /* ---------- upload (multi-image) ---------- */
 const drop = document.getElementById('drop');
