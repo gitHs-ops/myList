@@ -77,8 +77,10 @@
   .hero-actions { flex: 0 0 auto; }
   .btn-row.hero-actions { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
   .btn-row.hero-actions .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
-  .hero-samples { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .hero-samples { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
+  .hero-samples .chk-btn { flex: 0 0 auto; }
   .sample-select {
+    flex: 1 1 auto; min-width: 0;
     font-family: var(--font-main); font-weight: 600; font-size: 12.5px; cursor: pointer;
     border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
     border-radius: 10px; padding: 7px 10px;
