@@ -423,7 +423,7 @@
         <h2><span class="step">3</span> 벽 좌표 JSON</h2>
         <textarea id="jsonBox" spellcheck="false" placeholder='{ "unit":"mm", "wallHeight":2400, "wallThickness":150, "walls":[{"start":[0,0],"end":[5000,0]}] }'></textarea>
         <button id="btnBuild" class="btn" style="margin-top:12px">이 JSON으로 3D 생성</button>
-        <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.<br>벽 옵션: <code>height</code> · <code>thickness</code> · <code>sill</code>/<code>lintel</code>(벽 전체폭 밴드).<br>가로 창/문: <code>openings:[{offset, width, sill, height, type}]</code> — offset=벽 시작점~개구부, width=폭.</p>
+        <p class="hint">단위 mm · 평면 좌표 [x, y] (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.<br>벽 옵션: <code>height</code> · <code>thickness</code> · <code>sill</code>/<code>lintel</code>(벽 전체폭 밴드).<br>가로 창/문: <code>openings:[{offset, width, sill, height, type}]</code> — offset=벽 시작점~개구부, width=폭.<br>방 이름표: <code>rooms:[{label, point:[x,y]}]</code> — point는 그 방 안쪽 아무 좌표.</p>
       </div>
 
       <div class="card">
@@ -467,6 +467,7 @@
           <label class="clr">지붕<input type="color" id="roofColor" value="#b0674c" /></label>
           <button id="dimToggle" class="dim-btn">치수 표시</button>
           <button id="roofToggle" class="dim-btn on">지붕 숨김</button>
+          <button id="roomLabelToggle" class="dim-btn on">방 이름 숨김</button>
         </div>
       </div>
       <canvas id="viewport"></canvas>
@@ -526,6 +527,11 @@ const SAMPLES = {
       { start: [0, 4000], end: [0, 0] },
       { start: [3200, 0], end: [3200, 4000] },
       { start: [3200, 2400], end: [7000, 2400] }
+    ],
+    rooms: [
+      { label: "거실", point: [1600, 2000] },
+      { label: "침실", point: [5100, 3200] },
+      { label: "복도", point: [5100, 1200] }
     ]
   },
   L: {
@@ -634,6 +640,10 @@ dimGroup.add(interiorLengthGroup);
 
 let compassGroup = new THREE.Group();
 scene.add(compassGroup);
+
+let roomLabelGroup = new THREE.Group();
+scene.add(roomLabelGroup);
+let showRoomLabels = true;
 
 let roofGroup = new THREE.Group();
 scene.add(roofGroup);
@@ -1082,6 +1092,23 @@ function buildModel(data) {
       compassGroup.add(sp);
     });
 
+    // 방 이름표 (침실/거실 등, rooms 배열이 있을 때만)
+    disposeGroup(roomLabelGroup);
+    scene.remove(roomLabelGroup);
+    roomLabelGroup = new THREE.Group();
+    roomLabelGroup.visible = showRoomLabels;
+    scene.add(roomLabelGroup);
+    if (Array.isArray(data.rooms)) {
+      const roomLabelH = Math.min(900, Math.max(220, labelH * 0.9));
+      const roomLabelY = Math.min(H * 0.7, 1800);
+      data.rooms.forEach(r => {
+        if (!r || !Array.isArray(r.point) || !r.label) return;
+        const sp = makeLabel(String(r.label), roomLabelH, 'rgba(219,39,119,0.94)');
+        sp.position.set(r.point[0], roomLabelY, -r.point[1]);
+        roomLabelGroup.add(sp);
+      });
+    }
+
     // 지붕 (박공/평지붕) — footprint 기준, 벽 최상단(eave)에서 생성
     let roofTopY = bbox.max.y;
     const roof = data.roof;
@@ -1403,6 +1430,14 @@ roofToggle.addEventListener('click', () => {
   roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
 });
 
+const roomLabelToggle = document.getElementById('roomLabelToggle');
+roomLabelToggle.addEventListener('click', () => {
+  showRoomLabels = !showRoomLabels;
+  roomLabelGroup.visible = showRoomLabels;
+  roomLabelToggle.classList.toggle('on', showRoomLabels);
+  roomLabelToggle.textContent = showRoomLabels ? '방 이름 숨김' : '방 이름 표시';
+});
+
 /* ---------- 평면도·입면도 생성 버튼 (변경사항 발생 시 활성화) ---------- */
 const viewsGenBtn = document.getElementById('viewsRefresh');
 let hasGeneratedViews = false;
@@ -1679,7 +1714,7 @@ function collectSceneState() {
   return {
     wallColor: '#' + wallMat.color.getHexString(),
     roofColor: '#' + roofMat.color.getHexString(),
-    showRoof, showDims, showShadow, viewsDim, drawRoof, sunHour
+    showRoof, showDims, showShadow, viewsDim, drawRoof, sunHour, showRoomLabels
   };
 }
 
@@ -1693,6 +1728,7 @@ function applySceneVars(s) {
   if (typeof s.viewsDim === 'boolean') viewsDim = s.viewsDim;
   if (typeof s.drawRoof === 'boolean') drawRoof = s.drawRoof;
   if (typeof s.sunHour === 'number') sunHour = s.sunHour;
+  if (typeof s.showRoomLabels === 'boolean') showRoomLabels = s.showRoomLabels;
 }
 
 function syncToggleUI() {
@@ -1700,6 +1736,8 @@ function syncToggleUI() {
   document.getElementById('roofColor').value = '#' + roofMat.color.getHexString();
   roofToggle.classList.toggle('on', showRoof);
   roofToggle.textContent = showRoof ? '지붕 숨김' : '지붕 표시';
+  roomLabelToggle.classList.toggle('on', showRoomLabels);
+  roomLabelToggle.textContent = showRoomLabels ? '방 이름 숨김' : '방 이름 표시';
   dimToggle.classList.toggle('on', showDims);
   dimToggle.textContent = showDims ? '치수 숨김' : '치수 표시';
   sun.castShadow = showShadow;

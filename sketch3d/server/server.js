@@ -93,6 +93,18 @@ const WALL_SCHEMA = {
         }
       }
     },
+    rooms: {                          // 방 용도 이름표 (선택)
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['label', 'point'],
+        properties: {
+          label: { type: 'string' },  // 방 용도 (예: 침실, 거실, 주방, 욕실, 드레스룸)
+          point: { type: 'array', items: { type: 'number' } }  // 그 방 내부 대표 좌표 [x,y]
+        }
+      }
+    },
     notes: { type: 'string' }
   }
 };
@@ -116,6 +128,7 @@ const SYSTEM = `당신은 건축 손그림 스케치를 벽 중심선 좌표로 
   · 스케치에 "N"·나침반·방위 화살표 등 방위 표시가 있으면, 그 표시가 스케치의 어느 변(위/아래/왼쪽/오른쪽)에 붙어 있거나 그 변을 향해 가리키는지를 보고 그 변을 north로 정합니다. 좌우를 혼동하지 않도록 신중히 판단하세요(예: 화살표가 스케치의 오른쪽 변에 있거나 오른쪽을 가리키면 north='right').
   · 방위 표시가 없으면 'up'으로 둡니다.
 - roof: 지붕 정보(옵션). { type: 'flat'|'gable'|'none', pitch: 물매(°, 박공), overhang: 처마내밀기(mm), ridge: 'x'|'y'(박공 능선 방향) }. 스케치에 지붕/단면이 보이면 반영하고, 없으면 생략합니다.
+- rooms: 스케치에 "침실"·"거실"·"주방"·"욕실" 같은 방 용도 이름이 손글씨로 적혀 있으면, 그 이름과 해당 방 내부의 대표 좌표를 rooms 배열에 담습니다: [{label, point:[x,y]}]. point는 그 방 벽 안쪽 아무 지점이면 됩니다. 방 이름이 스케치에 전혀 없으면 rooms는 생략합니다(임의로 추측해 붙이지 마세요).
 - 확신이 낮거나 추정한 내용은 notes에 한국어로 간단히 남깁니다.`;
 
 app.post('/api/extract', async (req, res) => {
@@ -189,6 +202,7 @@ const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국�
 - 가로 위치·폭이 있는 창/문은 openings 배열로 다룹니다: [{offset(벽 시작점~개구부 시작), width(폭), sill, height, type:'window'|'door'}]. "폭 1600 창을 오른쪽에" 같은 지시는 openings로 반영하고, "창 없애줘"는 openings/sill/lintel을 제거합니다.
 - north(도면 북쪽: 'up'|'down'|'left'|'right')도 지시에 따라 설정/변경합니다. 예: "북쪽을 오른쪽으로" → north:'right'.
 - roof(지붕: {type:'flat'|'gable'|'none', pitch, overhang, ridge:'x'|'y'})도 지시에 따라 설정/변경합니다. 예: "박공지붕 물매 30도" → roof:{type:'gable',pitch:30,...}, "지붕 없애" → roof:{type:'none'} 또는 제거.
+- rooms(방 이름표): [{label, point:[x,y]}] 배열입니다. "왼쪽 방을 침실로", "가운데를 거실로 표시해줘" 같은 지시는 그 방 벽 안쪽 대표 좌표를 잡아 rooms에 추가/수정합니다(같은 방이면 point는 유지하고 label만 바꿉니다). "이름표 지워줘"는 해당 항목을 rooms에서 제거합니다. 다른 방 이름표와 겹치지 않게 좌표를 잡습니다.
 - 지시와 무관한 벽은 그대로 둡니다. 방이 닫혀 있어야 하면 연결 좌표를 함께 맞춥니다.
 - notes에는 무엇을 어떻게 바꿨는지 한국어로 짧게 적습니다. 지시가 모호하면 합리적으로 해석하고 그 사실을 notes에 남깁니다.
 - 반드시 전체 벽 JSON(수정 결과)을 반환합니다.`;
