@@ -33,6 +33,20 @@ npm start                 # http://localhost:8787
 - 좌표계: 원점 좌하단, x→오른쪽, y→위, 단위 mm
 - 벽은 중심선 `start`~`end` 선분
 
+## 가구 기본 치수 (스키마)
+
+`index.html` 의 `FURNITURE_TYPES` — 배치·회전·렌더링은 아직 없고, 타입별 기본 크기만 정의한
+참고용 카탈로그. 단위 mm.
+
+| 타입 | width(가로) | depth(세로) | height(높이) |
+|---|---|---|---|
+| 싱크대 (`sink`) | 900 | 600 | 850 |
+| 침대 (`bed`) | 1500 | 2000 | 450 |
+| 소파 (`sofa`) | 2000 | 900 | 850 |
+| 식탁 (`table`) | 1200 | 800 | 750 |
+| 사무용탁자 (`desk`) | 1200 | 600 | 720 |
+| 냉장고 (`fridge`) | 800 | 750 | 1750 |
+
 ## 배포
 - 프론트: GitHub Pages → `https://giths-ops.github.io/myList/sketch3d/`
 - 백엔드: Render → `https://mylist-9nha.onrender.com` (Web Service 수동 생성, Root Directory `server`, 환경변수 `ANTHROPIC_API_KEY`/`VISION_MODEL`). 프론트 기본 Extract API URL이 이 주소로 설정되어 있음(`/api/extract`).
