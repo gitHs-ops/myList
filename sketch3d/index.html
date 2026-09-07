@@ -78,7 +78,7 @@
   .btn-row.hero-actions { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
   .btn-row.hero-actions .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
   .sample-select {
-    flex: 0 0 auto; width: 110px;
+    flex: 0 0 auto; width: 190px;
     font-family: var(--font-main); font-weight: 600; font-size: 12.5px; cursor: pointer;
     border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
     border-radius: 10px; padding: 7px 10px;
@@ -189,7 +189,7 @@
   .num-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .permit-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .permit-row h2 { margin: 0; flex: 0 0 auto; }
-  .permit-row input { flex: 1 1 160px; min-width: 120px; }
+  .permit-row input { flex: 1 1 90px; min-width: 70px; max-width: 200px; }
   .permit-row .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
 
   .drop {
@@ -401,9 +401,9 @@
     <div class="hero-top">
       <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입 <button id="btnIntroHelp" class="dim-btn intro-help-btn" title="소개">ⓘ</button></h1>
       <div class="btn-row hero-actions">
-        <button id="btnLoadTestImage" class="btn ghost" title="스케치 업로드 칸에 테스트용 샘플 이미지를 바로 채워 넣습니다">🧪 테스트이미지 불러오기</button>
         <button id="btnLoadProject" class="btn ghost">📂 불러오기</button>
         <button id="btnSaveProject" class="btn ghost">💾 저장</button>
+        <button id="btnLoadTestImage" class="btn ghost" title="스케치 업로드 칸에 테스트용 샘플 이미지를 바로 채워 넣습니다">🧪 테스트이미지 불러오기</button>
         <input id="projectFileInput" type="file" accept="application/json" style="display:none" />
         <select id="sampleSelect" class="sample-select">
           <option value="" selected>샘플로 테스트… (API 불필요)</option>
@@ -533,7 +533,6 @@
           <input id="permitProject" type="text" placeholder="프로젝트명" />
           <input id="permitSite" type="text" placeholder="대지위치 (선택)" />
           <button id="btnPermitPdf" class="btn" title="인허가용 정식 도면 세트 생성 (인쇄 → PDF)">📐 PDF 생성</button>
-          <h2 style="margin-left:16px">평면도 · 입면도</h2>
           <button id="viewsRefresh" class="dim-btn" style="background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">📐 도면 생성</button>
         </div>
         <p class="hint">도면을 클릭하면 확대해서 볼 수 있고, 그 안에서 수치·지붕·방 이름 표시를 바꿀 수 있습니다. 바꾼 뒤 모델을 다시 만들면 <b>도면 생성</b> 버튼이 활성화됩니다. 눌러야 반영됩니다.</p>
@@ -656,12 +655,13 @@ const SAMPLES = {
 /* ---------- furniture schema (기본 육면체: width/depth/height, mm) ----------
    배치·회전·렌더링은 아직 없음 -- 타입별 기본 크기만 정의한 참고용 카탈로그. */
 const FURNITURE_TYPES = {
-  sink:   { label: '싱크대',     width: 900,  depth: 600,  height: 850 },
-  bed:    { label: '침대',       width: 1500, depth: 2000, height: 450 },
-  sofa:   { label: '소파',       width: 2000, depth: 900,  height: 850 },
-  table:  { label: '식탁',       width: 1200, depth: 800,  height: 750 },
-  desk:   { label: '사무용탁자', width: 1200, depth: 600,  height: 720 },
-  fridge: { label: '냉장고',     width: 800,  depth: 750,  height: 1750 }
+  sink:      { label: '싱크대',     width: 900,  depth: 600,  height: 850 },
+  bed:       { label: '침대',       width: 1500, depth: 2000, height: 450 },
+  bedSingle: { label: '싱글침대',   width: 1200, depth: 1800, height: 450 },
+  sofa:      { label: '소파',       width: 2000, depth: 900,  height: 850 },
+  table:     { label: '식탁',       width: 1200, depth: 800,  height: 750 },
+  desk:      { label: '사무용탁자', width: 1200, depth: 600,  height: 720 },
+  fridge:    { label: '냉장고',     width: 800,  depth: 750,  height: 1750 }
 };
 
 /* ---------- three.js scene ---------- */
