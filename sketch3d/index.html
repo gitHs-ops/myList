@@ -528,6 +528,7 @@
         <span class="stat">🛋️ 가구 배치 <small>(버튼 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거)</small></span>
         <div class="vp-right">
           <div id="furnitureButtons" style="display:contents"></div>
+          <button id="btnFurnitureDisarm" class="dim-btn" title="가구 배치 모드를 끕니다">✋ 배치 해제</button>
           <button id="btnFurnitureClearAll" class="dim-btn" title="배치한 가구를 전체 삭제합니다">🗑 전체 삭제</button>
         </div>
       </div>
@@ -760,6 +761,7 @@ let currentNorth = 'up';
 let sunHour = 12;
 const lastCenter = new THREE.Vector3(0, 0, 0);
 const lastSize = new THREE.Vector3(3000, 2700, 3000);
+let lastWallThickness = 150; // 가구 배치 시 "벽 안쪽인지" 판정에 사용 (buildModel에서 갱신)
 const savedCamPos = new THREE.Vector3();
 const savedCamTarget = new THREE.Vector3();
 
@@ -1173,7 +1175,7 @@ function buildModel(data) {
     }
 
     // 태양/그림자 갱신 + 그림자 바닥 크기
-    lastCenter.copy(center); lastSize.copy(size);
+    lastCenter.copy(center); lastSize.copy(size); lastWallThickness = T;
     currentNorth = NORTH_VEC[data.north] ? data.north : 'up';
     updateSun();
     const gsz = Math.max(size.x, size.z) * 4 + 4000;
@@ -1807,12 +1809,26 @@ furnitureButtonsEl.addEventListener('click', (e) => {
   }
 });
 
+document.getElementById('btnFurnitureDisarm').addEventListener('click', () => {
+  disarmFurniture();
+  status('가구 배치 모드를 끝냈습니다.', 'info');
+});
+
 document.getElementById('btnFurnitureClearAll').addEventListener('click', () => {
   if (!furnitureGroup.children.length) return;
   disposeGroup(furnitureGroup);
   furnitureGroup.clear();
   status('배치한 가구를 모두 삭제했습니다.', 'info');
 });
+
+// 건물 바깥(벽 두께 안쪽까지 포함해서)에는 가구를 놓을 수 없음 -- 정확한 방 폴리곤이 아니라
+// 전체 벽 바운딩박스(외곽 기준)를 벽 두께만큼 안으로 줄인 사각형으로 근사한다. 오목한(L자)
+// 평면에서는 완벽하지 않지만, "건물 밖 클릭"을 막는다는 목적에는 충분하다.
+function isInsideBuilding(x, z) {
+  const halfX = Math.max(0, lastSize.x / 2 - lastWallThickness);
+  const halfZ = Math.max(0, lastSize.z / 2 - lastWallThickness);
+  return Math.abs(x - lastCenter.x) <= halfX && Math.abs(z - lastCenter.z) <= halfZ;
+}
 
 function placeFurniture(type, x, z) {
   const f = FURNITURE_TYPES[type];
@@ -1879,6 +1895,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (armedFurnitureType) {
     const pt = fpGroundPoint(e.clientX, e.clientY);
     if (!pt) { status('바닥 쪽을 클릭하세요.', 'err'); return; }
+    if (!isInsideBuilding(pt.x, pt.z)) { status('벽 안쪽 바닥을 클릭하세요.', 'err'); return; }
     placeFurniture(armedFurnitureType, pt.x, pt.z);
     status(`${FURNITURE_TYPES[armedFurnitureType].label} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
   }
