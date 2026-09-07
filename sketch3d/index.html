@@ -583,6 +583,17 @@ const SAMPLES = {
   }
 };
 
+/* ---------- furniture schema (기본 육면체: width/depth/height, mm) ----------
+   배치·회전·렌더링은 아직 없음 -- 타입별 기본 크기만 정의한 참고용 카탈로그. */
+const FURNITURE_TYPES = {
+  sink:   { label: '싱크대',     width: 900,  depth: 600,  height: 850 },
+  bed:    { label: '침대',       width: 1500, depth: 2000, height: 450 },
+  sofa:   { label: '소파',       width: 2000, depth: 900,  height: 850 },
+  table:  { label: '식탁',       width: 1200, depth: 800,  height: 750 },
+  desk:   { label: '사무용탁자', width: 1200, depth: 600,  height: 720 },
+  fridge: { label: '냉장고',     width: 800,  depth: 750,  height: 1750 }
+};
+
 /* ---------- three.js scene ---------- */
 const canvas = document.getElementById('viewport');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
