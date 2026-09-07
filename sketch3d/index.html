@@ -191,6 +191,8 @@
   .permit-row h2 { margin: 0; flex: 0 0 auto; }
   .permit-row input { flex: 1 1 90px; min-width: 70px; max-width: 200px; }
   .permit-row .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
+  .permit-row #btnPermitPdf { padding: 9px 16px; font-size: 12.5px; }
+  .permit-row #viewsRefresh { padding: 8px 14px; font-size: 12.5px; }
 
   .drop {
     margin-top: 4px;
@@ -277,6 +279,7 @@
   .vp-bar .stat b { color: var(--text-primary); font-family: var(--font-accent); }
   .vp-bar { flex-wrap: wrap; gap: 10px; }
   .vp-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .furniture-bar .stat small { font-weight: 400; color: var(--text-secondary); font-size: 11px; margin-left: 4px; }
   .sun-ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
   .sun-ctl input[type="range"] { width: 110px; accent-color: var(--accent-primary); }
   #sunLabel { font-family: var(--font-accent); font-weight: 600; color: var(--text-primary); min-width: 40px; }
@@ -521,8 +524,16 @@
           <button id="roomLabelToggle" class="dim-btn on">방 이름 숨김</button>
         </div>
       </div>
+      <div class="vp-bar furniture-bar">
+        <span class="stat">🛋️ 가구 배치 <small>(버튼 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거)</small></span>
+        <div class="vp-right">
+          <div id="furnitureButtons" style="display:contents"></div>
+          <button id="btnFurnitureClearAll" class="dim-btn" title="배치한 가구를 전체 삭제합니다">🗑 전체 삭제</button>
+        </div>
+      </div>
       <canvas id="viewport"></canvas>
       <div id="fpHint" class="fp-hint">🖱️ 드래그: 시선 회전 · 스크롤: 확대/축소 · 바닥 클릭: 그 위치로 이동</div>
+      <div id="furnitureHint" class="fp-hint furniture-place-hint">🛋️ 바닥을 클릭하면 이 가구를 배치합니다 (다시 누르면 취소)</div>
       </div>
 
       <div class="card permit-views-card">
@@ -560,6 +571,8 @@
         <label class="chk-btn"><input type="checkbox" id="viewsDimToggle" /> 수치 표시</label>
         <label class="chk-btn"><input type="checkbox" id="viewsRoofToggle" checked /> 지붕 포함</label>
         <label class="chk-btn"><input type="checkbox" id="viewsRoomToggle" checked /> 방 이름 포함</label>
+        <button id="viewEnlargeRedraw" class="dim-btn" style="background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">🔄 다시 그리기</button>
+        <button id="viewEnlargeSave" class="dim-btn" title="지금 보이는 도면을 파일로 저장">💾 저장</button>
       </div>
       <button id="viewEnlargeClose" class="btn ghost" style="margin-top:14px">닫기</button>
     </dialog>
@@ -653,15 +666,15 @@ const SAMPLES = {
 };
 
 /* ---------- furniture schema (기본 육면체: width/depth/height, mm) ----------
-   배치·회전·렌더링은 아직 없음 -- 타입별 기본 크기만 정의한 참고용 카탈로그. */
+   3D 뷰에서 타입 버튼 선택 -> 바닥 클릭으로 배치, 배치된 가구 클릭으로 제거. */
 const FURNITURE_TYPES = {
-  sink:      { label: '싱크대',     width: 900,  depth: 600,  height: 850 },
-  bed:       { label: '침대',       width: 1500, depth: 2000, height: 450 },
-  bedSingle: { label: '싱글침대',   width: 1200, depth: 1800, height: 450 },
-  sofa:      { label: '소파',       width: 2000, depth: 900,  height: 850 },
-  table:     { label: '식탁',       width: 1200, depth: 800,  height: 750 },
-  desk:      { label: '사무용탁자', width: 1200, depth: 600,  height: 720 },
-  fridge:    { label: '냉장고',     width: 800,  depth: 750,  height: 1750 }
+  sink:      { label: '싱크대',     icon: '🚰', width: 900,  depth: 600,  height: 850 },
+  bed:       { label: '침대',       icon: '🛏️', width: 1500, depth: 2000, height: 450 },
+  bedSingle: { label: '싱글침대',   icon: '🛏️', width: 1200, depth: 1800, height: 450 },
+  sofa:      { label: '소파',       icon: '🛋️', width: 2000, depth: 900,  height: 850 },
+  table:     { label: '식탁',       icon: '🍽️', width: 1200, depth: 800,  height: 750 },
+  desk:      { label: '사무용탁자', icon: '🖥️', width: 1200, depth: 600,  height: 720 },
+  fridge:    { label: '냉장고',     icon: '🧊', width: 800,  depth: 750,  height: 1750 }
 };
 
 /* ---------- three.js scene ---------- */
@@ -731,6 +744,10 @@ let showRoomLabels = true;
 
 let roofGroup = new THREE.Group();
 scene.add(roofGroup);
+
+// 배치한 가구 — buildModel() 재생성 대상이 아님(모델을 다시 만들어도 배치는 유지)
+const furnitureGroup = new THREE.Group();
+scene.add(furnitureGroup);
 let showRoof = true;
 let drawRoof = true;   // 도면(평면/입면)에 지붕 포함 여부
 let viewsDim = false;  // 도면에 치수 표시 여부
@@ -776,6 +793,8 @@ const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff });
 const drawFaceMat = new THREE.MeshBasicMaterial({ color: 0xffffff, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
 const drawLineMat = new THREE.LineBasicMaterial({ color: 0x1e293b });
 const roofMat = new THREE.MeshStandardMaterial({ color: 0xb0674c, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide });
+const furnitureMat = new THREE.MeshStandardMaterial({ color: 0xc9a876, roughness: 0.8, metalness: 0.05 });
+const furnitureEdgeMat = new THREE.LineBasicMaterial({ color: 0x5c4326 });
 
 function addEdges(mesh, group) {
   const e = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat);
@@ -1604,10 +1623,12 @@ const viewLabels = { Top: '평면도 (위에서)', N: '북측 입면', E: '동�
 const viewEnlargeDialog = document.getElementById('viewEnlargeDialog');
 const viewEnlargeImg = document.getElementById('viewEnlargeImg');
 const viewEnlargeTitle = document.getElementById('viewEnlargeTitle');
+let currentEnlargeKey = null; // 팝업에 지금 열려 있는 도면(Top/N/E/S/W) -- 다시 그리기/저장이 이걸 참조
 document.querySelectorAll('.views img').forEach(img => {
   img.addEventListener('click', () => {
     if (!hasGeneratedViews) { status('먼저 "도면 생성"을 눌러주세요.', 'err'); return; }
     const key = img.closest('figure').dataset.view;
+    currentEnlargeKey = key;
     viewEnlargeTitle.textContent = viewLabels[key];
     viewEnlargeImg.src = img.src;
     viewEnlargeImg.alt = img.alt;
@@ -1615,6 +1636,29 @@ document.querySelectorAll('.views img').forEach(img => {
   });
 });
 document.getElementById('viewEnlargeClose').addEventListener('click', () => viewEnlargeDialog.close());
+
+// 팝업 안의 체크박스(수치·지붕·방 이름)를 바꾼 뒤 창을 닫지 않고도 바로 반영할 수 있도록
+// 팝업 전용 "다시 그리기" 버튼을 둔다 -- <dialog>가 모달이라 배경의 도면 생성 버튼은 누를 수 없음.
+document.getElementById('viewEnlargeRedraw').addEventListener('click', () => {
+  renderViews();
+  hasGeneratedViews = true;
+  viewsGenBtn.disabled = true;
+  viewsGenBtn.textContent = '📐 도면 생성';
+  if (currentEnlargeKey) {
+    const img = document.getElementById('view' + currentEnlargeKey);
+    viewEnlargeImg.src = img.src;
+    viewEnlargeImg.alt = img.alt;
+  }
+  status('도면을 다시 그렸습니다.', 'ok');
+});
+
+document.getElementById('viewEnlargeSave').addEventListener('click', () => {
+  if (!currentEnlargeKey) return;
+  const dlBtn = document.querySelector(`.view-dl-btn[data-view="${currentEnlargeKey}"]`);
+  const label = dlBtn ? dlBtn.dataset.label : currentEnlargeKey;
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  downloadDataUrl(viewEnlargeImg.src, `sketch3d-${label}-${ts}.png`);
+});
 viewEnlargeDialog.addEventListener('click', (e) => {
   const r = viewEnlargeDialog.getBoundingClientRect();
   const inside = r.top <= e.clientY && e.clientY <= r.bottom && r.left <= e.clientX && e.clientX <= r.right;
@@ -1697,6 +1741,7 @@ canvas.addEventListener('pointerup', (e) => {
 const fpHint = document.getElementById('fpHint');
 fpToggle.addEventListener('click', () => {
   firstPerson = !firstPerson;
+  if (firstPerson) disarmFurniture(); // 가구 배치 모드와 1인칭 시점은 동시에 켤 수 없음
   fpToggle.classList.toggle('on', firstPerson);
   fpToggle.textContent = firstPerson ? '🚶 기본 시점으로' : '🚶 1인칭 시점';
   fpHint.classList.toggle('show', firstPerson);
@@ -1725,6 +1770,114 @@ canvas.addEventListener('wheel', (e) => {
   camera.zoom = Math.min(3, Math.max(0.25, camera.zoom - e.deltaY * 0.001));
   camera.updateProjectionMatrix();
 }, { passive: false });
+
+/* ---------- 가구 배치 (3D 뷰에서 직접: 타입 선택 -> 바닥 클릭 -> 배치, 배치된 가구 클릭 -> 제거) ---------- */
+let armedFurnitureType = null; // 지금 배치 대기 중인 타입 (null = 배치 대기 없음 -> 클릭 시 제거 모드)
+const furnitureHint = document.getElementById('furnitureHint');
+const furnitureButtonsEl = document.getElementById('furnitureButtons');
+
+Object.entries(FURNITURE_TYPES).forEach(([type, f]) => {
+  const b = document.createElement('button');
+  b.className = 'dim-btn furniture-btn';
+  b.dataset.type = type;
+  b.textContent = `${f.icon || '🛋️'} ${f.label}`;
+  b.title = `${f.label} 배치 (${f.width}×${f.depth}×${f.height}mm)`;
+  furnitureButtonsEl.appendChild(b);
+});
+
+function disarmFurniture() {
+  armedFurnitureType = null;
+  furnitureButtonsEl.querySelectorAll('.furniture-btn').forEach(b => b.classList.remove('on'));
+  furnitureHint.classList.remove('show');
+  canvas.style.cursor = '';
+}
+
+furnitureButtonsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.furniture-btn');
+  if (!btn) return;
+  const type = btn.dataset.type;
+  const wasArmed = armedFurnitureType === type;
+  if (firstPerson) fpToggle.click(); // 1인칭 시점 중이었다면 먼저 끄고 배치 모드로 전환
+  disarmFurniture();
+  if (!wasArmed) {
+    armedFurnitureType = type;
+    btn.classList.add('on');
+    furnitureHint.classList.add('show');
+    canvas.style.cursor = 'crosshair';
+  }
+});
+
+document.getElementById('btnFurnitureClearAll').addEventListener('click', () => {
+  if (!furnitureGroup.children.length) return;
+  disposeGroup(furnitureGroup);
+  furnitureGroup.clear();
+  status('배치한 가구를 모두 삭제했습니다.', 'info');
+});
+
+function placeFurniture(type, x, z) {
+  const f = FURNITURE_TYPES[type];
+  if (!f) return;
+  const geo = new THREE.BoxGeometry(f.width, f.height, f.depth);
+  const mesh = new THREE.Mesh(geo, furnitureMat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), furnitureEdgeMat);
+
+  const labelH = Math.max(200, f.height * 0.45);
+  const label = makeLabel(f.label, labelH, 'rgba(92,67,38,0.94)');
+  label.position.y = f.height / 2 + labelH * 0.6;
+
+  const item = new THREE.Group();
+  item.add(mesh, edges, label);
+  item.position.set(x, f.height / 2, z);
+  furnitureGroup.add(item);
+}
+
+const furnRaycaster = new THREE.Raycaster();
+function pickFurnitureAt(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((clientX - rect.left) / rect.width) * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1
+  );
+  furnRaycaster.setFromCamera(ndc, camera);
+  const hits = furnRaycaster.intersectObjects(furnitureGroup.children, true);
+  if (!hits.length) return null;
+  let obj = hits[0].object;
+  // 가구 아이템 구조는 항상 2단(item Group -> mesh/edges/label)이라 실제로는 1회면 충분하지만,
+  // 조상 체인이 furnitureGroup에 닿지 못하는 예외적인 경우에도 무한루프가 되지 않도록 상한을 둔다.
+  for (let i = 0; i < 20 && obj.parent && obj.parent !== furnitureGroup; i++) obj = obj.parent;
+  return obj.parent === furnitureGroup ? obj : null;
+}
+
+// fpDownPos(1인칭 이동)와 별개의 좌표 추적 -- 두 모드는 상호배타적이지만(disarmFurniture로 보장)
+// 판정 방식(포인터다운/업 거리차)은 동일하게 재사용: OrbitControls 드래그 캡처로 인한
+// 캔버스 밖 드래그 종료 시 click 오인식 문제를 여기서도 똑같이 피해야 함.
+let furnDownPos = null;
+canvas.addEventListener('pointerdown', (e) => {
+  if (firstPerson) return;
+  furnDownPos = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('pointercancel', () => { furnDownPos = null; });
+canvas.addEventListener('pointerup', (e) => {
+  if (firstPerson || !furnDownPos) return;
+  const moved = Math.hypot(e.clientX - furnDownPos.x, e.clientY - furnDownPos.y);
+  furnDownPos = null;
+  if (moved > 6) return; // 드래그(카메라 회전/이동)였음 -- 배치/제거 안 함
+
+  if (armedFurnitureType) {
+    const pt = fpGroundPoint(e.clientX, e.clientY);
+    if (!pt) { status('바닥 쪽을 클릭하세요.', 'err'); return; }
+    placeFurniture(armedFurnitureType, pt.x, pt.z);
+    status(`${FURNITURE_TYPES[armedFurnitureType].label} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
+  } else {
+    const item = pickFurnitureAt(e.clientX, e.clientY);
+    if (!item) return;
+    furnitureGroup.remove(item);
+    disposeGroup(item);
+    status('가구를 제거했습니다.', 'info');
+  }
+});
 
 /* ---------- 색상 지정 (벽/지붕) ---------- */
 document.getElementById('wallColor').addEventListener('input', e => wallMat.color.set(e.target.value));
