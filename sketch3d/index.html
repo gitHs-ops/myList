@@ -574,7 +574,6 @@
         <label class="chk-btn"><input type="checkbox" id="viewsDimToggle" /> 수치 표시</label>
         <label class="chk-btn"><input type="checkbox" id="viewsRoofToggle" checked /> 지붕 포함</label>
         <label class="chk-btn"><input type="checkbox" id="viewsRoomToggle" checked /> 방 이름 포함</label>
-        <button id="viewEnlargeRedraw" class="dim-btn" style="background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)">🔄 다시 그리기</button>
         <button id="viewEnlargeSave" class="dim-btn" title="지금 보이는 도면을 파일로 저장">💾 저장</button>
       </div>
       <button id="viewEnlargeClose" class="btn ghost" style="margin-top:14px">닫기</button>
@@ -1641,9 +1640,10 @@ document.querySelectorAll('.views img').forEach(img => {
 });
 document.getElementById('viewEnlargeClose').addEventListener('click', () => viewEnlargeDialog.close());
 
-// 팝업 안의 체크박스(수치·지붕·방 이름)를 바꾼 뒤 창을 닫지 않고도 바로 반영할 수 있도록
-// 팝업 전용 "다시 그리기" 버튼을 둔다 -- <dialog>가 모달이라 배경의 도면 생성 버튼은 누를 수 없음.
-document.getElementById('viewEnlargeRedraw').addEventListener('click', () => {
+// 팝업 안의 체크박스(수치·지붕·방 이름)를 바꾸면 창을 닫지 않고도 바로 반영된다 --
+// <dialog>가 모달이라 배경의 "도면 생성" 버튼은 누를 수 없으므로, 체크박스 change에서
+// 곧바로 다시 그린다(별도 "다시 그리기" 버튼 없음).
+function redrawEnlarged() {
   renderViews();
   hasGeneratedViews = true;
   viewsGenBtn.disabled = true;
@@ -1653,8 +1653,7 @@ document.getElementById('viewEnlargeRedraw').addEventListener('click', () => {
     viewEnlargeImg.src = img.src;
     viewEnlargeImg.alt = img.alt;
   }
-  status('도면을 다시 그렸습니다.', 'ok');
-});
+}
 
 document.getElementById('viewEnlargeSave').addEventListener('click', () => {
   if (!currentEnlargeKey) return;
@@ -1671,17 +1670,17 @@ viewEnlargeDialog.addEventListener('click', (e) => {
 
 document.getElementById('viewsRoofToggle').addEventListener('change', e => {
   drawRoof = e.target.checked;
-  markViewsDirty();
+  redrawEnlarged();
 });
 
 document.getElementById('viewsRoomToggle').addEventListener('change', e => {
   viewsRoom = e.target.checked;
-  markViewsDirty();
+  redrawEnlarged();
 });
 
 document.getElementById('viewsDimToggle').addEventListener('change', e => {
   viewsDim = e.target.checked;
-  markViewsDirty();
+  redrawEnlarged();
 });
 
 /* ---------- 그림자 토글 ---------- */
