@@ -279,7 +279,17 @@
   .vp-bar .stat b { color: var(--text-primary); font-family: var(--font-accent); }
   .vp-bar { flex-wrap: wrap; gap: 10px; }
   .vp-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .furniture-bar .stat small { font-weight: 400; color: var(--text-secondary); font-size: 11px; margin-left: 4px; }
+  #furnitureModeToggle {
+    flex: 0 0 auto; white-space: nowrap;
+    /* 긴 안내문 텍스트라 폭이 좁아지면 버튼 안에서 줄바꿈되며 드롭다운과 어색하게
+       한 줄을 나눠 쓰던 문제 방지 -- 줄바꿈 대신 버튼 전체가 다음 줄로 넘어가게 함 */
+  }
+  .furniture-scale { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); font-weight: 600; cursor: help; }
+  .furniture-scale input[type="number"] {
+    width: 48px; font-family: var(--font-main); font-weight: 600; font-size: 12.5px;
+    border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-primary);
+    border-radius: 8px; padding: 6px 4px; text-align: center;
+  }
   .sun-ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
   .sun-ctl input[type="range"] { width: 110px; accent-color: var(--accent-primary); }
   #sunLabel { font-family: var(--font-accent); font-weight: 600; color: var(--text-primary); min-width: 40px; }
@@ -530,6 +540,9 @@
           <select id="furnitureSelect" class="sample-select">
             <option value="" selected>가구 선택…</option>
           </select>
+          <label class="furniture-scale" title="다음에 배치할 가구의 크기(%) -- 그때그때 임시로 적용되는 값이라 이미 놓인 가구나 스키마 기본 크기에는 영향 없음">
+            크기 <input type="number" id="furnitureScale" min="50" max="200" step="10" value="100" />%
+          </label>
         </div>
       </div>
       <canvas id="viewport"></canvas>
@@ -668,7 +681,7 @@ const SAMPLES = {
 /* ---------- furniture schema (기본 육면체: width/depth/height, mm) ----------
    3D 뷰에서 타입 버튼 선택 -> 바닥 클릭으로 배치, 배치된 가구 클릭으로 제거. */
 const FURNITURE_TYPES = {
-  sink:      { label: '싱크대',     icon: '🚰', width: 900,  depth: 600,  height: 850 },
+  sink:      { label: '싱크대',     icon: '🚰', width: 1000, depth: 600,  height: 850 },
   bed:       { label: '침대',       icon: '🛏️', width: 1500, depth: 2000, height: 450 },
   bedSingle: { label: '싱글침대',   icon: '🛏️', width: 1200, depth: 1800, height: 450 },
   sofa:      { label: '소파',       icon: '🛋️', width: 2000, depth: 900,  height: 850 },
@@ -804,7 +817,9 @@ function addEdges(mesh, group) {
 }
 
 // 치수 라벨 스프라이트 (항상 카메라를 향함, 벽 위로 렌더)
-function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
+// occludable=true면 반대로 깊이 테스트를 켜서, 벽·가구 등 다른 물체가 카메라와 라벨
+// 사이에 있으면 그 물체에 가려지게 한다(방이름 라벨처럼 바닥 높이에 두는 경우용).
+function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)', occludable = false) {
   const SS = 3; // 슈퍼샘플 배수 — 라벨이 작아져도 텍스트 해상도를 유지해 흐림 방지
   const fs = 64 * SS, pad = 18 * SS;
   const cvs = document.createElement('canvas');
@@ -826,9 +841,9 @@ function makeLabel(text, heightWorld, color = 'rgba(79,70,229,0.94)') {
 
   const tex = new THREE.CanvasTexture(cvs);
   tex.anisotropy = 4;   // 밉맵은 유지(원거리 축소 시 앨리어싱 방지), 슈퍼샘플로 근접 흐림만 보완
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: occludable });
   const sp = new THREE.Sprite(mat);
-  sp.renderOrder = 999;
+  sp.renderOrder = occludable ? 0 : 999;
   sp.frustumCulled = false;   // 원점에서 먼 카메라(동/서 입면)에서 컬링 오판으로 사라지는 것 방지
   sp.scale.set(heightWorld * (cvs.width / cvs.height), heightWorld, 1);
   return sp;
@@ -1210,10 +1225,10 @@ function buildModel(data) {
     scene.add(roomLabelGroup);
     if (Array.isArray(data.rooms)) {
       const roomLabelH = Math.min(900, Math.max(220, labelH * 0.9));
-      const roomLabelY = Math.min(H * 0.7, 1800);
+      const roomLabelY = roomLabelH / 2; // 바닥에 붙도록 라벨 밑변이 y=0에 오게(중심 기준이라 절반만큼 올림)
       data.rooms.forEach(r => {
         if (!r || !Array.isArray(r.point) || !r.label) return;
-        const sp = makeLabel(String(r.label), roomLabelH, 'rgba(219,39,119,0.94)');
+        const sp = makeLabel(String(r.label), roomLabelH, 'rgba(219,39,119,0.94)', true);
         sp.position.set(r.point[0], roomLabelY, -r.point[1]);
         roomLabelGroup.add(sp);
       });
@@ -1782,6 +1797,11 @@ const furnitureHint = document.getElementById('furnitureHint');
 const furnitureSelect = document.getElementById('furnitureSelect');
 const furnitureModeToggle = document.getElementById('furnitureModeToggle');
 const FURNITURE_MODE_OFF_LABEL = furnitureModeToggle.textContent; // HTML 초기 문구를 그대로 재사용
+const furnitureScaleInput = document.getElementById('furnitureScale');
+furnitureScaleInput.addEventListener('change', () => {
+  const clamped = Math.min(200, Math.max(50, Number(furnitureScaleInput.value) || 100));
+  furnitureScaleInput.value = clamped;
+});
 
 Object.entries(FURNITURE_TYPES).forEach(([type, f]) => {
   const opt = document.createElement('option');
@@ -1842,12 +1862,13 @@ function isInsideBuilding(x, z, halfW = 0, halfD = 0) {
 
 // (x,z)에 halfW/halfD 크기의 가구를 두면 이미 배치된 다른 가구와 겹치는지(AABB 겹침 판정).
 // excludeItem은 지금 옮기는 중인 가구 자신 -- 자기 자신과는 비교하지 않음(배치 시에는 null).
+// 다른 가구의 실제 크기(userData에 저장된 값 -- 배치 당시 적용된 배율이 반영된 값)를 쓴다.
+// FURNITURE_TYPES 기본값을 다시 찾지 않는 이유: 배율 적용 후엔 기본값과 다를 수 있어서.
 function collidesWithFurniture(excludeItem, x, z, halfW, halfD) {
   for (const other of furnitureGroup.children) {
     if (other === excludeItem) continue;
-    const of = FURNITURE_TYPES[other.userData.type];
-    if (!of) continue;
-    const oHalfW = of.width / 2, oHalfD = of.depth / 2;
+    if (!other.userData.width) continue;
+    const oHalfW = other.userData.width / 2, oHalfD = other.userData.depth / 2;
     if (Math.abs(x - other.position.x) < halfW + oHalfW && Math.abs(z - other.position.z) < halfD + oHalfD) {
       return true;
     }
@@ -1855,9 +1876,14 @@ function collidesWithFurniture(excludeItem, x, z, halfW, halfD) {
   return false;
 }
 
-function placeFurniture(type, x, z) {
-  const f = FURNITURE_TYPES[type];
-  if (!f) return;
+// scalePercent: 이번에 배치할 가구에만 임시로 적용하는 크기 배율(%) -- FURNITURE_TYPES
+// 기본값이나 이미 놓인 다른 가구에는 영향 없음. 실제 적용된 치수는 item.userData에 저장해
+// 이후 드래그 이동·충돌 판정이 항상 "이 가구의 진짜 크기"를 보게 한다.
+function placeFurniture(type, x, z, scalePercent = 100) {
+  const base = FURNITURE_TYPES[type];
+  if (!base) return;
+  const s = Math.max(0.1, (Number(scalePercent) || 100) / 100);
+  const f = { label: base.label, width: base.width * s, depth: base.depth * s, height: base.height * s };
   const geo = new THREE.BoxGeometry(f.width, f.height, f.depth);
   const mesh = new THREE.Mesh(geo, furnitureMat);
   mesh.castShadow = true;
@@ -1865,13 +1891,17 @@ function placeFurniture(type, x, z) {
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), furnitureEdgeMat);
 
   const labelH = 220; // 가구 종류(높이)와 무관하게 이름표 글자 크기는 고정
-  const label = makeLabel(f.label, labelH, 'rgba(92,67,38,0.94)');
+  const labelText = s === 1 ? f.label : `${f.label} (${Math.round(s * 100)}%)`;
+  const label = makeLabel(labelText, labelH, 'rgba(92,67,38,0.94)');
   label.position.y = f.height / 2 + labelH * 0.6; // 가구 상단 바로 위, 고정 간격
 
   const item = new THREE.Group();
   item.add(mesh, edges, label);
   item.position.set(x, f.height / 2, z);
-  item.userData.type = type; // 드래그 이동 시 이 가구의 폭·깊이를 다시 찾기 위해 필요
+  item.userData.type = type;
+  item.userData.width = f.width;
+  item.userData.depth = f.depth;
+  item.userData.height = f.height; // 드래그 이동·충돌 판정이 배율 적용 후 실제 크기를 쓰도록
   furnitureGroup.add(item);
 }
 
@@ -1951,12 +1981,14 @@ canvas.addEventListener('pointerup', (e) => {
       status('가구를 제거했습니다.', 'info');
       return;
     }
-    const f = FURNITURE_TYPES[item.userData.type];
-    if (!f) { item.position.copy(startPos); return; }
-    if (!isInsideBuilding(item.position.x, item.position.z, f.width / 2, f.depth / 2)) {
+    // 배치 당시 적용된(배율 반영) 실제 치수 -- FURNITURE_TYPES 기본값이 아니라 이걸 써야
+    // 크기를 조정해 놓은 가구도 이동 시 자기 실제 크기 기준으로 판정된다.
+    const halfW = item.userData.width / 2, halfD = item.userData.depth / 2;
+    if (!item.userData.width) { item.position.copy(startPos); return; }
+    if (!isInsideBuilding(item.position.x, item.position.z, halfW, halfD)) {
       item.position.copy(startPos);
       status('벽 안쪽으로만 옮길 수 있어 원래 자리로 되돌렸습니다.', 'err');
-    } else if (collidesWithFurniture(item, item.position.x, item.position.z, f.width / 2, f.depth / 2)) {
+    } else if (collidesWithFurniture(item, item.position.x, item.position.z, halfW, halfD)) {
       item.position.copy(startPos);
       status('다른 가구와 부딪혀 원래 자리로 되돌렸습니다.', 'err');
     } else {
@@ -1970,17 +2002,21 @@ canvas.addEventListener('pointerup', (e) => {
   if (armedFurnitureType) {
     const pt = fpGroundPoint(e.clientX, e.clientY);
     if (!pt) { status('바닥 쪽을 클릭하세요.', 'err'); return; }
-    const f = FURNITURE_TYPES[armedFurnitureType];
-    if (!isInsideBuilding(pt.x, pt.z, f.width / 2, f.depth / 2)) {
+    const base = FURNITURE_TYPES[armedFurnitureType];
+    const scalePercent = Number(furnitureScaleInput.value) || 100;
+    const s = Math.max(0.1, scalePercent / 100);
+    const halfW = (base.width * s) / 2, halfD = (base.depth * s) / 2;
+    if (!isInsideBuilding(pt.x, pt.z, halfW, halfD)) {
       status('가구 전체가 벽 안쪽에 들어오는 위치를 클릭하세요.', 'err');
       return;
     }
-    if (collidesWithFurniture(null, pt.x, pt.z, f.width / 2, f.depth / 2)) {
+    if (collidesWithFurniture(null, pt.x, pt.z, halfW, halfD)) {
       status('다른 가구와 겹쳐서 배치할 수 없습니다.', 'err');
       return;
     }
-    placeFurniture(armedFurnitureType, pt.x, pt.z);
-    status(`${FURNITURE_TYPES[armedFurnitureType].label} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
+    placeFurniture(armedFurnitureType, pt.x, pt.z, scalePercent);
+    const sizeNote = scalePercent === 100 ? '' : ` (${scalePercent}% 크기)`;
+    status(`${base.label}${sizeNote} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
   }
 });
 
