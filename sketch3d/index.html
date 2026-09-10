@@ -535,7 +535,7 @@
         </div>
       </div>
       <div class="vp-bar furniture-bar">
-        <button id="furnitureModeToggle" class="dim-btn">🛋️ 가구 배치 모드 (드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</button>
+        <button id="furnitureModeToggle" class="dim-btn" title="배치·드래그로 옮긴 가구는 선택 상태가 되어 Shift+화살표로 10mm씩 미세 이동할 수 있습니다">🛋️ 가구 배치 모드 (드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</button>
         <div class="vp-right">
           <select id="furnitureSelect" class="sample-select">
             <option value="" selected>가구 선택…</option>
@@ -809,6 +809,9 @@ const drawLineMat = new THREE.LineBasicMaterial({ color: 0x1e293b });
 const roofMat = new THREE.MeshStandardMaterial({ color: 0xb0674c, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide });
 const furnitureMat = new THREE.MeshStandardMaterial({ color: 0xc9a876, roughness: 0.8, metalness: 0.05 });
 const furnitureEdgeMat = new THREE.LineBasicMaterial({ color: 0x5c4326 });
+// Shift+화살표 미세 이동 대상으로 선택된 가구 하나에만 잠깐 씌우는 강조용 테두리 -- 공용
+// 머티리얼이라 dispose() 대상이 아님(furnitureEdgeMat과 동일하게 개별 가구 제거 시 지우지 않음).
+const furnitureSelectedEdgeMat = new THREE.LineBasicMaterial({ color: 0xffcc00 });
 
 function addEdges(mesh, group) {
   const e = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat);
@@ -1833,6 +1836,7 @@ function enterFurnitureMode() {
 // 가구 모드 전체를 끔(예전 "배치 해제" 버튼의 역할) -- 배치 대기 해제 + 캔버스 상호작용도 꺼짐
 function exitFurnitureMode() {
   disarmFurniture();
+  deselectFurniture(); // Shift+화살표 미세 이동은 가구 모드 안에서만 동작하도록 선택도 같이 해제
   furnitureModeOn = false;
   furnitureModeToggle.classList.remove('on');
   furnitureModeToggle.textContent = FURNITURE_MODE_OFF_LABEL;
@@ -1907,18 +1911,20 @@ function spawnFurnitureItem(type, x, z, width, depth, height, labelSuffix = '') 
   item.userData.width = width;
   item.userData.depth = depth;
   item.userData.height = height; // 드래그 이동·충돌 판정이 항상 이 실제 크기를 쓰도록
+  item.userData.edges = edges; // Shift+화살표로 선택된 가구를 강조 표시할 때 다시 찾지 않고 바로 씀
   furnitureGroup.add(item);
   return item;
 }
 
 // scalePercent: 이번에 배치할 가구에만 임시로 적용하는 크기 배율(%) -- FURNITURE_TYPES
-// 기본값이나 이미 놓인 다른 가구에는 영향 없음.
+// 기본값이나 이미 놓인 다른 가구에는 영향 없음. 배치된 item을 돌려줘 곧바로 선택 상태로
+// 이어갈 수 있게 한다(배치 직후 Shift+화살표로 바로 미세 조정 가능).
 function placeFurniture(type, x, z, scalePercent = 100) {
   const base = FURNITURE_TYPES[type];
-  if (!base) return;
+  if (!base) return null;
   const s = Math.max(0.1, (Number(scalePercent) || 100) / 100);
   const suffix = s === 1 ? '' : `${Math.round(s * 100)}%`;
-  spawnFurnitureItem(type, x, z, base.width * s, base.depth * s, base.height * s, suffix);
+  return spawnFurnitureItem(type, x, z, base.width * s, base.depth * s, base.height * s, suffix);
 }
 
 // 현재 배치된 가구를 채팅 편집 API에 보낼 평범한 JSON으로 직렬화(가구 크기수정 지시용).
@@ -1939,6 +1945,7 @@ function furnitureStateForApi() {
 // 돌려주므로, 매번 전체를 다시 그려도 배치·크기가 사라지지 않는다.
 function rebuildFurnitureFromList(list) {
   if (!Array.isArray(list)) return; // 잘못된/누락된 응답으로 기존 배치가 지워지지 않도록 먼저 확인
+  deselectFurniture(); // 지금 선택된 항목이 곧 disposeGroup으로 사라질 수 있어 참조를 먼저 끊음
   disposeGroup(furnitureGroup);
   while (furnitureGroup.children.length) furnitureGroup.remove(furnitureGroup.children[0]);
   list.forEach(it => {
@@ -1973,6 +1980,19 @@ function pickFurnitureAt(clientX, clientY) {
 let furnDownPos = null;
 let draggingItem = null;  // 포인터다운에서 잡은 기존 가구(item Group) -- 그대로면 클릭(제거), 움직이면 드래그(이동)
 let dragStartPos = null;  // 드래그 시작 위치 -- 벽 밖으로 놓으면 여기로 되돌림
+
+// 마우스 드래그는 큰 단위 이동엔 좋지만 정확한 위치 맞추기(미세조정)엔 부정확하다 --
+// 배치/드래그로 마지막으로 손댄 가구 하나를 "선택 상태"로 기억해 Shift+화살표로 10mm씩
+// 더 정밀하게 옮길 수 있게 한다. 테두리 색을 바꿔 지금 뭐가 선택돼 있는지 보이게 함.
+let selectedFurnitureItem = null;
+function selectFurnitureItem(item) {
+  if (selectedFurnitureItem && selectedFurnitureItem !== item && selectedFurnitureItem.userData.edges) {
+    selectedFurnitureItem.userData.edges.material = furnitureEdgeMat;
+  }
+  selectedFurnitureItem = item;
+  if (item && item.userData.edges) item.userData.edges.material = furnitureSelectedEdgeMat;
+}
+function deselectFurniture() { selectFurnitureItem(null); }
 
 canvas.addEventListener('pointerdown', (e) => {
   if (firstPerson || !furnitureModeOn) return;
@@ -2021,11 +2041,15 @@ canvas.addEventListener('pointerup', (e) => {
         status('제거를 취소했습니다.', 'info');
         return;
       }
+      if (selectedFurnitureItem === item) deselectFurniture();
       furnitureGroup.remove(item);
       disposeGroup(item);
       status('가구를 제거했습니다.', 'info');
       return;
     }
+    // 드래그(이동 시도)는 결과가 벽/충돌로 되돌려지더라도 "이 가구를 만졌다"는 의도이므로
+    // 선택 상태로 삼는다 -- 잡았다 그 자리에 놓아도(허용 범위 안이면) 선택만 하는 용도로 쓸 수 있다.
+    selectFurnitureItem(item);
     // 배치 당시 적용된(배율 반영) 실제 치수 -- FURNITURE_TYPES 기본값이 아니라 이걸 써야
     // 크기를 조정해 놓은 가구도 이동 시 자기 실제 크기 기준으로 판정된다.
     const halfW = item.userData.width / 2, halfD = item.userData.depth / 2;
@@ -2059,10 +2083,47 @@ canvas.addEventListener('pointerup', (e) => {
       status('다른 가구와 겹쳐서 배치할 수 없습니다.', 'err');
       return;
     }
-    placeFurniture(armedFurnitureType, pt.x, pt.z, scalePercent);
+    const placed = placeFurniture(armedFurnitureType, pt.x, pt.z, scalePercent);
+    if (placed) selectFurnitureItem(placed); // 배치 직후 바로 Shift+화살표로 미세 조정 가능하도록
     const sizeNote = scalePercent === 100 ? '' : ` (${scalePercent}% 크기)`;
     status(`${base.label}${sizeNote} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
   }
+});
+
+// Shift+화살표: 선택된 가구를 10mm씩 미세 이동(마우스 드래그의 정밀도 문제 보완).
+// 위/왼쪽 = 평면상 -z/-x, 아래/오른쪽 = +z/+x (2D 도면을 위에서 내려다볼 때 위=북=-z 기준,
+// 카메라를 자유롭게 돌릴 수 있는 3D 뷰라 화면 기준 방향과는 다를 수 있음).
+const FURNITURE_NUDGE_STEP = 10; // mm
+const FURNITURE_NUDGE_DELTA = {
+  ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0]
+};
+// 드래그 이동(pointerup)과 같은 벽/충돌 판정을 그대로 재사용 -- 여기서도 벗어나면 그 자리에
+// 그대로 두고(드래그와 달리 이동 자체가 없었으니 되돌릴 필요도 없음) 이유만 알려준다.
+function tryNudgeFurniture(item, dx, dz) {
+  const x = item.position.x + dx * FURNITURE_NUDGE_STEP;
+  const z = item.position.z + dz * FURNITURE_NUDGE_STEP;
+  const halfW = item.userData.width / 2, halfD = item.userData.depth / 2;
+  if (!isInsideBuilding(x, z, halfW, halfD)) {
+    status('벽 안쪽으로만 옮길 수 있어 이동하지 못했습니다.', 'err');
+    return false;
+  }
+  if (collidesWithFurniture(item, x, z, halfW, halfD)) {
+    status('다른 가구와 부딪혀 이동하지 못했습니다.', 'err');
+    return false;
+  }
+  item.position.x = x;
+  item.position.z = z;
+  return true;
+}
+document.addEventListener('keydown', (e) => {
+  if (!e.shiftKey || !(e.key in FURNITURE_NUDGE_DELTA)) return;
+  if (!furnitureModeOn || !selectedFurnitureItem) return;
+  const el = document.activeElement;
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return; // 입력 중엔 원래 키 동작 존중
+
+  e.preventDefault();
+  const [dx, dz] = FURNITURE_NUDGE_DELTA[e.key];
+  tryNudgeFurniture(selectedFurnitureItem, dx, dz);
 });
 
 /* ---------- 색상 지정 (벽/지붕) ---------- */
