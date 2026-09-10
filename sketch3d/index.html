@@ -905,8 +905,9 @@ function renderViews() {
   const m = Math.max(s.x, s.y, s.z) * 2 + 3000;
 
   // 도면용: 보조요소 숨기고 흰 배경
-  const vis = { grid: grid.visible, dim: dimGroup.visible, comp: compassGroup.visible, ground: ground.visible, bg: scene.background, room: roomLabelGroup.visible };
+  const vis = { grid: grid.visible, dim: dimGroup.visible, comp: compassGroup.visible, ground: ground.visible, bg: scene.background, room: roomLabelGroup.visible, furn: furnitureGroup.visible };
   grid.visible = false; dimGroup.visible = viewsDim; compassGroup.visible = false; ground.visible = false; roomLabelGroup.visible = false;
+  furnitureGroup.visible = false; // 인허가용 정식 도면·평면도/입면도에는 가구를 표시하지 않음
   scene.background = new THREE.Color(0xffffff);
 
   // 라인드로잉 재질로 교체 (은선처리)
@@ -962,6 +963,7 @@ function renderViews() {
   saved.forEach(([o, mat]) => { o.material = mat; });
   grid.visible = vis.grid; dimGroup.visible = vis.dim; compassGroup.visible = vis.comp; ground.visible = vis.ground; scene.background = vis.bg;
   roomLabelGroup.visible = vis.room;
+  furnitureGroup.visible = vis.furn;
   roofGroup.visible = roofVisSaved;
   roofDimGroup.visible = roofDimVisSaved;
 }
@@ -1838,6 +1840,21 @@ function isInsideBuilding(x, z, halfW = 0, halfD = 0) {
   return Math.abs(x - lastCenter.x) <= halfX && Math.abs(z - lastCenter.z) <= halfZ;
 }
 
+// (x,z)에 halfW/halfD 크기의 가구를 두면 이미 배치된 다른 가구와 겹치는지(AABB 겹침 판정).
+// excludeItem은 지금 옮기는 중인 가구 자신 -- 자기 자신과는 비교하지 않음(배치 시에는 null).
+function collidesWithFurniture(excludeItem, x, z, halfW, halfD) {
+  for (const other of furnitureGroup.children) {
+    if (other === excludeItem) continue;
+    const of = FURNITURE_TYPES[other.userData.type];
+    if (!of) continue;
+    const oHalfW = of.width / 2, oHalfD = of.depth / 2;
+    if (Math.abs(x - other.position.x) < halfW + oHalfW && Math.abs(z - other.position.z) < halfD + oHalfD) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function placeFurniture(type, x, z) {
   const f = FURNITURE_TYPES[type];
   if (!f) return;
@@ -1922,17 +1939,28 @@ canvas.addEventListener('pointerup', (e) => {
     dragStartPos = null;
 
     if (moved <= 6) {
+      const f = FURNITURE_TYPES[item.userData.type];
+      const label = f ? f.label : '가구';
+      item.position.copy(startPos); // 확인 대기 중엔 원래 자리를 유지
+      if (!window.confirm(`가구를 제거할까요? (${label})`)) {
+        status('제거를 취소했습니다.', 'info');
+        return;
+      }
       furnitureGroup.remove(item);
       disposeGroup(item);
       status('가구를 제거했습니다.', 'info');
       return;
     }
     const f = FURNITURE_TYPES[item.userData.type];
-    if (f && isInsideBuilding(item.position.x, item.position.z, f.width / 2, f.depth / 2)) {
-      status('가구를 옮겼습니다.', 'ok');
-    } else {
+    if (!f) { item.position.copy(startPos); return; }
+    if (!isInsideBuilding(item.position.x, item.position.z, f.width / 2, f.depth / 2)) {
       item.position.copy(startPos);
       status('벽 안쪽으로만 옮길 수 있어 원래 자리로 되돌렸습니다.', 'err');
+    } else if (collidesWithFurniture(item, item.position.x, item.position.z, f.width / 2, f.depth / 2)) {
+      item.position.copy(startPos);
+      status('다른 가구와 부딪혀 원래 자리로 되돌렸습니다.', 'err');
+    } else {
+      status('가구를 옮겼습니다.', 'ok');
     }
     return;
   }
@@ -1945,6 +1973,10 @@ canvas.addEventListener('pointerup', (e) => {
     const f = FURNITURE_TYPES[armedFurnitureType];
     if (!isInsideBuilding(pt.x, pt.z, f.width / 2, f.depth / 2)) {
       status('가구 전체가 벽 안쪽에 들어오는 위치를 클릭하세요.', 'err');
+      return;
+    }
+    if (collidesWithFurniture(null, pt.x, pt.z, f.width / 2, f.depth / 2)) {
+      status('다른 가구와 겹쳐서 배치할 수 없습니다.', 'err');
       return;
     }
     placeFurniture(armedFurnitureType, pt.x, pt.z);
