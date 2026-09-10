@@ -525,7 +525,7 @@
         </div>
       </div>
       <div class="vp-bar furniture-bar">
-        <span class="stat">🛋️ 가구 배치 <small>(드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거)</small></span>
+        <span class="stat">🛋️ 가구 배치 <small>(드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</small></span>
         <div class="vp-right">
           <select id="furnitureSelect" class="sample-select">
             <option value="" selected>가구 선택…</option>
@@ -1842,6 +1842,7 @@ function placeFurniture(type, x, z) {
   const item = new THREE.Group();
   item.add(mesh, edges, label);
   item.position.set(x, f.height / 2, z);
+  item.userData.type = type; // 드래그 이동 시 이 가구의 폭·깊이를 다시 찾기 위해 필요
   furnitureGroup.add(item);
 }
 
@@ -1866,27 +1867,65 @@ function pickFurnitureAt(clientX, clientY) {
 // 판정 방식(포인터다운/업 거리차)은 동일하게 재사용: OrbitControls 드래그 캡처로 인한
 // 캔버스 밖 드래그 종료 시 click 오인식 문제를 여기서도 똑같이 피해야 함.
 let furnDownPos = null;
+let draggingItem = null;  // 포인터다운에서 잡은 기존 가구(item Group) -- 그대로면 클릭(제거), 움직이면 드래그(이동)
+let dragStartPos = null;  // 드래그 시작 위치 -- 벽 밖으로 놓으면 여기로 되돌림
+
 canvas.addEventListener('pointerdown', (e) => {
   if (firstPerson) return;
   furnDownPos = { x: e.clientX, y: e.clientY };
+  const hit = pickFurnitureAt(e.clientX, e.clientY);
+  if (hit) {
+    draggingItem = hit;
+    dragStartPos = hit.position.clone();
+    controls.enabled = false; // 드래그 중엔 OrbitControls 대신 가구가 커서를 따라가야 함
+  }
 });
-canvas.addEventListener('pointercancel', () => { furnDownPos = null; });
+canvas.addEventListener('pointermove', (e) => {
+  if (!draggingItem) return;
+  const pt = fpGroundPoint(e.clientX, e.clientY);
+  if (!pt) return;
+  draggingItem.position.x = pt.x;
+  draggingItem.position.z = pt.z;
+});
+canvas.addEventListener('pointercancel', () => {
+  furnDownPos = null;
+  if (draggingItem) {
+    draggingItem.position.copy(dragStartPos);
+    controls.enabled = true;
+    draggingItem = null;
+    dragStartPos = null;
+  }
+});
 canvas.addEventListener('pointerup', (e) => {
   if (firstPerson || !furnDownPos) return;
   const moved = Math.hypot(e.clientX - furnDownPos.x, e.clientY - furnDownPos.y);
   furnDownPos = null;
-  if (moved > 6) return; // 드래그(카메라 회전/이동)였음 -- 배치/제거 안 함
 
-  // 이미 놓인 가구를 클릭한 경우 항상 제거를 우선한다 -- armed 상태였다면(연속 배치 중)
-  // 예전에는 이 분기를 못 타서 같은 자리에 겹쳐 또 배치돼(겉으론 아무 변화 없이 보임) "클릭해도
-  // 제거 안 됨"처럼 보였다. 배치는 "빈 바닥을 클릭했을 때"에만 일어나야 함.
-  const hitItem = pickFurnitureAt(e.clientX, e.clientY);
-  if (hitItem) {
-    furnitureGroup.remove(hitItem);
-    disposeGroup(hitItem);
-    status('가구를 제거했습니다.', 'info');
+  // 이미 놓인 가구를 잡고 시작한 제스처는 항상 그 가구가 대상이다(armed 여부와 무관) --
+  // 거의 안 움직였으면 클릭(제거), 충분히 움직였으면 드래그(이동)로 본다.
+  if (draggingItem) {
+    const item = draggingItem, startPos = dragStartPos;
+    controls.enabled = true;
+    draggingItem = null;
+    dragStartPos = null;
+
+    if (moved <= 6) {
+      furnitureGroup.remove(item);
+      disposeGroup(item);
+      status('가구를 제거했습니다.', 'info');
+      return;
+    }
+    const f = FURNITURE_TYPES[item.userData.type];
+    if (f && isInsideBuilding(item.position.x, item.position.z, f.width / 2, f.depth / 2)) {
+      status('가구를 옮겼습니다.', 'ok');
+    } else {
+      item.position.copy(startPos);
+      status('벽 안쪽으로만 옮길 수 있어 원래 자리로 되돌렸습니다.', 'err');
+    }
     return;
   }
+
+  if (moved > 6) return; // 빈 곳에서 시작한 드래그(카메라 회전/이동)였음 -- 배치 안 함
 
   if (armedFurnitureType) {
     const pt = fpGroundPoint(e.clientX, e.clientY);
