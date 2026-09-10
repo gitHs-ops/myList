@@ -189,6 +189,26 @@ app.post('/api/extract', async (req, res) => {
   }
 });
 
+// /api/edit 전용 — 이미 3D에 배치된 가구 배열(선택). 배치·삭제·이동은 클라이언트의 직접
+// 클릭 UI 몫이라 이 스키마는 크기(width/depth/height) 수정만 반영하도록 값을 받는다.
+// WALL_SCHEMA(추출용)에는 넣지 않는다 — 스케치 추출 결과에 가구를 지어내는 걸 원천적으로 막기 위해.
+const FURNITURE_ITEM_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'type', 'x', 'z', 'width', 'depth', 'height'],
+  properties: {
+    id: { type: 'string' },     // 클라이언트가 배치 시 부여한 안정적 식별자 — 그대로 돌려줄 것
+    type: { type: 'string', enum: ['sink', 'bed', 'bedSingle', 'sofa', 'table', 'desk', 'fridge'] },
+    x: { type: 'number' }, z: { type: 'number' },              // 배치 좌표(벽과 같은 좌표계) — 그대로 유지
+    width: { type: 'number' }, depth: { type: 'number' }, height: { type: 'number' }  // mm, 실제 적용 치수
+  }
+};
+
+const EDIT_SCHEMA = {
+  ...WALL_SCHEMA,
+  properties: { ...WALL_SCHEMA.properties, furniture: { type: 'array', items: FURNITURE_ITEM_SCHEMA } }
+};
+
 const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국어 지시에 따라 수정하는 편집기입니다.
 - 입력으로 현재 벽 JSON(unit/wallHeight/wallThickness/walls/notes)을 받습니다.
 - 좌표계는 그대로 유지합니다: 단위 mm, 원점 좌하단, x는 오른쪽(+), y는 위쪽(+). 각 벽은 중심선 start[x,y]~end[x,y].
@@ -204,12 +224,26 @@ const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국�
 - roof(지붕: {type:'flat'|'gable'|'none', pitch, overhang, ridge:'x'|'y'})도 지시에 따라 설정/변경합니다. 예: "박공지붕 물매 30도" → roof:{type:'gable',pitch:30,...}, "지붕 없애" → roof:{type:'none'} 또는 제거.
 - rooms(방 이름표): [{label, point:[x,y]}] 배열입니다. "왼쪽 방을 침실로", "가운데를 거실로 표시해줘" 같은 지시는 그 방 벽 안쪽 대표 좌표를 잡아 rooms에 추가/수정합니다(같은 방이면 point는 유지하고 label만 바꿉니다). "이름표 지워줘"는 해당 항목을 rooms에서 제거합니다. 다른 방 이름표와 겹치지 않게 좌표를 잡습니다.
 - 지시와 무관한 벽은 그대로 둡니다. 방이 닫혀 있어야 하면 연결 좌표를 함께 맞춥니다.
+- furniture(이미 3D에 배치된 가구 목록, 선택 필드): [{id, type, x, z, width, depth, height}] 배열로 함께 주어질 수 있습니다.
+  · 이 배열은 오직 "가로/세로(깊이)/높이" 같은 치수 수정 지시에만 씁니다. 가구를 새로 추가하거나 지우거나
+    위치(x,z)를 옮기는 지시는 이 필드로 처리하지 마세요(그런 지시는 notes에 "3D 화면에서 직접 배치/클릭으로
+    조작해 주세요"라고 안내하고, 배열 자체는 건드리지 않습니다) — 배치·삭제·이동은 사용자가 3D 화면을 직접
+    클릭해서 하는 별도 기능입니다.
+  · "가로"=width, "세로"나 "깊이"=depth, "높이"=height 로 해석합니다. "~로/~으로"는 절대값 지정(예: "가로
+    1000으로"→width:1000), "~늘려/~줄여"는 현재 값 기준 가감(예: "가로 100 늘려"→width: 기존값+100)입니다.
+  · type(예: "싱크대"→sink, "소파"→sofa)으로 대상을 찾습니다. 같은 type이 여러 개 배치돼 있고 지시가 어느
+    것인지 특정하지 않으면(위치 등으로) 해당 type 전부에 같은 값을 적용하고, 그렇게 처리했음을 notes에
+    남깁니다. 지시에 해당하는 type이 furniture 배열에 하나도 없으면 배열은 그대로 두고 notes에 "현재
+    배치된 항목이 없어 반영하지 못했습니다"라고 남깁니다.
+  · id/x/z는 절대 바꾸지 않고 그대로 돌려줍니다. 지시와 무관한 항목도 배열에서 빠짐없이 그대로 돌려줍니다
+    (echo) — 언급되지 않은 항목이라고 배열에서 빼면 안 됩니다.
+  · furniture 필드 자체가 요청에 없으면 응답에도 넣지 않습니다.
 - notes에는 무엇을 어떻게 바꿨는지 한국어로 짧게 적습니다. 지시가 모호하면 합리적으로 해석하고 그 사실을 notes에 남깁니다.
-- 반드시 전체 벽 JSON(수정 결과)을 반환합니다.`;
+- 반드시 전체 벽 JSON(수정 결과)을 반환합니다. furniture가 입력에 있었다면 그 배열도(수정 여부와 무관하게 전체를) 함께 반환합니다.`;
 
 app.post('/api/edit', async (req, res) => {
   try {
-    const { walls, instruction } = req.body || {};
+    const { walls, furniture, instruction } = req.body || {};
     if (!walls || typeof walls !== 'object') {
       return res.status(400).json({ error: 'walls (current wall JSON object) required' });
     }
@@ -217,14 +251,19 @@ app.post('/api/edit', async (req, res) => {
       return res.status(400).json({ error: 'instruction (text) required' });
     }
 
+    // furniture는 선택 필드 — 안 보내면(구버전 클라이언트 포함) 프롬프트에도 안 실어 기존 동작과 동일하게 유지.
+    const furnitureBlock = Array.isArray(furniture)
+      ? `\n\n현재 배치된 가구 목록(치수 수정 지시가 있을 때만 사용, 추가/삭제/이동 금지):\n\`\`\`json\n${JSON.stringify(furniture)}\n\`\`\``
+      : '';
+
     const response = await client.messages.create({
       model: MODEL,
       max_tokens: 16000,
       system: EDIT_SYSTEM,
-      output_config: { format: { type: 'json_schema', schema: WALL_SCHEMA } },
+      output_config: { format: { type: 'json_schema', schema: EDIT_SCHEMA } },
       messages: [{
         role: 'user',
-        content: `현재 벽 JSON:\n\`\`\`json\n${JSON.stringify(walls)}\n\`\`\`\n\n수정 지시: ${instruction}\n\n지시를 반영한 전체 벽 JSON을 반환하세요.`
+        content: `현재 벽 JSON:\n\`\`\`json\n${JSON.stringify(walls)}\n\`\`\`${furnitureBlock}\n\n수정 지시: ${instruction}\n\n지시를 반영한 전체 벽 JSON을 반환하세요.`
       }]
     });
 

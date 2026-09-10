@@ -485,7 +485,7 @@
           <button id="chatRedo" class="dim-btn" disabled>↪ 다시하기</button>
         </h2>
         <div id="chatLog" class="chat-log">
-          <div class="chat-empty">현재 3D 모델을 말로 고칩니다. 우측 화면을 보며 조정하세요.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”</div>
+          <div class="chat-empty">현재 3D 모델을 말로 고칩니다. 우측 화면을 보며 조정하세요.<br>예: “왼쪽 벽을 1000mm 늘려줘”, “가운데 칸막이벽 추가”, “위쪽 벽 지워”, “벽 두께 300으로”, “싱크대 가로 1000으로”(배치된 가구가 있을 때)</div>
         </div>
         <div class="chat-row">
           <textarea id="chatInput" rows="1" placeholder="수정 지시를 입력… (Shift+Enter로 줄바꿈)"></textarea>
@@ -1466,10 +1466,12 @@ let undoStack = [];
 let redoStack = [];
 const chatUndoBtn = document.getElementById('chatUndo');
 const chatRedoBtn = document.getElementById('chatRedo');
+// 스냅샷은 벽 JSON 문자열 + 그 시점의 가구 배열을 함께 묶는다 -- 채팅으로 가구 크기까지
+// 바꿀 수 있게 된 뒤로는 벽만 되돌리면 가구는 그대로 남아 불일치가 생기기 때문.
 function pushUndo() {
   const cur = jsonBox.value.trim();
   if (!cur) return;
-  undoStack.push(cur);
+  undoStack.push({ walls: cur, furniture: furnitureStateForApi() });
   if (undoStack.length > 20) undoStack.shift();
   redoStack.length = 0; // 새 AI 응답이 오면 이전 다시하기 기록은 무효화
   chatUndoBtn.disabled = false;
@@ -1478,12 +1480,13 @@ function pushUndo() {
 chatUndoBtn.addEventListener('click', () => {
   if (!undoStack.length) return;
   const cur = jsonBox.value.trim();
-  if (cur) { redoStack.push(cur); if (redoStack.length > 20) redoStack.shift(); }
+  if (cur) { redoStack.push({ walls: cur, furniture: furnitureStateForApi() }); if (redoStack.length > 20) redoStack.shift(); }
   const prev = undoStack.pop();
   try {
-    const data = JSON.parse(prev);
-    jsonBox.value = prev;
+    const data = JSON.parse(prev.walls);
+    jsonBox.value = prev.walls;
     const n = buildModel(data);
+    rebuildFurnitureFromList(prev.furniture);
     status(`이전 상태로 되돌렸습니다. (벽 ${n}개)`, 'ok');
   } catch { status('되돌리기 실패: 저장된 상태가 손상됨', 'err'); }
   chatUndoBtn.disabled = undoStack.length === 0;
@@ -1492,12 +1495,13 @@ chatUndoBtn.addEventListener('click', () => {
 chatRedoBtn.addEventListener('click', () => {
   if (!redoStack.length) return;
   const cur = jsonBox.value.trim();
-  if (cur) { undoStack.push(cur); if (undoStack.length > 20) undoStack.shift(); }
+  if (cur) { undoStack.push({ walls: cur, furniture: furnitureStateForApi() }); if (undoStack.length > 20) undoStack.shift(); }
   const next = redoStack.pop();
   try {
-    const data = JSON.parse(next);
-    jsonBox.value = next;
+    const data = JSON.parse(next.walls);
+    jsonBox.value = next.walls;
     const n = buildModel(data);
+    rebuildFurnitureFromList(next.furniture);
     status(`다시 실행했습니다. (벽 ${n}개)`, 'ok');
   } catch { status('다시하기 실패: 저장된 상태가 손상됨', 'err'); }
   chatUndoBtn.disabled = undoStack.length === 0;
@@ -1876,33 +1880,74 @@ function collidesWithFurniture(excludeItem, x, z, halfW, halfD) {
   return false;
 }
 
-// scalePercent: 이번에 배치할 가구에만 임시로 적용하는 크기 배율(%) -- FURNITURE_TYPES
-// 기본값이나 이미 놓인 다른 가구에는 영향 없음. 실제 적용된 치수는 item.userData에 저장해
-// 이후 드래그 이동·충돌 판정이 항상 "이 가구의 진짜 크기"를 보게 한다.
-function placeFurniture(type, x, z, scalePercent = 100) {
+// 가구 항목 하나를 실제 절대 치수(mm)로 만들어 furnitureGroup에 추가한다. 배치 UI(%)와
+// 채팅 크기수정(서버가 절대 mm로 돌려줌) 양쪽이 이 함수를 공유 -- 치수를 어떻게 정했는지와
+// 무관하게 "가구를 실제로 만드는" 로직은 하나만 있어야 드래그 이동·충돌 판정도 항상 일치한다.
+// id: 채팅 크기수정 왕복(서버로 보내고 다시 받음) 시 어떤 항목인지 추적하기 위한 안정적 식별자.
+let furnitureIdSeq = 0;
+function spawnFurnitureItem(type, x, z, width, depth, height, labelSuffix = '') {
   const base = FURNITURE_TYPES[type];
-  if (!base) return;
-  const s = Math.max(0.1, (Number(scalePercent) || 100) / 100);
-  const f = { label: base.label, width: base.width * s, depth: base.depth * s, height: base.height * s };
-  const geo = new THREE.BoxGeometry(f.width, f.height, f.depth);
+  if (!base) return null;
+  const geo = new THREE.BoxGeometry(width, height, depth);
   const mesh = new THREE.Mesh(geo, furnitureMat);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), furnitureEdgeMat);
 
   const labelH = 220; // 가구 종류(높이)와 무관하게 이름표 글자 크기는 고정
-  const labelText = s === 1 ? f.label : `${f.label} (${Math.round(s * 100)}%)`;
+  const labelText = labelSuffix ? `${base.label} (${labelSuffix})` : base.label;
   const label = makeLabel(labelText, labelH, 'rgba(92,67,38,0.94)');
-  label.position.y = f.height / 2 + labelH * 0.6; // 가구 상단 바로 위, 고정 간격
+  label.position.y = height / 2 + labelH * 0.6; // 가구 상단 바로 위, 고정 간격
 
   const item = new THREE.Group();
   item.add(mesh, edges, label);
-  item.position.set(x, f.height / 2, z);
+  item.position.set(x, height / 2, z);
+  item.userData.id = `f${++furnitureIdSeq}`;
   item.userData.type = type;
-  item.userData.width = f.width;
-  item.userData.depth = f.depth;
-  item.userData.height = f.height; // 드래그 이동·충돌 판정이 배율 적용 후 실제 크기를 쓰도록
+  item.userData.width = width;
+  item.userData.depth = depth;
+  item.userData.height = height; // 드래그 이동·충돌 판정이 항상 이 실제 크기를 쓰도록
   furnitureGroup.add(item);
+  return item;
+}
+
+// scalePercent: 이번에 배치할 가구에만 임시로 적용하는 크기 배율(%) -- FURNITURE_TYPES
+// 기본값이나 이미 놓인 다른 가구에는 영향 없음.
+function placeFurniture(type, x, z, scalePercent = 100) {
+  const base = FURNITURE_TYPES[type];
+  if (!base) return;
+  const s = Math.max(0.1, (Number(scalePercent) || 100) / 100);
+  const suffix = s === 1 ? '' : `${Math.round(s * 100)}%`;
+  spawnFurnitureItem(type, x, z, base.width * s, base.depth * s, base.height * s, suffix);
+}
+
+// 현재 배치된 가구를 채팅 편집 API에 보낼 평범한 JSON으로 직렬화(가구 크기수정 지시용).
+function furnitureStateForApi() {
+  return furnitureGroup.children.map(item => ({
+    id: item.userData.id,
+    type: item.userData.type,
+    x: Math.round(item.position.x),
+    z: Math.round(item.position.z),
+    width: Math.round(item.userData.width),
+    depth: Math.round(item.userData.depth),
+    height: Math.round(item.userData.height)
+  }));
+}
+
+// 채팅 편집 API가 돌려준 가구 배열로 furnitureGroup을 통째로 다시 그린다(벽 buildModel과 같은
+// 패턴 -- 부분 수정 대신 항상 전체 재생성). 서버는 치수 수정 지시가 없던 항목도 그대로 echo해
+// 돌려주므로, 매번 전체를 다시 그려도 배치·크기가 사라지지 않는다.
+function rebuildFurnitureFromList(list) {
+  if (!Array.isArray(list)) return; // 잘못된/누락된 응답으로 기존 배치가 지워지지 않도록 먼저 확인
+  disposeGroup(furnitureGroup);
+  while (furnitureGroup.children.length) furnitureGroup.remove(furnitureGroup.children[0]);
+  list.forEach(it => {
+    if (!it || !FURNITURE_TYPES[it.type]) return;
+    const w = Number(it.width), d = Number(it.depth), h = Number(it.height);
+    if (!(w > 0 && d > 0 && h > 0)) return;
+    const item = spawnFurnitureItem(it.type, Number(it.x) || 0, Number(it.z) || 0, w, d, h);
+    if (item && it.id) item.userData.id = String(it.id); // 서버가 돌려준 id를 그대로 유지(왕복 안정성)
+  });
 }
 
 const furnRaycaster = new THREE.Raycaster();
@@ -2315,7 +2360,7 @@ async function sendChat() {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-App-Secret': apiSecretInput.value.trim() },
-      body: JSON.stringify({ walls: base, instruction: text }),
+      body: JSON.stringify({ walls: base, furniture: furnitureStateForApi(), instruction: text }),
       signal: editController.signal
     });
     if (res.status === 401) { typing.className = 'msg bot err'; typing.setText('접근 코드가 비어있거나 틀렸습니다. "백엔드 설정 > 접근 코드"에 입력하세요.'); return; }
@@ -2325,6 +2370,7 @@ async function sendChat() {
     const data = await res.json();
     pushUndo();
     const n = buildModel(data);
+    if (Array.isArray(data.furniture)) rebuildFurnitureFromList(data.furniture);
     jsonBox.value = JSON.stringify(data, null, 2);
     typing.setText((data.notes ? data.notes : `수정 완료`) + ` (벽 ${n}개${usage})`);
   } catch (e) {
