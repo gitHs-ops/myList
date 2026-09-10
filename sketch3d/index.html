@@ -525,13 +525,11 @@
         </div>
       </div>
       <div class="vp-bar furniture-bar">
-        <span class="stat">🛋️ 가구 배치 <small>(드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</small></span>
+        <button id="furnitureModeToggle" class="dim-btn">🛋️ 가구 배치 모드 (드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</button>
         <div class="vp-right">
           <select id="furnitureSelect" class="sample-select">
             <option value="" selected>가구 선택…</option>
           </select>
-          <button id="btnFurnitureDisarm" class="dim-btn" title="가구 배치 모드를 끕니다">✋ 배치 해제</button>
-          <button id="btnFurnitureClearAll" class="dim-btn" title="배치한 가구를 전체 삭제합니다">🗑 전체 삭제</button>
         </div>
       </div>
       <canvas id="viewport"></canvas>
@@ -1744,7 +1742,7 @@ canvas.addEventListener('pointerup', (e) => {
 const fpHint = document.getElementById('fpHint');
 fpToggle.addEventListener('click', () => {
   firstPerson = !firstPerson;
-  if (firstPerson) disarmFurniture(); // 가구 배치 모드와 1인칭 시점은 동시에 켤 수 없음
+  if (firstPerson) exitFurnitureMode(); // 가구 배치 모드와 1인칭 시점은 동시에 켤 수 없음
   fpToggle.classList.toggle('on', firstPerson);
   fpToggle.textContent = firstPerson ? '🚶 기본 시점으로' : '🚶 1인칭 시점';
   fpHint.classList.toggle('show', firstPerson);
@@ -1774,10 +1772,14 @@ canvas.addEventListener('wheel', (e) => {
   camera.updateProjectionMatrix();
 }, { passive: false });
 
-/* ---------- 가구 배치 (3D 뷰에서 직접: 타입 선택 -> 바닥 클릭 -> 배치, 배치된 가구 클릭 -> 제거) ---------- */
-let armedFurnitureType = null; // 지금 배치 대기 중인 타입 (null = 배치 대기 없음 -> 클릭 시 제거 모드)
+/* ---------- 가구 배치 (3D 뷰에서 직접: 가구 모드 토글 -> 드롭다운 선택 -> 바닥 클릭 -> 배치,
+   배치된 가구 클릭 -> 제거, 드래그 -> 이동) ---------- */
+let furnitureModeOn = false; // 켜져 있을 때만 캔버스에서 가구 배치/제거/이동이 동작함
+let armedFurnitureType = null; // 지금 배치 대기 중인 타입 (null = 배치 대기 없음 -> 클릭 시 제거)
 const furnitureHint = document.getElementById('furnitureHint');
 const furnitureSelect = document.getElementById('furnitureSelect');
+const furnitureModeToggle = document.getElementById('furnitureModeToggle');
+const FURNITURE_MODE_OFF_LABEL = furnitureModeToggle.textContent; // HTML 초기 문구를 그대로 재사용
 
 Object.entries(FURNITURE_TYPES).forEach(([type, f]) => {
   const opt = document.createElement('option');
@@ -1786,6 +1788,8 @@ Object.entries(FURNITURE_TYPES).forEach(([type, f]) => {
   furnitureSelect.appendChild(opt);
 });
 
+// 배치 대기 중인 타입만 해제(드롭다운을 "가구 선택..."으로 되돌림) -- 가구 모드 자체는 안 끔,
+// 그래도 배치된 가구 클릭 제거/드래그 이동은 계속 된다.
 function disarmFurniture() {
   armedFurnitureType = null;
   furnitureSelect.value = '';
@@ -1793,25 +1797,33 @@ function disarmFurniture() {
   canvas.style.cursor = '';
 }
 
+function enterFurnitureMode() {
+  if (firstPerson) fpToggle.click(); // 1인칭 시점 중이었다면 먼저 끄고 가구 모드로 전환
+  furnitureModeOn = true;
+  furnitureModeToggle.classList.add('on');
+  furnitureModeToggle.textContent = '🛋️ 가구모드해제';
+}
+
+// 가구 모드 전체를 끔(예전 "배치 해제" 버튼의 역할) -- 배치 대기 해제 + 캔버스 상호작용도 꺼짐
+function exitFurnitureMode() {
+  disarmFurniture();
+  furnitureModeOn = false;
+  furnitureModeToggle.classList.remove('on');
+  furnitureModeToggle.textContent = FURNITURE_MODE_OFF_LABEL;
+}
+
+furnitureModeToggle.addEventListener('click', () => {
+  if (furnitureModeOn) exitFurnitureMode();
+  else enterFurnitureMode();
+});
+
 furnitureSelect.addEventListener('change', () => {
   const type = furnitureSelect.value;
   if (!type) { disarmFurniture(); return; }
-  if (firstPerson) fpToggle.click(); // 1인칭 시점 중이었다면 먼저 끄고 배치 모드로 전환
+  if (!furnitureModeOn) enterFurnitureMode(); // 드롭다운에서 고르면 가구 모드도 같이 켜짐
   armedFurnitureType = type;
   furnitureHint.classList.add('show');
   canvas.style.cursor = 'crosshair';
-});
-
-document.getElementById('btnFurnitureDisarm').addEventListener('click', () => {
-  disarmFurniture();
-  status('가구 배치 모드를 끝냈습니다.', 'info');
-});
-
-document.getElementById('btnFurnitureClearAll').addEventListener('click', () => {
-  if (!furnitureGroup.children.length) return;
-  disposeGroup(furnitureGroup);
-  furnitureGroup.clear();
-  status('배치한 가구를 모두 삭제했습니다.', 'info');
 });
 
 // 건물 바깥(벽 두께 안쪽까지 포함해서)에는 가구를 놓을 수 없음 -- 정확한 방 폴리곤이 아니라
@@ -1863,7 +1875,7 @@ function pickFurnitureAt(clientX, clientY) {
   return obj.parent === furnitureGroup ? obj : null;
 }
 
-// fpDownPos(1인칭 이동)와 별개의 좌표 추적 -- 두 모드는 상호배타적이지만(disarmFurniture로 보장)
+// fpDownPos(1인칭 이동)와 별개의 좌표 추적 -- 두 모드는 상호배타적이지만(enter/exitFurnitureMode로 보장)
 // 판정 방식(포인터다운/업 거리차)은 동일하게 재사용: OrbitControls 드래그 캡처로 인한
 // 캔버스 밖 드래그 종료 시 click 오인식 문제를 여기서도 똑같이 피해야 함.
 let furnDownPos = null;
@@ -1871,7 +1883,7 @@ let draggingItem = null;  // 포인터다운에서 잡은 기존 가구(item Gro
 let dragStartPos = null;  // 드래그 시작 위치 -- 벽 밖으로 놓으면 여기로 되돌림
 
 canvas.addEventListener('pointerdown', (e) => {
-  if (firstPerson) return;
+  if (firstPerson || !furnitureModeOn) return;
   furnDownPos = { x: e.clientX, y: e.clientY };
   const hit = pickFurnitureAt(e.clientX, e.clientY);
   if (hit) {
