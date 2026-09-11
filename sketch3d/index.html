@@ -284,12 +284,6 @@
     /* 긴 안내문 텍스트라 폭이 좁아지면 버튼 안에서 줄바꿈되며 드롭다운과 어색하게
        한 줄을 나눠 쓰던 문제 방지 -- 줄바꿈 대신 버튼 전체가 다음 줄로 넘어가게 함 */
   }
-  .furniture-scale { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); font-weight: 600; cursor: help; }
-  .furniture-scale input[type="number"] {
-    width: 48px; font-family: var(--font-main); font-weight: 600; font-size: 12.5px;
-    border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-primary);
-    border-radius: 8px; padding: 6px 4px; text-align: center;
-  }
   .sun-ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
   .sun-ctl input[type="range"] { width: 110px; accent-color: var(--accent-primary); }
   #sunLabel { font-family: var(--font-accent); font-weight: 600; color: var(--text-primary); min-width: 40px; }
@@ -540,9 +534,6 @@
           <select id="furnitureSelect" class="sample-select">
             <option value="" selected>가구 선택…</option>
           </select>
-          <label class="furniture-scale" title="다음에 배치할 가구의 크기(%) -- 그때그때 임시로 적용되는 값이라 이미 놓인 가구나 스키마 기본 크기에는 영향 없음">
-            크기 <input type="number" id="furnitureScale" min="50" max="200" step="10" value="100" />%
-          </label>
         </div>
       </div>
       <canvas id="viewport"></canvas>
@@ -1804,11 +1795,6 @@ const furnitureHint = document.getElementById('furnitureHint');
 const furnitureSelect = document.getElementById('furnitureSelect');
 const furnitureModeToggle = document.getElementById('furnitureModeToggle');
 const FURNITURE_MODE_OFF_LABEL = furnitureModeToggle.textContent; // HTML 초기 문구를 그대로 재사용
-const furnitureScaleInput = document.getElementById('furnitureScale');
-furnitureScaleInput.addEventListener('change', () => {
-  const clamped = Math.min(200, Math.max(50, Number(furnitureScaleInput.value) || 100));
-  furnitureScaleInput.value = clamped;
-});
 
 Object.entries(FURNITURE_TYPES).forEach(([type, f]) => {
   const opt = document.createElement('option');
@@ -1888,12 +1874,13 @@ function collidesWithFurniture(excludeItem, x, z, halfW, halfD) {
   return false;
 }
 
-// 가구 항목 하나를 실제 절대 치수(mm)로 만들어 furnitureGroup에 추가한다. 배치 UI(%)와
-// 채팅 크기수정(서버가 절대 mm로 돌려줌) 양쪽이 이 함수를 공유 -- 치수를 어떻게 정했는지와
-// 무관하게 "가구를 실제로 만드는" 로직은 하나만 있어야 드래그 이동·충돌 판정도 항상 일치한다.
+// 가구 항목 하나를 실제 절대 치수(mm)로 만들어 furnitureGroup에 추가한다. 배치(스키마
+// 기본값)와 채팅 크기수정(서버가 절대 mm로 돌려줌) 양쪽이 이 함수를 공유 -- 치수를 어떻게
+// 정했는지와 무관하게 "가구를 실제로 만드는" 로직은 하나만 있어야 드래그 이동·충돌 판정도
+// 항상 일치한다.
 // id: 채팅 크기수정 왕복(서버로 보내고 다시 받음) 시 어떤 항목인지 추적하기 위한 안정적 식별자.
 let furnitureIdSeq = 0;
-function spawnFurnitureItem(type, x, z, width, depth, height, labelSuffix = '') {
+function spawnFurnitureItem(type, x, z, width, depth, height) {
   const base = FURNITURE_TYPES[type];
   if (!base) return null;
   const geo = new THREE.BoxGeometry(width, height, depth);
@@ -1903,8 +1890,7 @@ function spawnFurnitureItem(type, x, z, width, depth, height, labelSuffix = '') 
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), furnitureEdgeMat);
 
   const labelH = 220; // 가구 종류(높이)와 무관하게 이름표 글자 크기는 고정
-  const labelText = labelSuffix ? `${base.label} (${labelSuffix})` : base.label;
-  const label = makeLabel(labelText, labelH, 'rgba(92,67,38,0.94)');
+  const label = makeLabel(base.label, labelH, 'rgba(92,67,38,0.94)');
   label.position.y = height / 2 + labelH * 0.6; // 가구 상단 바로 위, 고정 간격
 
   const item = new THREE.Group();
@@ -1920,15 +1906,12 @@ function spawnFurnitureItem(type, x, z, width, depth, height, labelSuffix = '') 
   return item;
 }
 
-// scalePercent: 이번에 배치할 가구에만 임시로 적용하는 크기 배율(%) -- FURNITURE_TYPES
-// 기본값이나 이미 놓인 다른 가구에는 영향 없음. 배치된 item을 돌려줘 곧바로 선택 상태로
-// 이어갈 수 있게 한다(배치 직후 Shift+화살표로 바로 미세 조정 가능).
-function placeFurniture(type, x, z, scalePercent = 100) {
+// 배치된 item을 돌려줘 곧바로 선택 상태로 이어갈 수 있게 한다(배치 직후 Shift+화살표로
+// 바로 미세 조정 가능).
+function placeFurniture(type, x, z) {
   const base = FURNITURE_TYPES[type];
   if (!base) return null;
-  const s = Math.max(0.1, (Number(scalePercent) || 100) / 100);
-  const suffix = s === 1 ? '' : `${Math.round(s * 100)}%`;
-  return spawnFurnitureItem(type, x, z, base.width * s, base.depth * s, base.height * s, suffix);
+  return spawnFurnitureItem(type, x, z, base.width, base.depth, base.height);
 }
 
 // 현재 배치된 가구를 채팅 편집 API에 보낼 평범한 JSON으로 직렬화(가구 크기수정 지시용).
@@ -2076,9 +2059,7 @@ canvas.addEventListener('pointerup', (e) => {
     const pt = fpGroundPoint(e.clientX, e.clientY);
     if (!pt) { status('바닥 쪽을 클릭하세요.', 'err'); return; }
     const base = FURNITURE_TYPES[armedFurnitureType];
-    const scalePercent = Number(furnitureScaleInput.value) || 100;
-    const s = Math.max(0.1, scalePercent / 100);
-    const halfW = (base.width * s) / 2, halfD = (base.depth * s) / 2;
+    const halfW = base.width / 2, halfD = base.depth / 2;
     if (!isInsideBuilding(pt.x, pt.z, halfW, halfD)) {
       status('가구 전체가 벽 안쪽에 들어오는 위치를 클릭하세요.', 'err');
       return;
@@ -2087,10 +2068,9 @@ canvas.addEventListener('pointerup', (e) => {
       status('다른 가구와 겹쳐서 배치할 수 없습니다.', 'err');
       return;
     }
-    const placed = placeFurniture(armedFurnitureType, pt.x, pt.z, scalePercent);
+    const placed = placeFurniture(armedFurnitureType, pt.x, pt.z);
     if (placed) selectFurnitureItem(placed); // 배치 직후 바로 Shift+화살표로 미세 조정 가능하도록
-    const sizeNote = scalePercent === 100 ? '' : ` (${scalePercent}% 크기)`;
-    status(`${base.label}${sizeNote} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
+    status(`${base.label} 배치 완료 — 계속 배치하거나 버튼을 다시 눌러 종료하세요.`, 'ok');
   }
 });
 
