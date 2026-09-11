@@ -1857,13 +1857,17 @@ furnitureSelect.addEventListener('change', () => {
 });
 
 // 건물 바깥(벽 두께 안쪽까지 포함해서)에는 가구를 놓을 수 없음 -- 정확한 방 폴리곤이 아니라
-// 전체 벽 바운딩박스(외곽 기준)를 벽 두께만큼 안으로 줄인 사각형으로 근사한다. 오목한(L자)
-// 평면에서는 완벽하지 않지만, "건물 밖 클릭"을 막는다는 목적에는 충분하다.
+// lastSize/lastCenter는 벽 중심선(centerline) 좌표의 바운딩박스다(addSeg가 벽 박스를
+// 중심선 위에 두께가 절반씩(±T/2) 걸치도록 만듦, 외곽면 기준이 아님) — 그래서 벽
+// 안쪽(내측면)까지는 절반 두께(T/2)만 줄이면 된다. 전체를 다 줄이면(T) 실제 내측면보다
+// T/2만큼 안쪽에서 막혀, 눈에 보이는 여유 공간이 남았는데도 이동이 막히는 문제가 있었다.
+// 오목한(L자) 평면 등 정확한 방 폴리곤이 아니라 사각형으로 근사하는 한계는 여전히 있지만,
+// "건물 밖 클릭"을 막는다는 목적에는 충분하다.
 // halfW/halfD(가구 폭·깊이의 절반)를 함께 받아, 중심점이 아니라 가구 전체 외곽이
 // 벽 안쪽에 다 들어오는지를 판정한다(중심점만 보면 큰 가구는 벽을 뚫고 나갈 수 있었음).
 function isInsideBuilding(x, z, halfW = 0, halfD = 0) {
-  const halfX = Math.max(0, lastSize.x / 2 - lastWallThickness) - halfW;
-  const halfZ = Math.max(0, lastSize.z / 2 - lastWallThickness) - halfD;
+  const halfX = Math.max(0, lastSize.x / 2 - lastWallThickness / 2) - halfW;
+  const halfZ = Math.max(0, lastSize.z / 2 - lastWallThickness / 2) - halfD;
   if (halfX < 0 || halfZ < 0) return false; // 가구가 실내보다 커서 애초에 안 들어감
   return Math.abs(x - lastCenter.x) <= halfX && Math.abs(z - lastCenter.z) <= halfZ;
 }
