@@ -980,7 +980,12 @@ function renderViews() {
 }
 
 /* ---------- build ---------- */
-function buildModel(data) {
+// keepCamera: true면 카메라 위치·시점을 건드리지 않는다 -- 채팅 크기수정/되돌리기/다시하기처럼
+// "같은 건물을 조금 고친" 경우, 매번 카메라가 전체를 다시 담는 기본 시점으로 튀어서 사용자가
+// 보고 있던 각도·확대 상태를 잃는 문제가 있었다. 샘플 선택·JSON 새로 적용·비전 인식·프로젝트
+// 불러오기처럼 "다른/새 건물을 보여주는" 경우는 이 옵션 없이(기본값 false) 기존처럼 카메라를
+// 새로 맞춘다.
+function buildModel(data, keepCamera = false) {
   if (fpMarkerSprite) {
     scene.remove(fpMarkerSprite);
     fpMarkerSprite.material.map?.dispose();
@@ -1281,11 +1286,15 @@ function buildModel(data) {
     }
 
     const r = Math.max(size.x, size.z, roofTopY, H) * 1.4;
-    controls.target.copy(new THREE.Vector3(center.x, H / 2, center.z));
-    camera.position.set(center.x + r, H + r * 0.9, center.z + r);
+    // near/far는 keepCamera여도 갱신 -- 카메라 위치는 그대로 두되, 모델 크기가 크게 바뀌었을 때
+    // (예: 채팅으로 벽을 몇 미터씩 늘림) 새 지오메트리가 far 평면 밖으로 잘려 보이는 것만 방지.
     camera.near = r / 100; camera.far = r * 50; camera.updateProjectionMatrix();
-    savedCamPos.copy(camera.position);
-    savedCamTarget.copy(controls.target);
+    if (!keepCamera) {
+      controls.target.copy(new THREE.Vector3(center.x, H / 2, center.z));
+      camera.position.set(center.x + r, H + r * 0.9, center.z + r);
+      savedCamPos.copy(camera.position);
+      savedCamTarget.copy(controls.target);
+    }
   } else {
     document.getElementById('dims').textContent = '—';
   }
@@ -1481,7 +1490,7 @@ chatUndoBtn.addEventListener('click', () => {
   try {
     const data = JSON.parse(prev.walls);
     jsonBox.value = prev.walls;
-    const n = buildModel(data);
+    const n = buildModel(data, true); // keepCamera: 되돌리기는 같은 건물이라 보던 각도 유지
     rebuildFurnitureFromList(prev.furniture);
     status(`이전 상태로 되돌렸습니다. (벽 ${n}개)`, 'ok');
   } catch { status('되돌리기 실패: 저장된 상태가 손상됨', 'err'); }
@@ -1496,7 +1505,7 @@ chatRedoBtn.addEventListener('click', () => {
   try {
     const data = JSON.parse(next.walls);
     jsonBox.value = next.walls;
-    const n = buildModel(data);
+    const n = buildModel(data, true); // keepCamera: 다시하기도 같은 건물이라 보던 각도 유지
     rebuildFurnitureFromList(next.furniture);
     status(`다시 실행했습니다. (벽 ${n}개)`, 'ok');
   } catch { status('다시하기 실패: 저장된 상태가 손상됨', 'err'); }
@@ -2453,7 +2462,7 @@ async function sendChat() {
     addUsage(res);
     const data = await res.json();
     pushUndo();
-    const n = buildModel(data);
+    const n = buildModel(data, true); // keepCamera: 채팅 수정은 같은 건물을 조금 고친 것 -- 보던 각도 유지
     if (Array.isArray(data.furniture)) rebuildFurnitureFromList(data.furniture);
     jsonBox.value = JSON.stringify(data, null, 2);
     typing.setText((data.notes ? data.notes : `수정 완료`) + ` (벽 ${n}개${usage})`);
