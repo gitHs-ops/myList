@@ -529,7 +529,7 @@
         </div>
       </div>
       <div class="vp-bar furniture-bar">
-        <button id="furnitureModeToggle" class="dim-btn" title="배치·드래그로 옮긴 가구는 선택 상태가 되어 Shift+화살표로 10mm씩 미세 이동할 수 있습니다">🛋️ 가구 배치 모드 (드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</button>
+        <button id="furnitureModeToggle" class="dim-btn" title="배치·드래그로 옮긴 가구는 선택 상태가 되어 Shift+화살표로 10mm씩 미세 이동, 앞에 나타나는 파란 손잡이를 드래그하면 90도씩 회전할 수 있습니다">🛋️ 가구 배치 모드 (드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</button>
         <div class="vp-right">
           <select id="furnitureSelect" class="sample-select">
             <option value="" selected>가구 선택…</option>
@@ -805,6 +805,9 @@ const furnitureEdgeMat = new THREE.LineBasicMaterial({ color: 0x5c4326 });
 // Shift+화살표 미세 이동 대상으로 선택된 가구 하나에만 잠깐 씌우는 강조용 테두리 -- 공용
 // 머티리얼이라 dispose() 대상이 아님(furnitureEdgeMat과 동일하게 개별 가구 제거 시 지우지 않음).
 const furnitureSelectedEdgeMat = new THREE.LineBasicMaterial({ color: 0xffcc00 });
+// 회전 핸들(선택된 가구 앞쪽에만 보이는 파란 손잡이) 전용 색 -- 가구 본체(나무색)·선택 테두리(노란색)와
+// 겹치지 않는 선명한 파란색으로 "이건 다른 동작(회전)을 한다"는 걸 구분되게 한다.
+const furnitureRotateHandleMat = new THREE.MeshStandardMaterial({ color: 0x2f8fe0, emissive: 0x143a57, emissiveIntensity: 0.5 });
 
 function addEdges(mesh, group) {
   const e = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat);
@@ -1877,12 +1880,32 @@ function collidesWithFurniture(excludeItem, x, z, halfW, halfD) {
   for (const other of furnitureGroup.children) {
     if (other === excludeItem) continue;
     if (!other.userData.width) continue;
-    const oHalfW = other.userData.width / 2, oHalfD = other.userData.depth / 2;
+    const { halfW: oHalfW, halfD: oHalfD } = furnitureHalfExtents(other);
     if (Math.abs(x - other.position.x) < halfW + oHalfW && Math.abs(z - other.position.z) < halfD + oHalfD) {
       return true;
     }
   }
   return false;
+}
+
+// 회전(rotationY, 90도 단위)이 90/270이면 가구의 실제 바닥 점유 폭·깊이가 서로 뒤바뀐다 --
+// 벽/충돌 판정은 항상 이 함수로 얻은 값을 써야 회전된 가구의 실제 영역과 어긋나지 않는다.
+// 45도 등 임의각은 지원하지 않으므로(아래 회전 핸들이 항상 90도 단위로만 스냅) 축에 나란한
+// 사각형(AABB) 그대로 유지되고, 폭·깊이를 맞바꾸는 것만으로 충돌 판정이 정확하다.
+function furnitureHalfExtents(item) {
+  const rot = ((item.userData.rotationY || 0) % 360 + 360) % 360;
+  const swapped = rot === 90 || rot === 270;
+  const halfW = (swapped ? item.userData.depth : item.userData.width) / 2;
+  const halfD = (swapped ? item.userData.width : item.userData.depth) / 2;
+  return { halfW, halfD };
+}
+
+// 가구 중심 -> 목표 지점(dx,dz는 그 차) 방향을 90도 단위로 스냅한 각도(도, 0~359)로 바꾼다.
+// atan2(dx, dz) 순서인 이유: THREE.js의 rotation.y 컨벤션상 로컬 +Z의 점이 회전각 θ에서 월드
+// (sinθ, cosθ) 방향으로 이동하므로, 그 역산도 atan2(dx, dz)여야 한다(atan2(dz, dx)이면 90도 어긋남).
+function snapRotationDeg(dx, dz) {
+  const deg = Math.round(Math.atan2(dx, dz) * 180 / Math.PI / 90) * 90;
+  return ((deg % 360) + 360) % 360;
 }
 
 // 가구 항목 하나를 실제 절대 치수(mm)로 만들어 furnitureGroup에 추가한다. 배치(스키마
@@ -1896,7 +1919,7 @@ let furnitureIdSeq = 0;
 // 부터 뒤쪽 끝(depth)까지 -- 그래서 낮은 단일수록 뒤쪽 단들 밑을 전부 떠받치는 통짜 블록이
 // 되고, 옆에서 보면 계단 모양 실루엣이 나온다. 전체 폭·깊이·높이(바운딩박스)는 변하지 않아
 // 충돌·벽 판정·드래그·Shift+화살표 이동 로직은 손댈 필요가 없다.
-function spawnFurnitureItem(type, x, z, width, depth, height) {
+function spawnFurnitureItem(type, x, z, width, depth, height, rotationY = 0) {
   const base = FURNITURE_TYPES[type];
   if (!base) return null;
   const steps = base.steps || 1;
@@ -1923,13 +1946,24 @@ function spawnFurnitureItem(type, x, z, width, depth, height) {
   label.position.y = height + labelH * 0.6; // 가구 상단(전체 높이) 바로 위, 고정 간격
   item.add(label);
 
+  // 회전 핸들: 항목 앞쪽(로컬 +Z, 발목 높이)에 튀어나온 작은 파란 구 -- 선택됐을 때만 보이고
+  // (selectFurnitureItem/deselectFurniture가 visible을 토글) 마우스로 드래그하면 90도 단위로
+  // 회전한다. item(Group)의 자식이라 item.rotation.y가 바뀌면 항상 "현재 앞쪽"에 같이 따라간다.
+  const rotateHandle = new THREE.Mesh(new THREE.SphereGeometry(90, 12, 8), furnitureRotateHandleMat);
+  rotateHandle.position.set(0, 150, depth / 2 + 180);
+  rotateHandle.visible = false;
+  item.add(rotateHandle);
+
   item.position.set(x, 0, z); // 바닥 높이(y=0)에 둠 -- 각 단은 자기 높이만큼만 로컬로 떠 있음
+  item.rotation.y = rotationY * Math.PI / 180;
   item.userData.id = `f${++furnitureIdSeq}`;
   item.userData.type = type;
   item.userData.width = width;
   item.userData.depth = depth;
   item.userData.height = height; // 드래그 이동·충돌 판정이 항상 이 실제 크기를 쓰도록
+  item.userData.rotationY = rotationY; // 0/90/180/270 (도) -- furnitureHalfExtents가 폭·깊이 맞바꿈 여부 판단에 씀
   item.userData.edges = edgesList; // Shift+화살표로 선택된 가구를 강조 표시할 때 다시 찾지 않고 바로 씀
+  item.userData.rotateHandle = rotateHandle;
   furnitureGroup.add(item);
   return item;
 }
@@ -1951,7 +1985,8 @@ function furnitureStateForApi() {
     z: Math.round(item.position.z),
     width: Math.round(item.userData.width),
     depth: Math.round(item.userData.depth),
-    height: Math.round(item.userData.height)
+    height: Math.round(item.userData.height),
+    rotationY: item.userData.rotationY || 0 // 채팅 편집은 이 값을 절대 바꾸지 않고 그대로 echo해야 함(서버 프롬프트에 명시)
   }));
 }
 
@@ -1967,7 +2002,11 @@ function rebuildFurnitureFromList(list) {
     if (!it || !FURNITURE_TYPES[it.type]) return;
     const w = Number(it.width), d = Number(it.depth), h = Number(it.height);
     if (!(w > 0 && d > 0 && h > 0)) return;
-    const item = spawnFurnitureItem(it.type, Number(it.x) || 0, Number(it.z) || 0, w, d, h);
+    // rotationY는 항상 90도 단위(0/90/180/270)로 스냅 -- 필드가 없던 예전 저장 프로젝트/
+    // 서버 응답(누락 시 0)도 안전하게 처리.
+    let rot = Math.round((Number(it.rotationY) || 0) / 90) * 90;
+    rot = ((rot % 360) + 360) % 360;
+    const item = spawnFurnitureItem(it.type, Number(it.x) || 0, Number(it.z) || 0, w, d, h, rot);
     if (item && it.id) item.userData.id = String(it.id); // 서버가 돌려준 id를 그대로 유지(왕복 안정성)
   });
 }
@@ -1990,12 +2029,27 @@ function pickFurnitureAt(clientX, clientY) {
   return obj.parent === furnitureGroup ? obj : null;
 }
 
+// 지금 선택된 가구의 회전 핸들(파란 구)만 별도로 히트테스트한다 -- pickFurnitureAt보다 먼저
+// 검사해야, 핸들을 클릭했을 때 "가구 본체를 잡았다"(이동/제거)로 오인식되지 않는다.
+function pickRotateHandleAt(clientX, clientY) {
+  if (!selectedFurnitureItem || !selectedFurnitureItem.userData.rotateHandle) return false;
+  const rect = canvas.getBoundingClientRect();
+  const ndc = new THREE.Vector2(
+    ((clientX - rect.left) / rect.width) * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1
+  );
+  furnRaycaster.setFromCamera(ndc, camera);
+  return furnRaycaster.intersectObject(selectedFurnitureItem.userData.rotateHandle, false).length > 0;
+}
+
 // fpDownPos(1인칭 이동)와 별개의 좌표 추적 -- 두 모드는 상호배타적이지만(enter/exitFurnitureMode로 보장)
 // 판정 방식(포인터다운/업 거리차)은 동일하게 재사용: OrbitControls 드래그 캡처로 인한
 // 캔버스 밖 드래그 종료 시 click 오인식 문제를 여기서도 똑같이 피해야 함.
 let furnDownPos = null;
 let draggingItem = null;  // 포인터다운에서 잡은 기존 가구(item Group) -- 그대로면 클릭(제거), 움직이면 드래그(이동)
 let dragStartPos = null;  // 드래그 시작 위치 -- 벽 밖으로 놓으면 여기로 되돌림
+let rotatingItem = null;       // 회전 핸들을 잡고 드래그 중인 가구 -- draggingItem과 배타적(둘 다 같은 시점에 서지 않음)
+let dragStartRotationY = 0;    // 회전 시작 각도(도) -- 벽/충돌로 막히면 여기로 되돌림
 
 // 마우스 드래그는 큰 단위 이동엔 좋지만 정확한 위치 맞추기(미세조정)엔 부정확하다 --
 // 배치/드래그로 마지막으로 손댄 가구 하나를 "선택 상태"로 기억해 Shift+화살표로 10mm씩
@@ -2003,17 +2057,27 @@ let dragStartPos = null;  // 드래그 시작 위치 -- 벽 밖으로 놓으면 
 let selectedFurnitureItem = null;
 function selectFurnitureItem(item) {
   // userData.edges는 항상 배열(계단처럼 단이 여러 개면 그만큼, 그 외엔 1개) -- 전부 같이 강조/원복.
-  if (selectedFurnitureItem && selectedFurnitureItem !== item && selectedFurnitureItem.userData.edges) {
-    selectedFurnitureItem.userData.edges.forEach(e => { e.material = furnitureEdgeMat; });
+  if (selectedFurnitureItem && selectedFurnitureItem !== item) {
+    if (selectedFurnitureItem.userData.edges) selectedFurnitureItem.userData.edges.forEach(e => { e.material = furnitureEdgeMat; });
+    if (selectedFurnitureItem.userData.rotateHandle) selectedFurnitureItem.userData.rotateHandle.visible = false;
   }
   selectedFurnitureItem = item;
   if (item && item.userData.edges) item.userData.edges.forEach(e => { e.material = furnitureSelectedEdgeMat; });
+  if (item && item.userData.rotateHandle) item.userData.rotateHandle.visible = true; // 선택된 항목만 회전 핸들이 보임
 }
 function deselectFurniture() { selectFurnitureItem(null); }
 
 canvas.addEventListener('pointerdown', (e) => {
   if (firstPerson || !furnitureModeOn) return;
   furnDownPos = { x: e.clientX, y: e.clientY };
+  // 회전 핸들 히트테스트가 먼저다 -- 선택된 가구를 잡아 이동시키는 것과 핸들을 잡아 돌리는 것은
+  // 서로 다른 제스처라 동시에 성립할 수 없다.
+  if (pickRotateHandleAt(e.clientX, e.clientY)) {
+    rotatingItem = selectedFurnitureItem;
+    dragStartRotationY = rotatingItem.userData.rotationY || 0;
+    controls.enabled = false; // 회전 중엔 OrbitControls 대신 핸들이 커서를 따라가야 함
+    return;
+  }
   const hit = pickFurnitureAt(e.clientX, e.clientY);
   if (hit) {
     draggingItem = hit;
@@ -2022,6 +2086,17 @@ canvas.addEventListener('pointerdown', (e) => {
   }
 });
 canvas.addEventListener('pointermove', (e) => {
+  if (rotatingItem) {
+    const pt = fpGroundPoint(e.clientX, e.clientY);
+    if (!pt) return;
+    // 가구 중심 -> 마우스가 가리키는 바닥 지점의 방향을 90도 단위로 스냅해 그대로 회전값으로 삼는다
+    // (연속 각도를 허용하지 않는 이유는 furnitureHalfExtents가 AABB 폭·깊이 맞바꿈만 지원해서다).
+    const dx = pt.x - rotatingItem.position.x, dz = pt.z - rotatingItem.position.z;
+    const deg = snapRotationDeg(dx, dz);
+    rotatingItem.rotation.y = deg * Math.PI / 180;
+    rotatingItem.userData.rotationY = deg;
+    return;
+  }
   if (!draggingItem) return;
   const pt = fpGroundPoint(e.clientX, e.clientY);
   if (!pt) return;
@@ -2030,6 +2105,12 @@ canvas.addEventListener('pointermove', (e) => {
 });
 canvas.addEventListener('pointercancel', () => {
   furnDownPos = null;
+  if (rotatingItem) {
+    rotatingItem.rotation.y = dragStartRotationY * Math.PI / 180;
+    rotatingItem.userData.rotationY = dragStartRotationY;
+    controls.enabled = true;
+    rotatingItem = null;
+  }
   if (draggingItem) {
     draggingItem.position.copy(dragStartPos);
     controls.enabled = true;
@@ -2057,6 +2138,26 @@ canvas.addEventListener('pointerup', (e) => {
   const moved = Math.hypot(e.clientX - furnDownPos.x, e.clientY - furnDownPos.y);
   furnDownPos = null;
 
+  if (rotatingItem) {
+    const item = rotatingItem;
+    controls.enabled = true;
+    rotatingItem = null;
+    if (item.userData.rotationY === dragStartRotationY) return; // 핸들을 클릭만 하고 안 돌렸음 -- 조용히 무시
+    // 드래그 이동(pointerup)과 같은 벽/충돌 판정 -- 회전으로 폭·깊이가 맞바뀌었을 수 있어(90/270도)
+    // furnitureHalfExtents로 지금 각도 기준 실제 점유 영역을 다시 구해야 한다.
+    const { halfW, halfD } = furnitureHalfExtents(item);
+    const insideOk = isInsideBuilding(item.position.x, item.position.z, halfW, halfD);
+    const collideBad = insideOk && collidesWithFurniture(item, item.position.x, item.position.z, halfW, halfD);
+    if (insideOk && !collideBad) {
+      status('가구를 회전했습니다.', 'ok');
+    } else {
+      item.rotation.y = dragStartRotationY * Math.PI / 180;
+      item.userData.rotationY = dragStartRotationY;
+      status(`${insideOk ? '다른 가구' : '벽'}에 가로막혀 회전하지 못해 원래 방향으로 되돌렸습니다.`, 'err');
+    }
+    return;
+  }
+
   // 이미 놓인 가구를 잡고 시작한 제스처는 항상 그 가구가 대상이다(armed 여부와 무관) --
   // 거의 안 움직였으면 클릭(제거), 충분히 움직였으면 드래그(이동)로 본다.
   if (draggingItem) {
@@ -2082,10 +2183,11 @@ canvas.addEventListener('pointerup', (e) => {
     // 드래그(이동 시도)는 결과가 벽/충돌로 되돌려지더라도 "이 가구를 만졌다"는 의도이므로
     // 선택 상태로 삼는다 -- 잡았다 그 자리에 놓아도(허용 범위 안이면) 선택만 하는 용도로 쓸 수 있다.
     selectFurnitureItem(item);
-    // 배치 당시 적용된(배율 반영) 실제 치수 -- FURNITURE_TYPES 기본값이 아니라 이걸 써야
-    // 크기를 조정해 놓은 가구도 이동 시 자기 실제 크기 기준으로 판정된다.
-    const halfW = item.userData.width / 2, halfD = item.userData.depth / 2;
     if (!item.userData.width) { item.position.copy(startPos); return; }
+    // 배치 당시 적용된(배율 반영) 실제 치수 -- FURNITURE_TYPES 기본값이 아니라 이걸 써야
+    // 크기를 조정해 놓은 가구도 이동 시 자기 실제 크기 기준으로 판정된다. 회전(90/270도)됐으면
+    // furnitureHalfExtents가 폭·깊이를 맞바꿔 돌려준다.
+    const { halfW, halfD } = furnitureHalfExtents(item);
     const targetX = item.position.x, targetZ = item.position.z;
     const insideOk = isInsideBuilding(targetX, targetZ, halfW, halfD);
     const collideBad = insideOk && collidesWithFurniture(item, targetX, targetZ, halfW, halfD);
@@ -2134,7 +2236,7 @@ const FURNITURE_NUDGE_DELTA = {
 function tryNudgeFurniture(item, dx, dz) {
   const x = item.position.x + dx * FURNITURE_NUDGE_STEP;
   const z = item.position.z + dz * FURNITURE_NUDGE_STEP;
-  const halfW = item.userData.width / 2, halfD = item.userData.depth / 2;
+  const { halfW, halfD } = furnitureHalfExtents(item);
   if (!isInsideBuilding(x, z, halfW, halfD)) {
     status('벽 안쪽으로만 옮길 수 있어 이동하지 못했습니다.', 'err');
     return false;
