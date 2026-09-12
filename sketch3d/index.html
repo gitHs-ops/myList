@@ -2028,6 +2028,21 @@ canvas.addEventListener('pointercancel', () => {
     dragStartPos = null;
   }
 });
+// 드래그 놓은 자리가 막혀 있으면(벽 밖/다른 가구와 충돌) 예전엔 시작 위치로 전부 되돌렸다 --
+// 대신 시작 위치(항상 유효함이 보장됨)에서 그 자리 방향으로 이분탐색해 실제로 갈 수 있는
+// 가장 먼 지점까지만 이동한다(Shift+화살표가 10mm씩 막힐 때까지 가는 것과 같은 느낌).
+function closestReachablePosition(item, startPos, targetX, targetZ, halfW, halfD) {
+  const valid = (x, z) => isInsideBuilding(x, z, halfW, halfD) && !collidesWithFurniture(item, x, z, halfW, halfD);
+  if (valid(targetX, targetZ)) return { x: targetX, z: targetZ };
+  let loT = 0, hiT = 1; // t=0: startPos(항상 유효), t=1: 목표 지점(막힘) -- loT를 유효한 쪽 경계로 좁혀간다
+  for (let i = 0; i < 24; i++) {
+    const midT = (loT + hiT) / 2;
+    const x = startPos.x + (targetX - startPos.x) * midT;
+    const z = startPos.z + (targetZ - startPos.z) * midT;
+    if (valid(x, z)) loT = midT; else hiT = midT;
+  }
+  return { x: startPos.x + (targetX - startPos.x) * loT, z: startPos.z + (targetZ - startPos.z) * loT };
+}
 canvas.addEventListener('pointerup', (e) => {
   if (firstPerson || !furnDownPos) return;
   const moved = Math.hypot(e.clientX - furnDownPos.x, e.clientY - furnDownPos.y);
@@ -2062,14 +2077,17 @@ canvas.addEventListener('pointerup', (e) => {
     // 크기를 조정해 놓은 가구도 이동 시 자기 실제 크기 기준으로 판정된다.
     const halfW = item.userData.width / 2, halfD = item.userData.depth / 2;
     if (!item.userData.width) { item.position.copy(startPos); return; }
-    if (!isInsideBuilding(item.position.x, item.position.z, halfW, halfD)) {
-      item.position.copy(startPos);
-      status('벽 안쪽으로만 옮길 수 있어 원래 자리로 되돌렸습니다.', 'err');
-    } else if (collidesWithFurniture(item, item.position.x, item.position.z, halfW, halfD)) {
-      item.position.copy(startPos);
-      status('다른 가구와 부딪혀 원래 자리로 되돌렸습니다.', 'err');
-    } else {
+    const targetX = item.position.x, targetZ = item.position.z;
+    const insideOk = isInsideBuilding(targetX, targetZ, halfW, halfD);
+    const collideBad = insideOk && collidesWithFurniture(item, targetX, targetZ, halfW, halfD);
+    if (insideOk && !collideBad) {
       status('가구를 옮겼습니다.', 'ok');
+    } else {
+      // 시작 위치로 전부 되돌리는 대신, 막힌 지점 바로 앞(갈 수 있는 가장 먼 곳)까지만 이동.
+      const near = closestReachablePosition(item, startPos, targetX, targetZ, halfW, halfD);
+      item.position.x = near.x;
+      item.position.z = near.z;
+      status(`${insideOk ? '다른 가구' : '벽'}에 가로막혀 갈 수 있는 데까지만 이동했습니다.`, 'err');
     }
     return;
   }
