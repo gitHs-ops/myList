@@ -679,8 +679,8 @@ const FURNITURE_TYPES = {
   table:     { label: '식탁',       icon: '🍽️', width: 1200, depth: 800,  height: 750 },
   desk:      { label: '사무용탁자', icon: '🖥️', width: 1200, depth: 600,  height: 720 },
   fridge:    { label: '냉장고',     icon: '🧊', width: 800,  depth: 750,  height: 1750 },
-  stairs3:   { label: '3단계단',    icon: '🪜', width: 500,  depth: 600,  height: 900 },
-  stairs6:   { label: '6단계단',    icon: '🪜', width: 500,  depth: 600,  height: 1500 }
+  stairs3:   { label: '3단계단',    icon: '🪜', width: 500,  depth: 600,  height: 900,  steps: 3 },
+  stairs6:   { label: '6단계단',    icon: '🪜', width: 500,  depth: 600,  height: 1500, steps: 6 }
 };
 
 /* ---------- three.js scene ---------- */
@@ -1882,28 +1882,45 @@ function collidesWithFurniture(excludeItem, x, z, halfW, halfD) {
 // 항상 일치한다.
 // id: 채팅 크기수정 왕복(서버로 보내고 다시 받음) 시 어떤 항목인지 추적하기 위한 안정적 식별자.
 let furnitureIdSeq = 0;
+// 육면체 1개(steps 없음) 또는 계단(steps=N)이면 N개의 박스를 층층이 쌓아 실제 계단 옆모습을
+// 만든다. i번째 단(1=제일 낮은/앞쪽)은 높이 height*i/steps, 깊이는 앞쪽 끝 (i-1)*depth/steps
+// 부터 뒤쪽 끝(depth)까지 -- 그래서 낮은 단일수록 뒤쪽 단들 밑을 전부 떠받치는 통짜 블록이
+// 되고, 옆에서 보면 계단 모양 실루엣이 나온다. 전체 폭·깊이·높이(바운딩박스)는 변하지 않아
+// 충돌·벽 판정·드래그·Shift+화살표 이동 로직은 손댈 필요가 없다.
 function spawnFurnitureItem(type, x, z, width, depth, height) {
   const base = FURNITURE_TYPES[type];
   if (!base) return null;
-  const geo = new THREE.BoxGeometry(width, height, depth);
-  const mesh = new THREE.Mesh(geo, furnitureMat);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), furnitureEdgeMat);
+  const steps = base.steps || 1;
+
+  const item = new THREE.Group();
+  const edgesList = []; // 여러 단(段)을 한꺼번에 강조 표시할 수 있도록 배열로 관리
+  for (let i = 1; i <= steps; i++) {
+    const stepH = height * i / steps;
+    const frontZ = -depth / 2 + (i - 1) * depth / steps, backZ = depth / 2;
+    const stepD = backZ - frontZ;
+    const geo = new THREE.BoxGeometry(width, stepH, stepD);
+    const mesh = new THREE.Mesh(geo, furnitureMat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.position.set(0, stepH / 2, (frontZ + backZ) / 2);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), furnitureEdgeMat);
+    edges.position.copy(mesh.position);
+    item.add(mesh, edges);
+    edgesList.push(edges);
+  }
 
   const labelH = 220; // 가구 종류(높이)와 무관하게 이름표 글자 크기는 고정
   const label = makeLabel(base.label, labelH, 'rgba(92,67,38,0.94)');
-  label.position.y = height / 2 + labelH * 0.6; // 가구 상단 바로 위, 고정 간격
+  label.position.y = height + labelH * 0.6; // 가구 상단(전체 높이) 바로 위, 고정 간격
+  item.add(label);
 
-  const item = new THREE.Group();
-  item.add(mesh, edges, label);
-  item.position.set(x, height / 2, z);
+  item.position.set(x, 0, z); // 바닥 높이(y=0)에 둠 -- 각 단은 자기 높이만큼만 로컬로 떠 있음
   item.userData.id = `f${++furnitureIdSeq}`;
   item.userData.type = type;
   item.userData.width = width;
   item.userData.depth = depth;
   item.userData.height = height; // 드래그 이동·충돌 판정이 항상 이 실제 크기를 쓰도록
-  item.userData.edges = edges; // Shift+화살표로 선택된 가구를 강조 표시할 때 다시 찾지 않고 바로 씀
+  item.userData.edges = edgesList; // Shift+화살표로 선택된 가구를 강조 표시할 때 다시 찾지 않고 바로 씀
   furnitureGroup.add(item);
   return item;
 }
@@ -1957,8 +1974,9 @@ function pickFurnitureAt(clientX, clientY) {
   const hits = furnRaycaster.intersectObjects(furnitureGroup.children, true);
   if (!hits.length) return null;
   let obj = hits[0].object;
-  // 가구 아이템 구조는 항상 2단(item Group -> mesh/edges/label)이라 실제로는 1회면 충분하지만,
-  // 조상 체인이 furnitureGroup에 닿지 못하는 예외적인 경우에도 무한루프가 되지 않도록 상한을 둔다.
+  // 가구 아이템 구조는 항상 2단(item Group -> mesh/edges 여러 쌍(계단 등) + label)이라
+  // 실제로는 1회면 충분하지만, 조상 체인이 furnitureGroup에 닿지 못하는 예외적인 경우에도
+  // 무한루프가 되지 않도록 상한을 둔다.
   for (let i = 0; i < 20 && obj.parent && obj.parent !== furnitureGroup; i++) obj = obj.parent;
   return obj.parent === furnitureGroup ? obj : null;
 }
@@ -1975,11 +1993,12 @@ let dragStartPos = null;  // 드래그 시작 위치 -- 벽 밖으로 놓으면 
 // 더 정밀하게 옮길 수 있게 한다. 테두리 색을 바꿔 지금 뭐가 선택돼 있는지 보이게 함.
 let selectedFurnitureItem = null;
 function selectFurnitureItem(item) {
+  // userData.edges는 항상 배열(계단처럼 단이 여러 개면 그만큼, 그 외엔 1개) -- 전부 같이 강조/원복.
   if (selectedFurnitureItem && selectedFurnitureItem !== item && selectedFurnitureItem.userData.edges) {
-    selectedFurnitureItem.userData.edges.material = furnitureEdgeMat;
+    selectedFurnitureItem.userData.edges.forEach(e => { e.material = furnitureEdgeMat; });
   }
   selectedFurnitureItem = item;
-  if (item && item.userData.edges) item.userData.edges.material = furnitureSelectedEdgeMat;
+  if (item && item.userData.edges) item.userData.edges.forEach(e => { e.material = furnitureSelectedEdgeMat; });
 }
 function deselectFurniture() { selectFurnitureItem(null); }
 
