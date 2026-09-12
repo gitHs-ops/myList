@@ -198,7 +198,7 @@ const FURNITURE_ITEM_SCHEMA = {
   required: ['id', 'type', 'x', 'z', 'width', 'depth', 'height'],
   properties: {
     id: { type: 'string' },     // 클라이언트가 배치 시 부여한 안정적 식별자 — 그대로 돌려줄 것
-    type: { type: 'string', enum: ['sink', 'bed', 'bedSingle', 'sofa', 'table', 'desk', 'fridge'] },
+    type: { type: 'string', enum: ['sink', 'bed', 'bedSingle', 'sofa', 'table', 'desk', 'fridge', 'stairs3', 'stairs6'] },
     x: { type: 'number' }, z: { type: 'number' },              // 배치 좌표(벽과 같은 좌표계) — 그대로 유지
     width: { type: 'number' }, depth: { type: 'number' }, height: { type: 'number' }  // mm, 실제 적용 치수
   }
@@ -231,7 +231,7 @@ const EDIT_SYSTEM = `당신은 건축 벽체 평면 JSON을 사용자의 한국�
     클릭해서 하는 별도 기능입니다.
   · "가로"=width, "세로"나 "깊이"=depth, "높이"=height 로 해석합니다. "~로/~으로"는 절대값 지정(예: "가로
     1000으로"→width:1000), "~늘려/~줄여"는 현재 값 기준 가감(예: "가로 100 늘려"→width: 기존값+100)입니다.
-  · type(예: "싱크대"→sink, "소파"→sofa)으로 대상을 찾습니다. 같은 type이 여러 개 배치돼 있고 지시가 어느
+  · type(예: "싱크대"→sink, "소파"→sofa, "3단계단"→stairs3, "6단계단"→stairs6)으로 대상을 찾습니다. 같은 type이 여러 개 배치돼 있고 지시가 어느
     것인지 특정하지 않으면(위치 등으로) 해당 type 전부에 같은 값을 적용하고, 그렇게 처리했음을 notes에
     남깁니다. 지시에 해당하는 type이 furniture 배열에 하나도 없으면 배열은 그대로 두고 notes에 "현재
     배치된 항목이 없어 반영하지 못했습니다"라고 남깁니다.
