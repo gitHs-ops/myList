@@ -2045,6 +2045,25 @@ function pickRotateHandleAt(clientX, clientY) {
   return furnRaycaster.intersectObject(selectedFurnitureItem.userData.rotateHandle, false).length > 0;
 }
 
+// 회전 핸들에 커서를 올리면 상태 표시줄에 잠깐 "회전"이라고 띄우고, 벗어나면 그 전 표시로
+// 되돌린다 -- 드래그·회전 중이 아닐 때 pointermove에서 매 프레임 호출되므로, hovering이
+// 실제로 바뀔 때만(호버 시작/종료 1회씩) 상태를 건드려야 한다(안 그러면 매 프레임 덮어써
+// 그 전 표시를 저장할 기회 자체가 사라진다).
+let hoveringRotateHandle = false;
+let statusBeforeHover = null;
+function setRotateHandleHover(hovering) {
+  if (hovering === hoveringRotateHandle) return;
+  hoveringRotateHandle = hovering;
+  if (hovering) {
+    statusBeforeHover = { html: statusEl.innerHTML, className: statusEl.className };
+    status('회전', 'info');
+  } else if (statusBeforeHover) {
+    statusEl.innerHTML = statusBeforeHover.html;
+    statusEl.className = statusBeforeHover.className;
+    statusBeforeHover = null;
+  }
+}
+
 // fpDownPos(1인칭 이동)와 별개의 좌표 추적 -- 두 모드는 상호배타적이지만(enter/exitFurnitureMode로 보장)
 // 판정 방식(포인터다운/업 거리차)은 동일하게 재사용: OrbitControls 드래그 캡처로 인한
 // 캔버스 밖 드래그 종료 시 click 오인식 문제를 여기서도 똑같이 피해야 함.
@@ -2079,6 +2098,10 @@ canvas.addEventListener('pointerdown', (e) => {
     rotatingItem = selectedFurnitureItem;
     dragStartRotationY = rotatingItem.userData.rotationY || 0;
     controls.enabled = false; // 회전 중엔 OrbitControls 대신 핸들이 커서를 따라가야 함
+    // 지금부터 pointerup이 실제 결과 메시지를 status()로 띄운다 -- 호버 상태를 리셋해둬야
+    // 나중에 손을 떼고도 핸들 위에 그대로 있을 때, 그 결과 메시지를 옛 스냅샷으로 덮어쓰지 않는다.
+    hoveringRotateHandle = false;
+    statusBeforeHover = null;
     return;
   }
   const hit = pickFurnitureAt(e.clientX, e.clientY);
@@ -2100,12 +2123,16 @@ canvas.addEventListener('pointermove', (e) => {
     rotatingItem.userData.rotationY = deg;
     return;
   }
-  if (!draggingItem) return;
-  const pt = fpGroundPoint(e.clientX, e.clientY);
-  if (!pt) return;
-  draggingItem.position.x = pt.x;
-  draggingItem.position.z = pt.z;
+  if (draggingItem) {
+    const pt = fpGroundPoint(e.clientX, e.clientY);
+    if (!pt) return;
+    draggingItem.position.x = pt.x;
+    draggingItem.position.z = pt.z;
+    return;
+  }
+  if (furnitureModeOn) setRotateHandleHover(pickRotateHandleAt(e.clientX, e.clientY));
 });
+canvas.addEventListener('pointerleave', () => setRotateHandleHover(false)); // 캔버스 밖으로 나가면 더 이상 호버 중이 아님
 canvas.addEventListener('pointercancel', () => {
   furnDownPos = null;
   if (rotatingItem) {
