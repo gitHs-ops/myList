@@ -1325,6 +1325,7 @@ const jsonBox = document.getElementById('jsonBox');
 function loadIntoBoxAndBuild(data) {
   jsonBox.value = JSON.stringify(data, null, 2);
   const n = buildModel(data);
+  rebuildFurnitureFromList([]); // 샘플/부팅 시 새 건물을 세우는 것이므로 이전 가구 배치는 지운다(겹쳐 보이는 문제 방지)
   status(`${n}개 벽을 세웠습니다.`, 'ok');
 }
 
@@ -1332,6 +1333,7 @@ document.getElementById('btnBuild').addEventListener('click', () => {
   try {
     const data = JSON.parse(jsonBox.value);
     const n = buildModel(data);
+    rebuildFurnitureFromList([]); // JSON을 새로 적용하는 것이므로 이전 가구 배치는 지운다(겹쳐 보이는 문제 방지)
     if (n === 0) status('벽이 없습니다. walls 배열을 확인하세요.', 'err');
     else status(`${n}개 벽을 세웠습니다.`, 'ok');
   } catch (e) {
@@ -1580,6 +1582,7 @@ document.getElementById('btnExtract').addEventListener('click', async () => {
     const data = await res.json();
     pushUndo();
     const n = buildModel(data);
+    rebuildFurnitureFromList([]); // 새로 인식한 건물이므로 이전 가구 배치는 지운다(되돌리기로 복원 가능)
     jsonBox.value = JSON.stringify(data, null, 2);
     if (n === 0) status('벽을 찾지 못했습니다. 치수가 보이는 더 선명한 사진으로 다시 시도하세요.', 'err');
     else status(`인식 완료 — ${n}개 벽.${usage} ${data.notes ? '메모: ' + data.notes : ''}`, 'ok');
@@ -2503,6 +2506,11 @@ projectFileInput.addEventListener('change', () => {
       if (project.model) {
         jsonBox.value = JSON.stringify(project.model, null, 2);
         buildModel(project.model);
+        // 다른 건물을 불러오는 것이므로 이전 가구 배치는 지운다(안 그러면 새 건물과 겹쳐 보임).
+        // project.furniture는 현재 저장 포맷에 없어(btnSaveProject가 안 담음) 항상 빈 배열로
+        // 지워지지만, rebuildFurnitureFromList를 그대로 써서 나중에 저장 포맷이 가구를
+        // 포함하게 되어도 자동으로 복원되도록 해둔다.
+        rebuildFurnitureFromList(Array.isArray(project.furniture) ? project.furniture : []);
       }
       if (Array.isArray(project.chatHistory) && project.chatHistory.length) {
         chatHistory = [];
