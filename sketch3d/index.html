@@ -2469,6 +2469,7 @@ document.getElementById('btnSaveProject').addEventListener('click', () => {
   let model = null;
   try { model = JSON.parse(jsonBox.value); } catch { model = null; }
   const savedAt = new Date().toISOString();
+  const furniture = furnitureStateForApi(); // 배치된 가구도 프로젝트 파일에 같이 담아, 나중에 이 파일을 불러오면 그대로 복원되게 한다
   const project = {
     type: 'sketch3d-project',
     version: 1,
@@ -2477,6 +2478,7 @@ document.getElementById('btnSaveProject').addEventListener('click', () => {
     wallThickness: Number(document.getElementById('wallThickness').value) || 150,
     images,
     model,
+    furniture,
     scene: collectSceneState(),
     chatHistory
   };
@@ -2486,7 +2488,7 @@ document.getElementById('btnSaveProject').addEventListener('click', () => {
   a.href = URL.createObjectURL(blob);
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  status(`프로젝트를 저장했습니다. (이미지 ${images.length}장 · 벽 ${model?.walls?.length || 0}개)`, 'ok');
+  status(`프로젝트를 저장했습니다. (이미지 ${images.length}장 · 벽 ${model?.walls?.length || 0}개 · 가구 ${furniture.length}개)`, 'ok');
 });
 
 const projectFileInput = document.getElementById('projectFileInput');
@@ -2507,9 +2509,8 @@ projectFileInput.addEventListener('change', () => {
         jsonBox.value = JSON.stringify(project.model, null, 2);
         buildModel(project.model);
         // 다른 건물을 불러오는 것이므로 이전 가구 배치는 지운다(안 그러면 새 건물과 겹쳐 보임).
-        // project.furniture는 현재 저장 포맷에 없어(btnSaveProject가 안 담음) 항상 빈 배열로
-        // 지워지지만, rebuildFurnitureFromList를 그대로 써서 나중에 저장 포맷이 가구를
-        // 포함하게 되어도 자동으로 복원되도록 해둔다.
+        // project.furniture가 있으면(btnSaveProject가 저장해둔 값) 그걸로 복원하고, 없으면
+        // (가구 없이 저장된 옛 파일 등) 빈 배열로 지운다.
         rebuildFurnitureFromList(Array.isArray(project.furniture) ? project.furniture : []);
       }
       if (Array.isArray(project.chatHistory) && project.chatHistory.length) {
@@ -2520,7 +2521,7 @@ projectFileInput.addEventListener('change', () => {
         if (lastUser) chatInput.value = lastUser.text;   // 마지막 지시를 기본값으로 채워둠
       }
       syncToggleUI();
-      status(`프로젝트를 불러왔습니다. (이미지 ${images.length}장 · 벽 ${project.model?.walls?.length || 0}개)`, 'ok');
+      status(`프로젝트를 불러왔습니다. (이미지 ${images.length}장 · 벽 ${project.model?.walls?.length || 0}개 · 가구 ${Array.isArray(project.furniture) ? project.furniture.length : 0}개)`, 'ok');
     } catch (e) {
       status('프로젝트 파일을 읽을 수 없습니다: ' + e.message, 'err');
     }
