@@ -2056,7 +2056,7 @@ function setRotateHandleHover(hovering) {
   hoveringRotateHandle = hovering;
   if (hovering) {
     statusBeforeHover = { html: statusEl.innerHTML, className: statusEl.className };
-    status('회전', 'info');
+    status('90도 회전 가능', 'info');
   } else if (statusBeforeHover) {
     statusEl.innerHTML = statusBeforeHover.html;
     statusEl.className = statusBeforeHover.className;
