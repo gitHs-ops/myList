@@ -529,7 +529,7 @@
         </div>
       </div>
       <div class="vp-bar furniture-bar">
-        <button id="furnitureModeToggle" class="dim-btn" title="배치·드래그로 옮긴 가구는 선택 상태가 되어 Shift+화살표로 10mm씩 미세 이동, 앞에 나타나는 파란 손잡이를 드래그하면 90도씩 회전할 수 있습니다">🛋️ 가구 배치 모드 (드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</button>
+        <button id="furnitureModeToggle" class="dim-btn" title="배치·드래그로 옮긴 가구는 선택 상태가 되어 Shift+화살표로 10mm씩 미세 이동, 위쪽 모서리에 나타나는 파란 손잡이를 드래그하면 90도씩 회전할 수 있습니다">🛋️ 가구 배치 모드 (드롭다운에서 선택 후 바닥 클릭 · 배치된 가구 클릭 시 제거 · 드래그로 이동)</button>
         <div class="vp-right">
           <select id="furnitureSelect" class="sample-select">
             <option value="" selected>가구 선택…</option>
@@ -1946,11 +1946,14 @@ function spawnFurnitureItem(type, x, z, width, depth, height, rotationY = 0) {
   label.position.y = height + labelH * 0.6; // 가구 상단(전체 높이) 바로 위, 고정 간격
   item.add(label);
 
-  // 회전 핸들: 항목 앞쪽(로컬 +Z, 발목 높이)에 튀어나온 작은 파란 구 -- 선택됐을 때만 보이고
-  // (selectFurnitureItem/deselectFurniture가 visible을 토글) 마우스로 드래그하면 90도 단위로
-  // 회전한다. item(Group)의 자식이라 item.rotation.y가 바뀌면 항상 "현재 앞쪽"에 같이 따라간다.
+  // 회전 핸들: 항목의 앞쪽-오른쪽 위 모서리(로컬 +X, +Z, 맨 위) 바로 바깥에 튀어나온 작은
+  // 파란 구 -- 선택됐을 때만 보이고(selectFurnitureItem/deselectFurniture가 visible을 토글)
+  // 마우스로 드래그하면 90도 단위로 회전한다. item(Group)의 자식이라 item.rotation.y가
+  // 바뀌면 항상 "현재 그 모서리"에 같이 따라간다. 모서리 표면에 파묻히지 않도록 3축 모두
+  // 살짝(CORNER_GAP) 바깥으로 띄운다.
+  const CORNER_GAP = 60;
   const rotateHandle = new THREE.Mesh(new THREE.SphereGeometry(90, 12, 8), furnitureRotateHandleMat);
-  rotateHandle.position.set(0, 150, depth / 2 + 180);
+  rotateHandle.position.set(width / 2 + CORNER_GAP, height + CORNER_GAP, depth / 2 + CORNER_GAP);
   rotateHandle.visible = false;
   item.add(rotateHandle);
 
