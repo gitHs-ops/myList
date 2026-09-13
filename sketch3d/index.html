@@ -374,6 +374,34 @@
   .view-enlarge-dialog img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 10px; }
   .view-enlarge-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
+  /* 사용자 매뉴얼: 다른 help-dialog보다 훨씬 길어(전체 기능 안내) 폭을 넓히고 내부 스크롤을 둔다. */
+  .manual-dialog { max-width: 720px; max-height: 85vh; overflow-y: auto; text-align: left; }
+  .manual-dialog h3 { font-size: 17px; }
+  .manual-toc { display: flex; flex-wrap: wrap; gap: 6px 10px; list-style: none; margin: 0 0 18px; padding: 10px 12px; background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 12px; }
+  .manual-toc a { font-size: 12px; font-weight: 600; color: var(--accent-secondary); text-decoration: none; }
+  .manual-toc a:hover { text-decoration: underline; }
+  .manual-section { margin: 0 0 22px; scroll-margin-top: 8px; }
+  .manual-section:last-of-type { margin-bottom: 0; }
+  .manual-section h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 13.5px; font-weight: 800; color: var(--text-primary); }
+  .manual-num {
+    font-family: var(--font-accent); font-weight: 800; font-size: 11px; color: #fff;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    width: 19px; height: 19px; border-radius: 7px; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .manual-dialog p, .manual-dialog li { font-size: 12.5px; line-height: 1.65; color: var(--text-secondary); }
+  .manual-dialog p { margin: 0 0 8px; }
+  .manual-dialog ul { margin: 0 0 8px; padding-left: 18px; }
+  .manual-dialog li { margin-bottom: 5px; }
+  .manual-dialog li b, .manual-dialog p b { color: var(--text-primary); }
+  .manual-dialog code { font-size: 11.5px; }
+  .manual-table-wrap { overflow-x: auto; margin: 8px 0 10px; }
+  .manual-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+  .manual-table th, .manual-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--field-border); }
+  .manual-table th { color: var(--text-secondary); font-weight: 700; font-size: 11px; }
+  .manual-table td { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .manual-table td:not(:first-child) { font-family: var(--font-accent); }
+
   .chat-log {
     display: flex; flex-direction: column; gap: 8px;
     max-height: 260px; overflow-y: auto; padding: 4px 2px;
@@ -410,7 +438,7 @@
   <div id="statusToast" class="status-toast"></div>
   <header class="hero">
     <div class="hero-top">
-      <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입 <button id="btnIntroHelp" class="dim-btn intro-help-btn" title="소개">ⓘ</button></h1>
+      <h1><span class="accent">손그림 → 3D</span> 도면 프로토타입 <button id="btnIntroHelp" class="dim-btn intro-help-btn" title="소개">ⓘ</button> <button id="btnManualOpen" class="dim-btn intro-help-btn" title="사용법 전체 보기">📖 매뉴얼</button></h1>
       <div class="btn-row hero-actions">
         <button id="btnLoadProject" class="btn ghost">📂 불러오기</button>
         <button id="btnSaveProject" class="btn ghost">💾 저장</button>
@@ -431,6 +459,106 @@
       <h3>손그림 → 3D 도면 프로토타입 — 소개</h3>
       <p>치수가 적힌 손그림 스케치를 첨부하여 올리면 벽체를 분석하여 3D로 조합하여 표현합니다. 만약 비전 API 없을 경우엔 샘플 도면이나 JSON으로 도면 만들 수 있고 대화창으로 수정가능합니다.</p>
       <button id="btnIntroHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
+    </dialog>
+    <dialog id="manualDialog" class="help-dialog manual-dialog">
+      <h3>사용자 매뉴얼</h3>
+      <ul class="manual-toc">
+        <li><a href="#man-start">시작하기</a></li>
+        <li><a href="#man-view">3D 화면 다루기</a></li>
+        <li><a href="#man-furniture">가구 배치하기</a></li>
+        <li><a href="#man-chat">대화로 수정하기</a></li>
+        <li><a href="#man-save">저장·불러오기</a></li>
+        <li><a href="#man-permit">인허가용 도면 만들기</a></li>
+        <li><a href="#man-limits">알아두면 좋은 점</a></li>
+      </ul>
+
+      <section class="manual-section" id="man-start">
+        <h4><span class="manual-num">1</span>시작하기</h4>
+        <p>세 가지 방법 중 하나로 3D 벽체를 세웁니다.</p>
+        <ul>
+          <li>화면 위쪽 <b>"샘플로 테스트…"</b> 드롭다운 — 백엔드 없이 바로 확인</li>
+          <li><b>STEP 1 스케치 업로드</b> → <b>"비전 API로 벽 인식 → 3D"</b> — 치수가 적힌 손그림 사진을 올리면 벽 좌표를 자동 인식(백엔드 접속 필요, 아래 4번 참고)</li>
+          <li><b>STEP 3 벽 좌표 JSON</b>에 직접 입력 → <b>"이 JSON으로 3D 생성"</b></li>
+        </ul>
+        <p>어느 방법이든 <b>새 건물을 세우면 그때까지 배치해 둔 가구는 자동으로 지워집니다</b>(다른 건물과 겹쳐 보이는 것을 막기 위함). 남기고 싶은 배치가 있으면 먼저 <b>저장</b>하세요(아래 5번).</p>
+      </section>
+
+      <section class="manual-section" id="man-view">
+        <h4><span class="manual-num">2</span>3D 화면 다루기</h4>
+        <ul>
+          <li>드래그로 회전, 스크롤로 확대·축소(가구 배치 모드가 꺼져 있을 때)</li>
+          <li><b>🚶 1인칭 시점</b> — 바닥을 클릭하면 그 자리, 눈높이(1.6m)에서 둘러봅니다. 드래그로 시선 회전, 바닥을 다시 클릭하면 그 자리로 이동. 가구 배치 모드와는 동시에 켤 수 없습니다.</li>
+          <li><b>그림자</b> 버튼 / <b>☀ 시간대</b> 슬라이더 — 시간대별 태양 위치·그림자를 확인합니다.</li>
+        </ul>
+      </section>
+
+      <section class="manual-section" id="man-furniture">
+        <h4><span class="manual-num">3</span>가구 배치하기</h4>
+        <ul>
+          <li><b>🛋️ 가구 배치 모드</b>를 켜고 드롭다운에서 종류를 고른 뒤 바닥을 클릭하면 배치됩니다(드롭다운은 선택을 유지해 계속 배치 가능).</li>
+          <li>배치된 가구를 <b>클릭</b>하면 확인 후 제거, <b>드래그</b>하면 이동합니다 — 벽 밖으로 나가거나 다른 가구와 겹치면 갈 수 있는 데까지만 이동합니다.</li>
+          <li>방금 배치했거나 옮긴 가구는 <b>노란 테두리</b>로 선택 표시됩니다. 이 상태에서 <b>Shift+화살표</b>를 누르면 10mm씩 미세 이동합니다.</li>
+          <li>선택된 가구의 위쪽 모서리에 <b>파란 손잡이</b>가 나타납니다. 마우스로 눌러 드래그하면 <b>90도 단위</b>로 회전합니다(마우스를 올리기만 해도 "90도 회전 가능"이 표시됨). <b>회전은 마우스 드래그로만 가능하며 채팅으로는 할 수 없습니다.</b></li>
+          <li>치수를 바꾸려면 배치 후 <b>STEP 2 채팅</b>으로 지시합니다(아래 4번) — 배치 시점에 크기를 다르게 지정하는 기능은 없습니다.</li>
+        </ul>
+        <div class="manual-table-wrap">
+          <table class="manual-table">
+            <thead><tr><th>타입</th><th>가로</th><th>세로</th><th>높이</th></tr></thead>
+            <tbody>
+              <tr><td>싱크대</td><td>1000</td><td>600</td><td>850</td></tr>
+              <tr><td>침대</td><td>1500</td><td>2000</td><td>450</td></tr>
+              <tr><td>싱글침대</td><td>1200</td><td>1800</td><td>450</td></tr>
+              <tr><td>소파</td><td>2000</td><td>900</td><td>850</td></tr>
+              <tr><td>식탁</td><td>1200</td><td>800</td><td>750</td></tr>
+              <tr><td>사무용탁자</td><td>1200</td><td>600</td><td>720</td></tr>
+              <tr><td>냉장고</td><td>800</td><td>750</td><td>1750</td></tr>
+              <tr><td>3단계단</td><td>500</td><td>600</td><td>900</td></tr>
+              <tr><td>6단계단</td><td>500</td><td>900</td><td>1200</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>단위 mm. 가구는 3D 화면에만 보이고 아래 6번의 인허가용 도면에는 나오지 않습니다.</p>
+      </section>
+
+      <section class="manual-section" id="man-chat">
+        <h4><span class="manual-num">4</span>대화로 수정하기</h4>
+        <p><b>STEP 2</b> 채팅창에 한국어로 지시를 쓰면 현재 모델을 고쳐 돌려줍니다. 백엔드 접속(화면 위쪽 <b>"백엔드 설정"</b>에서 API 주소·접근 코드)이 필요합니다.</p>
+        <ul>
+          <li><b>벽체</b>: "왼쪽 벽을 1000mm 늘려줘", "벽 두께 300으로", "가운데 칸막이벽 추가", "박공지붕 물매 30도", "왼쪽 방을 침실로" 등</li>
+          <li><b>가구 치수</b>: "소파 깊이 900으로 줄여줘", "냉장고 높이 200 늘려줘"처럼 이미 배치된 가구의 가로·세로·높이만 바꿉니다. 배치·삭제·이동·회전은 이 채팅으로 되지 않고 3D 화면에서 직접 합니다.</li>
+        </ul>
+        <p><b>↩ 되돌리기</b> / <b>↪ 다시하기</b>로 벽과 가구 상태를 함께 왕복합니다. 채팅 수정·되돌리기·다시하기는 보고 있던 카메라 각도·확대 상태를 그대로 유지합니다.</p>
+      </section>
+
+      <section class="manual-section" id="man-save">
+        <h4><span class="manual-num">5</span>저장·불러오기</h4>
+        <ul>
+          <li><b>💾 저장</b> — 지금 벽 모델·스케치 이미지·가구 배치·대화 기록을 파일 하나로 내려받습니다.</li>
+          <li><b>📂 불러오기</b> — 그 파일을 열어 화면을 통째로 그 상태로 바꿉니다(저장 당시 가구 배치가 있었으면 그대로 복원). 지금 화면에 저장하지 않은 배치가 있다면 불러오는 순간 사라지므로, 남기고 싶으면 먼저 저장하세요.</li>
+        </ul>
+      </section>
+
+      <section class="manual-section" id="man-permit">
+        <h4><span class="manual-num">6</span>인허가용 도면 만들기</h4>
+        <ul>
+          <li><b>STEP 4</b>에서 <b>"📐 도면 생성"</b>을 누르면 평면도 + 4방위 입면도가 만들어집니다.</li>
+          <li>도면을 클릭하면 확대 팝업이 열리고, 그 안에서 수치·지붕·방 이름 표시 여부를 체크박스로 바로 바꿀 수 있습니다(재생성 버튼 없이 즉시 반영). 팝업 안 <b>저장</b> 버튼으로 그 도면 한 장을 이미지로 내려받습니다.</li>
+          <li><b>"📐 PDF 생성"</b>은 전체 세트를 축척·방위·치수가 표기된 A3 인쇄용 시트로 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.</li>
+        </ul>
+        <p>이 도면들은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
+      </section>
+
+      <section class="manual-section" id="man-limits">
+        <h4><span class="manual-num">7</span>알아두면 좋은 점</h4>
+        <ul>
+          <li>벽 안쪽 판정은 정확한 방 폴리곤이 아니라 벽 중심선 바운딩박스를 근사한 사각형이라, 오목한(L자) 평면에서는 완벽하지 않습니다.</li>
+          <li>가구 회전은 90도 단위만 되고 자유각(45도 등)은 지원하지 않으며, 마우스 드래그로만 가능합니다.</li>
+          <li>1인칭 시점과 가구 배치 모드는 동시에 켤 수 없습니다.</li>
+          <li>가구 없이 저장된 예전 프로젝트 파일을 불러오면 그 파일 자체에 정보가 없어 가구는 빈 상태로 시작합니다.</li>
+        </ul>
+      </section>
+
+      <button id="btnManualClose" class="btn ghost" style="margin-top:4px">닫기</button>
     </dialog>
     <div id="usageBadge" class="usage-badge" hidden>💰 이번 세션 비전 API ≈ $<span id="usageCost">0</span> · 토큰 입력<span id="usageIn">0</span>/출력<span id="usageOut">0</span></div>
   </header>
@@ -1359,6 +1487,7 @@ function wireHelpDialog(openBtnId, dialogId, closeBtnId) {
 wireHelpDialog('btnJsonHelp', 'jsonHelpDialog', 'btnJsonHelpClose');
 wireHelpDialog('btnPermitHelp', 'permitHelpDialog', 'btnPermitHelpClose');
 wireHelpDialog('btnIntroHelp', 'introHelpDialog', 'btnIntroHelpClose');
+wireHelpDialog('btnManualOpen', 'manualDialog', 'btnManualClose');
 
 const sampleSelect = document.getElementById('sampleSelect');
 sampleSelect.addEventListener('change', () => {
