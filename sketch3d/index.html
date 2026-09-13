@@ -370,6 +370,17 @@
   .help-dialog li { margin-bottom: 8px; font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); }
   .help-dialog p { font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 10px; }
   .help-dialog code { font-size: 11.5px; }
+  /* 모든 팝업(help-dialog 계열) 우측 상단 모서리 닫기 버튼 -- dialog:modal이 브라우저 기본으로
+     position:fixed라 이 absolute 자식의 기준(containing block)이 이미 되어 있어, .help-dialog
+     자체에 position을 새로 줄 필요가 없다(주면 오히려 그 fixed를 덮어써 중앙 정렬이 깨짐). */
+  .dialog-close-x {
+    position: absolute; top: 14px; right: 14px;
+    width: 26px; height: 26px; padding: 0; border-radius: 50%;
+    border: 1px solid var(--field-border); background: var(--field-bg);
+    color: var(--text-secondary); font-size: 17px; line-height: 1; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .dialog-close-x:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
   .view-enlarge-dialog { max-width: 900px; }
   .view-enlarge-dialog img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: #fff; border: 1px solid var(--field-border); border-radius: 10px; }
   .view-enlarge-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
@@ -456,11 +467,13 @@
       </div>
     </div>
     <dialog id="introHelpDialog" class="help-dialog">
+      <button class="dialog-close-x" aria-label="닫기" title="닫기">×</button>
       <h3>손그림 → 3D 도면 프로토타입 — 소개</h3>
       <p>치수가 적힌 손그림 스케치를 첨부하여 올리면 벽체를 분석하여 3D로 조합하여 표현합니다. 만약 비전 API 없을 경우엔 샘플 도면이나 JSON으로 도면 만들 수 있고 대화창으로 수정가능합니다.</p>
       <button id="btnIntroHelpClose" class="btn ghost" style="margin-top:14px">닫기</button>
     </dialog>
     <dialog id="manualDialog" class="help-dialog manual-dialog">
+      <button class="dialog-close-x" aria-label="닫기" title="닫기">×</button>
       <h3>사용자 매뉴얼</h3>
       <ul class="manual-toc">
         <li><a href="#man-start">시작하기</a></li>
@@ -629,6 +642,7 @@
       </div>
 
       <dialog id="jsonHelpDialog" class="help-dialog">
+        <button class="dialog-close-x" aria-label="닫기" title="닫기">×</button>
         <h3>벽 좌표 JSON — 용어 설명</h3>
         <ul>
           <li>단위 mm · 평면 좌표 <code>[x, y]</code> (원점 좌하단, x→오른쪽, y→위). 벽은 중심선 기준.</li>
@@ -694,6 +708,7 @@
       </div>
 
       <dialog id="permitHelpDialog" class="help-dialog">
+        <button class="dialog-close-x" aria-label="닫기" title="닫기">×</button>
         <h3>인허가용 정식 도면 — 설명</h3>
         <p>평면도 + 4방위 입면도를 축척·방위·치수가 표기된 A3 인쇄용 시트로 구성해 새 창에 엽니다. 인쇄 대화상자에서 "PDF로 저장"(배율 100%)을 선택하세요.</p>
         <p><b>주의:</b> 본 기능이 만드는 도면은 손그림 스케치 기반 자동 생성 초안입니다. 실제 인허가 제출 전 반드시 건축사의 검토·날인이 필요합니다.</p>
@@ -702,6 +717,7 @@
     </div>
 
     <dialog id="viewEnlargeDialog" class="help-dialog view-enlarge-dialog">
+      <button class="dialog-close-x" aria-label="닫기" title="닫기">×</button>
       <h3 id="viewEnlargeTitle">평면도</h3>
       <img id="viewEnlargeImg" alt="" />
       <div class="view-enlarge-controls">
@@ -1488,6 +1504,10 @@ wireHelpDialog('btnJsonHelp', 'jsonHelpDialog', 'btnJsonHelpClose');
 wireHelpDialog('btnPermitHelp', 'permitHelpDialog', 'btnPermitHelpClose');
 wireHelpDialog('btnIntroHelp', 'introHelpDialog', 'btnIntroHelpClose');
 wireHelpDialog('btnManualOpen', 'manualDialog', 'btnManualClose');
+// 팝업마다 반복해서 id를 붙이지 않도록, 우측 상단 닫기(X)는 클래스 하나로 전부 한 번에 연결한다.
+document.querySelectorAll('dialog .dialog-close-x').forEach(btn => {
+  btn.addEventListener('click', () => btn.closest('dialog').close());
+});
 
 const sampleSelect = document.getElementById('sampleSelect');
 sampleSelect.addEventListener('change', () => {
