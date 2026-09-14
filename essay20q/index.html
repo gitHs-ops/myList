@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>에세이식 스무고개</title>
 <style>
   :root{
@@ -208,8 +213,9 @@
   /* ---------- 옵시디언 연결 모달 ---------- */
   .modal-backdrop{
     position:fixed; inset:0; background:rgba(20,22,20,.5); display:flex;
-    align-items:center; justify-content:center; padding:20px; z-index:50;
+    align-items:flex-start; justify-content:center; padding:20px; z-index:50;
     opacity:0; pointer-events:none; transition:opacity .15s ease;
+    overflow-y:auto;
   }
   .modal-backdrop.show{ opacity:1; pointer-events:auto; }
   .modal{
@@ -234,6 +240,8 @@
     .q-text{ font-size:17.5px; }
   }
 </style>
+</head>
+<body>
 
 <div class="page">
 
@@ -1707,3 +1715,5 @@
   });
 })();
 </script>
+</body>
+</html>
