@@ -84,14 +84,6 @@
   .card p{ color:var(--ink-soft); margin:8px 0 0; }
   .card p:first-child{ margin-top:0; }
 
-  .intro .steps{ list-style:none; margin:16px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
-  .intro .steps li{ display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border-radius:10px; background:var(--surface-2); }
-  .step-tag{ flex:0 0 auto; font-size:11px; font-weight:700; letter-spacing:.4px; padding:3px 8px; border-radius:999px; }
-  .step-tag.explore{ background:var(--accent-tint); color:var(--accent-strong); }
-  .step-tag.pivot{ background:var(--amber-tint); color:var(--amber); }
-  .step-tag.converge{ background:var(--accent-strong-tint); color:var(--accent-strong); }
-  .intro .steps b{ display:block; font-size:14.5px; margin-bottom:2px; }
-  .intro .steps span{ color:var(--ink-soft); font-size:13.5px; }
   /* ---------- fields ---------- */
   label.field-label{ display:block; font-weight:600; font-size:14.5px; margin-bottom:6px; }
   textarea{
@@ -271,7 +263,7 @@
     <section id="situationPage">
       <section class="card intro">
         <h2>어떤 상황인가요</h2>
-        <p>스무고개가 잘 듣는 열두 가지 상황입니다. 해당하는 것을 하나 이상 고르면, 다음 화면의 주제란에 미리 채워 드립니다 — 그대로 두거나 고쳐서 시작하시면 됩니다.</p>
+        <p>스무고개가 잘 듣는 열두 가지 상황입니다. 가장 가까운 것을 하나 고르면, 다음 화면의 주제란에 미리 채워 드립니다 — 그대로 두거나 고쳐서 시작하시면 됩니다.</p>
         <div class="chips" id="situationChipRow" style="margin-top:14px"></div>
         <div class="situation-detail" id="situationDetail" hidden></div>
       </section>
@@ -282,26 +274,11 @@
       </div>
     </section>
 
-    <section id="introPage" hidden>
-      <section class="card intro">
-        <div class="situation-detail" id="chosenSituationBanner" hidden style="margin-top:0;margin-bottom:18px">
-          <div id="chosenSituationText"></div>
-        </div>
-        <h2>이렇게 진행돼요</h2>
-        <p>정해진 질문지가 아니라, 방금 남긴 답변을 읽고 그때그때 다음 질문을 만듭니다.<br>총 20개의 질문이 한 라운드이며, 진행은 세 단계를 거칩니다.</p>
-        <ul class="steps">
-          <li><span class="step-tag explore">탐색 1~7</span><span><b>지금 상황을 넓게 살펴봅니다</b><span>처한 상황, 동기, 문제를 폭넓게 묻습니다.</span></span></li>
-          <li><span class="step-tag pivot">전환 8~14</span><span><b>당연하게 여긴 전제를 한 번은 뒤집습니다</b><span>반례, 반대 입장, 다른 제약 조건을 통해 스스로 놓친 부분을 찾습니다.</span></span></li>
-          <li><span class="step-tag converge">수렴 15~20</span><span><b>구체적으로 좁혀갑니다</b><span>대상·방법·수량·기간·우선순위·검증 방법·실행 계획을 정합니다.</span></span></li>
-        </ul>
-      </section>
-
-      <div class="start-row">
-        <button class="btn primary" id="introStartBtn" type="button">시작하기</button>
-      </div>
-    </section>
-
     <section id="setupPage" hidden>
+
+    <div class="situation-detail" id="chosenSituationBanner" hidden style="margin-top:0;margin-bottom:18px">
+      <div id="chosenSituationText"></div>
+    </div>
 
     <section class="card field-card" id="topicCard">
       <h2>주제 — 하고 싶은 일 · 목표 · 고민</h2>
@@ -516,20 +493,32 @@
   var SAMPLE_BACKGROUND = '주중 저녁 2시간, 주말 반나절 정도 시간을 낼 수 있음. 예산은 200만 원 이내. 비슷한 서비스 A, B를 조사했지만 차별점을 못 찾음.';
 
   var SITUATIONS = [
-    { t: '사업 아이템이 불명확할 때',                f: '<b>“뭐로 돈을 벌지”</b>에서 실행계획까지' },
-    { t: '보고서·기획안 방향을 못 잡을 때',          f: '<b>위에서 원하는 것</b>부터 명확하게' },
-    { t: '블로그나 유튜브 주제를 못 정할 때',        f: '<b>누가 왜 볼 것인지</b>부터' },
-    { t: '이직·퇴사를 고민할 때',                    f: '진짜 문제가 <b>회사인지 다른 것인지</b>' },
-    { t: '앱·서비스 기능이 자꾸 늘어날 때',          f: '<b>없어도 되는 기능</b>부터 빼기' },
-    { t: '개발 외주를 맡기기 전',                    f: '무엇을 <b>어디까지 만들지</b> 범위 확정' },
-    { t: '강의·교육 과정을 설계할 때',               f: '<b>누구에게 무엇을</b> 가르칠지' },
-    { t: '마케팅 예산을 어디에 쓸지 의견이 갈릴 때', f: '<b>목표부터 하나로</b>' },
-    { t: '팀 목표나 KPI를 잡을 때',                  f: '<b>측정할 것과 판단할 것</b> 구분' },
-    { t: '진로나 커리어가 흐릿할 때',                f: '<b>하고 싶은 것과 할 수 있는 것</b> 좁히기' },
-    { t: '불안 초조 우울 할 때',                     f: '' },
-    { t: '앱개발 방향 정할 때',                      f: '' }
+    { t: '사업 아이템이 불명확할 때',                f: '<b>“뭐로 돈을 벌지”</b>에서 실행계획까지',
+      bg: '주중 저녁 2시간, 주말 반나절 정도 시간을 낼 수 있음. 예산은 200만 원 이내. 비슷한 서비스 A, B를 조사했지만 차별점을 못 찾음.' },
+    { t: '보고서·기획안 방향을 못 잡을 때',          f: '<b>위에서 원하는 것</b>부터 명확하게',
+      bg: '발표까지 남은 시간은 1주일. 팀장님이 "방향이 애매하다"고만 하고 구체적인 피드백은 안 주심. 기존 보고서 2건을 참고했지만 이번 건과 결이 달라 그대로 못 씀.' },
+    { t: '블로그나 유튜브 주제를 못 정할 때',        f: '<b>누가 왜 볼 것인지</b>부터',
+      bg: '주 1회 발행을 목표로 3개월째 준비 중인데 아직 첫 편도 못 올림. 관심 분야는 2~3개로 좁혔지만 어느 쪽이 사람들이 볼지 확신이 안 섬. 비슷한 채널 몇 개를 구독 중이지만 구독자 수 차이가 큼.' },
+    { t: '이직·퇴사를 고민할 때',                    f: '진짜 문제가 <b>회사인지 다른 것인지</b>',
+      bg: '지금 회사 재직 3년차, 최근 6개월간 야근이 잦아지고 의욕이 떨어짐. 이직 준비를 시작하긴 했으나 이력서만 만들어두고 지원은 못 함. 배우자와는 아직 구체적으로 상의하지 않음.' },
+    { t: '앱·서비스 기능이 자꾸 늘어날 때',          f: '<b>없어도 되는 기능</b>부터 빼기',
+      bg: '출시까지 2주 남았는데 기능 목록이 처음 계획보다 두 배로 늘어남. 핵심 기능 3개는 정해져 있지만 나머지 우선순위를 못 정함. 개발 인력은 혼자.' },
+    { t: '개발 외주를 맡기기 전',                    f: '무엇을 <b>어디까지 만들지</b> 범위 확정',
+      bg: '예산은 500만 원, 기간은 2개월로 잡고 있음. 견적을 두 군데서 받았는데 금액 차이가 3배 남. 요구사항 문서는 없이 말로만 설명한 상태.' },
+    { t: '강의·교육 과정을 설계할 때',               f: '<b>누구에게 무엇을</b> 가르칠지',
+      bg: '대상은 아직 "입문자" 정도로만 정해둠. 8주 과정으로 기획 중이나 커리큘럼 순서를 못 정함. 비슷한 강의 2개를 들어봤지만 난이도가 너무 낮거나 너무 높았음.' },
+    { t: '마케팅 예산을 어디에 쓸지 의견이 갈릴 때', f: '<b>목표부터 하나로</b>',
+      bg: '월 예산 300만 원, 채널 후보는 인스타그램 광고와 네이버 검색광고 두 가지. 지난달 테스트에서 클릭률은 나왔지만 실제 구매 전환은 추적 못 함. 팀 내에서 두 채널 지지자가 반반으로 갈림.' },
+    { t: '팀 목표나 KPI를 잡을 때',                  f: '<b>측정할 것과 판단할 것</b> 구분',
+      bg: '다음 분기 목표를 세워야 하는데 팀원 4명이 각자 다른 지표를 우선시함. 지난 분기엔 목표를 세우긴 했으나 달성 여부를 판단할 기준이 모호해 흐지부지됨.' },
+    { t: '진로나 커리어가 흐릿할 때',                f: '<b>하고 싶은 것과 할 수 있는 것</b> 좁히기',
+      bg: '현재 5년차, 전문성을 더 키울지 관리직으로 갈지 갈림길. 최근 사내 공모로 다른 팀 이동 기회가 생겼지만 지원 마감이 2주 남음. 배우고 싶은 분야는 있으나 당장 돈이 되는지는 불확실.' },
+    { t: '불안 초조 우울 할 때',                     f: '',
+      bg: '최근 두 달간 아침에 일어나기가 유독 힘들고, 이유를 딱히 설명하기 어려운 불안감이 자주 듦. 가족이나 친구에게는 아직 구체적으로 말하지 않음.' },
+    { t: '앱개발 방향 정할 때',                      f: '',
+      bg: '베타 사용자 30명 정도를 확보했고 피드백은 받았지만 무엇을 먼저 개선해야 할지 못 정함. 개발은 혼자, 다음 마일스톤까지 남은 시간은 한 달.' }
   ];
-  var situationTopicSeed = null;
+  var situationSelectedIndex = null;
 
   // ---------------------------------------------------------------- utils
 
@@ -1059,13 +1048,12 @@
     updateCounters();
     render();
 
-    situationTopicSeed = null;
+    situationSelectedIndex = null;
     document.getElementById('chosenSituationBanner').hidden = true;
-    situationSelected = SITUATIONS.map(function () { return false; });
+    situationPicked = null;
     renderSituationChips();
     renderSituationDetail();
     document.getElementById('setupPage').hidden = true;
-    document.getElementById('introPage').hidden = true;
     document.getElementById('situationPage').hidden = false;
     document.getElementById('pageFooter').hidden = true;
   }
@@ -1528,18 +1516,10 @@
   }
 
   function showSetupPage() {
-    document.getElementById('introPage').hidden = true;
     document.getElementById('setupPage').hidden = false;
-    if (situationTopicSeed && !document.getElementById('topicInput').value.trim()) {
-      document.getElementById('topicInput').value = situationTopicSeed;
-      updateCounters();
-      evaluateStartButton();
-      saveState();
-    }
-    situationTopicSeed = null;
   }
 
-  var situationSelected = SITUATIONS.map(function () { return false; });
+  var situationPicked = null; // 고른 상황의 인덱스, 없으면 null (한 번에 하나만)
 
   function renderSituationChips() {
     var row = document.getElementById('situationChipRow');
@@ -1547,10 +1527,10 @@
     SITUATIONS.forEach(function (item, i) {
       var btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'chip'; btn.textContent = item.t;
-      btn.dataset.state = situationSelected[i] ? 'like' : 'neutral';
+      btn.dataset.state = situationPicked === i ? 'like' : 'neutral';
       btn.addEventListener('click', function () {
-        situationSelected[i] = !situationSelected[i];
-        btn.dataset.state = situationSelected[i] ? 'like' : 'neutral';
+        situationPicked = (situationPicked === i) ? null : i; // 같은 걸 다시 누르면 선택 해제
+        renderSituationChips();
         renderSituationDetail();
       });
       row.appendChild(btn);
@@ -1563,42 +1543,45 @@
   }
 
   function renderSituationDetail() {
-    var picked = SITUATIONS.filter(function (item, i) { return situationSelected[i]; });
     var box = document.getElementById('situationDetail');
-    document.getElementById('situationNextBtn').disabled = picked.length === 0;
-    if (picked.length === 0) { box.hidden = true; box.innerHTML = ''; return; }
+    document.getElementById('situationNextBtn').disabled = situationPicked === null;
+    if (situationPicked === null) { box.hidden = true; box.innerHTML = ''; return; }
     box.hidden = false;
-    box.innerHTML = picked.map(situationFocusLine).join('');
+    box.innerHTML = situationFocusLine(SITUATIONS[situationPicked]);
   }
 
-  function goToIntroFromSituation(withSeed) {
+  function goToSetupFromSituation(withSeed) {
     var banner = document.getElementById('chosenSituationBanner');
-    var picked = withSeed ? SITUATIONS.filter(function (item, i) { return situationSelected[i]; }) : [];
-    if (picked.length) {
-      situationTopicSeed = picked.map(function (item) { return item.t; }).join(' / ');
-      document.getElementById('chosenSituationText').innerHTML = picked.map(situationFocusLine).join('');
+    var i = withSeed ? situationPicked : null;
+    situationSelectedIndex = i;
+    document.getElementById('situationPage').hidden = true;
+    document.getElementById('pageFooter').hidden = false;
+    showSetupPage();
+    if (i !== null) {
+      var item = SITUATIONS[i];
+      document.getElementById('chosenSituationText').innerHTML = situationFocusLine(item);
       banner.hidden = false;
+      document.getElementById('topicInput').value = item.t;
+      updateCounters();
+      evaluateStartButton();
+      saveState();
     } else {
-      situationTopicSeed = null;
       banner.hidden = true;
     }
-    document.getElementById('situationPage').hidden = true;
-    document.getElementById('introPage').hidden = false;
-    document.getElementById('pageFooter').hidden = false;
   }
 
   function wireInputs() {
     renderSituationChips();
-    document.getElementById('situationNextBtn').addEventListener('click', function () { goToIntroFromSituation(true); });
-    document.getElementById('situationSkipBtn').addEventListener('click', function () { goToIntroFromSituation(false); });
-    document.getElementById('introStartBtn').addEventListener('click', showSetupPage);
+    document.getElementById('situationNextBtn').addEventListener('click', function () { goToSetupFromSituation(true); });
+    document.getElementById('situationSkipBtn').addEventListener('click', function () { goToSetupFromSituation(false); });
     document.getElementById('topicInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
     document.getElementById('backgroundInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
 
     document.getElementById('startBtn').addEventListener('click', startFlow);
 
     document.getElementById('exampleFillBtn').addEventListener('click', function () {
-      document.getElementById('backgroundInput').value = SAMPLE_BACKGROUND;
+      var tailored = (situationSelectedIndex !== null && SITUATIONS[situationSelectedIndex].bg) || SAMPLE_BACKGROUND;
+      document.getElementById('backgroundInput').value = tailored;
       updateCounters(); evaluateStartButton(); saveState();
     });
     document.getElementById('exampleClearBtn').addEventListener('click', function () {
@@ -1622,6 +1605,7 @@
       backend = 'apikey';
       renderApiKeyCard({ key: key, model: model });
       refreshStartAvailability();
+      closeApiKeyModal();
     });
     document.getElementById('apiKeyClearBtn').addEventListener('click', function () {
       if (!confirm('저장된 API 키를 지울까요?')) return;
@@ -1718,7 +1702,6 @@
 
     if (hasProgress(state)) {
       document.getElementById('situationPage').hidden = true;
-      document.getElementById('introPage').hidden = true;
       document.getElementById('pageFooter').hidden = false;
       showSetupPage();
       document.getElementById('resumeBanner').hidden = false;
