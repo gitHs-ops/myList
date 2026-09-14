@@ -47,7 +47,7 @@
   .page{ max-width:760px; margin:0 auto; padding:28px 20px 80px; }
 
   /* ---------- header / progress rail ---------- */
-  .top{ margin-bottom:22px; }
+  .top{ margin-bottom:22px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
   .brand{ display:flex; align-items:center; gap:14px; }
   .brand-mark{ flex:0 0 auto; width:40px; height:40px; color:var(--accent-strong); }
   .brand h1{ font-size:22px; font-weight:700; letter-spacing:-.2px; }
@@ -92,12 +92,6 @@
   .step-tag.converge{ background:var(--accent-strong-tint); color:var(--accent-strong); }
   .intro .steps b{ display:block; font-size:14.5px; margin-bottom:2px; }
   .intro .steps span{ color:var(--ink-soft); font-size:13.5px; }
-  .note-line{
-    margin-top:16px; padding-top:14px; border-top:1px solid var(--line-soft);
-    font-size:13px; color:var(--ink-faint);
-  }
-  .note-line + .note-line{ border-top:none; padding-top:6px; margin-top:6px; }
-
   /* ---------- fields ---------- */
   label.field-label{ display:block; font-weight:600; font-size:14.5px; margin-bottom:6px; }
   textarea{
@@ -114,7 +108,7 @@
   .start-row{ display:flex; align-items:center; gap:14px; margin:6px 4px 22px; flex-wrap:wrap; }
   .hint{ color:var(--ink-faint); font-size:13px; }
 
-  .example-row{ display:flex; align-items:center; gap:10px 14px; margin:0 4px 14px; flex-wrap:wrap; }
+  .example-row{ display:flex; align-items:center; gap:10px 14px; margin:12px 0 16px; flex-wrap:wrap; }
   .example-row .btn{ padding:8px 16px; font-size:13.5px; }
 
   /* ---------- buttons ---------- */
@@ -134,6 +128,20 @@
     text-decoration:underline; cursor:pointer; font-size:inherit;
   }
   .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+  /* ---------- situation picker (opening screen) ---------- */
+  .situation-select{
+    width:100%; border:1px solid var(--line); border-radius:12px;
+    background:var(--surface-2); color:var(--ink); padding:12px 14px;
+    font:inherit; font-size:14.5px; margin-top:2px;
+  }
+  .situation-detail{
+    margin-top:16px; padding:14px 16px; border-radius:12px;
+    background:var(--accent-tint); border:1px solid var(--accent-strong-tint);
+  }
+  .situation-detail .focus{ font-size:14.5px; color:var(--ink); }
+  .situation-detail .focus b{ color:var(--accent-strong); }
+  .situation-detail .focus.none{ color:var(--ink-faint); font-style:italic; }
 
   /* ---------- result card ---------- */
   .result-card{ min-height:120px; }
@@ -259,12 +267,48 @@
         <p class="tagline">질문 하나, 답변 하나로 생각을 끝까지 밀고 가는 대화형 정리 도구</p>
       </div>
     </div>
+    <button type="button" class="btn ghost" id="apiKeyOpenBtn" hidden>API관련</button>
   </header>
 
   <main>
 
-    <section id="introPage">
+    <section id="situationPage">
       <section class="card intro">
+        <h2>어떤 상황인가요</h2>
+        <p>스무고개가 잘 듣는 열두 가지 상황입니다. 가장 가까운 것을 고르면, 다음 화면의 주제란에 미리 채워 드립니다 — 그대로 두거나 고쳐서 시작하시면 됩니다.</p>
+        <div style="margin-top:14px">
+          <label class="field-label" for="situationSelect">상황 고르기</label>
+          <select id="situationSelect" class="situation-select">
+            <option value="0">1) 사업 아이템이 불명확할 때</option>
+            <option value="1">2) 보고서·기획안 방향을 못 잡을 때</option>
+            <option value="2">3) 블로그나 유튜브 주제를 못 정할 때</option>
+            <option value="3">4) 이직·퇴사를 고민할 때</option>
+            <option value="4">5) 앱·서비스 기능이 자꾸 늘어날 때</option>
+            <option value="5">6) 개발 외주를 맡기기 전</option>
+            <option value="6">7) 강의·교육 과정을 설계할 때</option>
+            <option value="7">8) 마케팅 예산을 어디에 쓸지 의견이 갈릴 때</option>
+            <option value="8">9) 팀 목표나 KPI를 잡을 때</option>
+            <option value="9">10) 진로나 커리어가 흐릿할 때</option>
+            <option value="10">11) 불안 초조 우울 할 때</option>
+            <option value="11">12) 앱개발 방향 정할 때</option>
+          </select>
+        </div>
+        <div class="situation-detail" id="situationDetail">
+          <div class="focus" id="situationFocus"><b>“뭐로 돈을 벌지”</b>에서 실행계획까지</div>
+        </div>
+      </section>
+
+      <div class="start-row">
+        <button class="btn primary" id="situationNextBtn" type="button">이 상황으로 시작하기</button>
+        <button class="link-btn" id="situationSkipBtn" type="button">선택 없이 바로 시작</button>
+      </div>
+    </section>
+
+    <section id="introPage" hidden>
+      <section class="card intro">
+        <div class="situation-detail" id="chosenSituationBanner" hidden style="margin-top:0;margin-bottom:18px">
+          <div class="focus" id="chosenSituationText"></div>
+        </div>
         <h2>이렇게 진행돼요</h2>
         <p>정해진 질문지가 아니라, 방금 남긴 답변을 읽고 그때그때 다음 질문을 만듭니다.<br>총 20개의 질문이 한 라운드이며, 진행은 세 단계를 거칩니다.</p>
         <ul class="steps">
@@ -272,9 +316,6 @@
           <li><span class="step-tag pivot">전환 8~14</span><span><b>당연하게 여긴 전제를 한 번은 뒤집습니다</b><span>반례, 반대 입장, 다른 제약 조건을 통해 스스로 놓친 부분을 찾습니다.</span></span></li>
           <li><span class="step-tag converge">수렴 15~20</span><span><b>구체적으로 좁혀갑니다</b><span>대상·방법·수량·기간·우선순위·검증 방법·실행 계획을 정합니다.</span></span></li>
         </ul>
-        <div class="note-line">20문항이 끝나면 지금까지의 답변을 목표와 실행 계획으로 종합합니다.<br>숫자·이름·기간처럼 구체적인 사실이 아직 부족하면, 그 결과를 씨앗 삼아 2라운드·3라운드로 스무고개를 이어갑니다.</div>
-        <div class="note-line">※ 이 페이지는 실시간으로 웹을 검색하지 않습니다.<br>판단할 자료가 부족하면 추측 대신, 필요한 정보를 직접 물어보는 질문을 드립니다.</div>
-        <div class="note-line">질문을 만드는 데 이 화면을 보고 계신 Claude 계정의 사용량이 쓰입니다.<br>첫 질문을 요청할 때 한 번 허용 여부를 물어봅니다.</div>
       </section>
 
       <div class="start-row">
@@ -283,40 +324,6 @@
     </section>
 
     <section id="setupPage" hidden>
-
-    <section class="card field-card" id="apiKeyCard" hidden>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <h2>개인 API 키로 사용하기</h2>
-        <button type="button" class="link-btn" id="apiKeyToggleBtn">간략히 보기</button>
-      </div>
-      <p class="example" id="apiKeyStatus" style="margin-top:8px"></p>
-      <p class="example" id="usageInfo" style="margin-top:2px"></p>
-      <div id="apiKeyCardBody">
-        <p>이 화면은 Claude 아티팩트 밖(예: GitHub Pages)에서 열려 있어서, 계정 사용량 대신 <b>본인의 Anthropic API 키</b>로 직접 호출합니다.<br>이 키는 <b>이 브라우저에만</b> 저장되고, 이 페이지에서 Anthropic API로 곧바로 전송됩니다 — 개인 용도로만 쓰시고, 공용 PC나 공개 데모에는 쓰지 마세요.</p>
-        <div style="margin-top:14px">
-          <label class="field-label" for="apiKeyInput">Anthropic API 키</label>
-          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:12px 14px;font:inherit;font-size:14.5px;">
-        </div>
-        <div style="margin-top:14px">
-          <label class="field-label" for="apiModelSelect">모델</label>
-          <select id="apiModelSelect" style="width:100%;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);color:var(--ink);padding:10px 14px;font:inherit;font-size:14.5px;">
-            <option value="claude-opus-5">Claude Opus 5 (기본 · 가장 성능 좋음)</option>
-            <option value="claude-sonnet-5">Claude Sonnet 5 (더 저렴)</option>
-            <option value="claude-haiku-4-5">Claude Haiku 4.5 (가장 저렴 · 빠름)</option>
-          </select>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary" id="apiKeySaveBtn" type="button">저장하고 사용하기</button>
-          <button class="btn ghost" id="apiKeyClearBtn" type="button">키 지우기</button>
-        </div>
-      </div>
-    </section>
-
-    <div class="example-row" id="exampleRow">
-      <span class="hint">빠르게 살펴보고 싶다면 예시로 채워볼 수 있어요.</span>
-      <button class="btn ghost" id="exampleFillBtn" type="button">예시 제시</button>
-      <button class="btn ghost" id="exampleClearBtn" type="button">예시 지우기</button>
-    </div>
 
     <section class="card field-card" id="topicCard">
       <h2>주제 — 하고 싶은 일 · 목표 · 고민</h2>
@@ -330,6 +337,11 @@
 
     <section class="card field-card" id="backgroundCard">
       <h2>배경 설명 — 현재 상황 · 조사한 정보 · 제약 조건</h2>
+      <div class="example-row" id="exampleRow">
+        <span class="hint">빠르게 살펴보고 싶다면 예시로 채워볼 수 있어요.</span>
+        <button class="btn ghost" id="exampleFillBtn" type="button">예시 제시</button>
+        <button class="btn ghost" id="exampleClearBtn" type="button">예시 지우기</button>
+      </div>
       <p>지금까지 파악한 상황, 이미 조사해 둔 정보나 갖고 있는 데이터, 시간·예산·인력 같은 제약 조건을 적어주세요.<br>참고할 자료가 있다면 핵심 내용을 옮겨 붙여넣으셔도 됩니다.</p>
       <div style="margin-top:14px">
         <label class="field-label" for="backgroundInput">배경 설명</label>
@@ -489,6 +501,32 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="apiKeyModal" role="dialog" aria-modal="true" aria-labelledby="apiKeyTitle">
+  <div class="modal">
+    <button type="button" class="modal-close" id="apiKeyModalClose" aria-label="닫기">✕</button>
+    <h2 id="apiKeyTitle">개인 API 키로 사용하기</h2>
+    <p class="example">이 화면은 Claude 아티팩트 밖(예: GitHub Pages)에서 열려 있어서, 계정 사용량 대신 <b>본인의 Anthropic API 키</b>로 직접 호출합니다.<br>이 키는 <b>이 브라우저에만</b> 저장되고, 이 페이지에서 Anthropic API로 곧바로 전송됩니다 — 개인 용도로만 쓰시고, 공용 PC나 공개 데모에는 쓰지 마세요.</p>
+    <p class="example" id="apiKeyStatus" style="margin-top:8px"></p>
+    <p class="example" id="usageInfo" style="margin-top:2px"></p>
+    <div style="margin-top:12px">
+      <label class="field-label" for="apiKeyInput">Anthropic API 키</label>
+      <input type="password" id="apiKeyInput" class="modal-field" placeholder="sk-ant-..." autocomplete="off">
+    </div>
+    <div style="margin-top:14px">
+      <label class="field-label" for="apiModelSelect">모델</label>
+      <select id="apiModelSelect" class="modal-field">
+        <option value="claude-opus-5">Claude Opus 5 (가장 성능 좋음)</option>
+        <option value="claude-sonnet-5">Claude Sonnet 5 (더 저렴)</option>
+        <option value="claude-haiku-4-5" selected>Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn ghost" id="apiKeyClearBtn">키 지우기</button>
+      <button type="button" class="btn primary" id="apiKeySaveBtn">저장하고 사용하기</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -497,8 +535,23 @@
   var STORAGE_KEY = 'essay20q_v1';
   var MAX_TRANSCRIPT_BYTES = 30000;
   var MAX_SYNTH_TRANSCRIPT_BYTES = 35000;
-  var SAMPLE_TOPIC = '올해 안에 사이드 프로젝트를 수익화하고 싶은데, 어디서부터 시작해야 할지 막막하다.';
   var SAMPLE_BACKGROUND = '주중 저녁 2시간, 주말 반나절 정도 시간을 낼 수 있음. 예산은 200만 원 이내. 비슷한 서비스 A, B를 조사했지만 차별점을 못 찾음.';
+
+  var SITUATIONS = [
+    { t: '사업 아이템이 불명확할 때',                f: '<b>“뭐로 돈을 벌지”</b>에서 실행계획까지' },
+    { t: '보고서·기획안 방향을 못 잡을 때',          f: '<b>위에서 원하는 것</b>부터 명확하게' },
+    { t: '블로그나 유튜브 주제를 못 정할 때',        f: '<b>누가 왜 볼 것인지</b>부터' },
+    { t: '이직·퇴사를 고민할 때',                    f: '진짜 문제가 <b>회사인지 다른 것인지</b>' },
+    { t: '앱·서비스 기능이 자꾸 늘어날 때',          f: '<b>없어도 되는 기능</b>부터 빼기' },
+    { t: '개발 외주를 맡기기 전',                    f: '무엇을 <b>어디까지 만들지</b> 범위 확정' },
+    { t: '강의·교육 과정을 설계할 때',               f: '<b>누구에게 무엇을</b> 가르칠지' },
+    { t: '마케팅 예산을 어디에 쓸지 의견이 갈릴 때', f: '<b>목표부터 하나로</b>' },
+    { t: '팀 목표나 KPI를 잡을 때',                  f: '<b>측정할 것과 판단할 것</b> 구분' },
+    { t: '진로나 커리어가 흐릿할 때',                f: '<b>하고 싶은 것과 할 수 있는 것</b> 좁히기' },
+    { t: '불안 초조 우울 할 때',                     f: '' },
+    { t: '앱개발 방향 정할 때',                      f: '' }
+  ];
+  var situationTopicSeed = null;
 
   // ---------------------------------------------------------------- utils
 
@@ -683,9 +736,9 @@
 
   var APIKEY_STORAGE_KEY = 'essay20q_apikey_v1';
   var API_MODELS = {
-    'claude-opus-5':   { label: 'Claude Opus 5 (기본 · 가장 성능 좋음)',  inPrice: 5,  outPrice: 25 },
-    'claude-sonnet-5': { label: 'Claude Sonnet 5 (더 저렴)',             inPrice: 2,  outPrice: 10 },
-    'claude-haiku-4-5':{ label: 'Claude Haiku 4.5 (가장 저렴 · 빠름)',    inPrice: 1,  outPrice: 5  }
+    'claude-opus-5':   { label: 'Claude Opus 5 (가장 성능 좋음)',            inPrice: 5,  outPrice: 25 },
+    'claude-sonnet-5': { label: 'Claude Sonnet 5 (더 저렴)',                   inPrice: 2,  outPrice: 10 },
+    'claude-haiku-4-5':{ label: 'Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)',  inPrice: 1,  outPrice: 5  }
   };
 
   function loadApiKeyConfig() {
@@ -694,7 +747,7 @@
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || !parsed.key) return null;
-      if (!API_MODELS[parsed.model]) parsed.model = 'claude-opus-5';
+      if (!API_MODELS[parsed.model]) parsed.model = 'claude-haiku-4-5';
       return parsed;
     } catch (e) { return null; }
   }
@@ -712,8 +765,7 @@
     if (sampleFn) {
       backend = 'artifact';
     } else {
-      document.getElementById('apiKeyCard').hidden = false;
-      applyApiKeyCardCollapse(getApiKeyCardCollapsed());
+      document.getElementById('apiKeyOpenBtn').hidden = false;
       var saved = loadApiKeyConfig();
       backend = saved ? 'apikey' : null;
       renderApiKeyCard(saved);
@@ -725,7 +777,7 @@
     var hint = document.getElementById('startHint');
     if (backend === null) {
       document.getElementById('startBtn').disabled = true;
-      hint.textContent = '이 화면에서는 AI 질문 기능을 불러오지 못했습니다. 아래에서 개인 API 키를 등록하거나, Claude 아티팩트로 열람해 주세요.';
+      hint.textContent = '이 화면에서는 AI 질문 기능을 불러오지 못했습니다. 위쪽의 "API관련" 버튼에서 개인 API 키를 등록하거나, Claude 아티팩트로 열람해 주세요.';
       return;
     }
     evaluateStartButton();
@@ -733,29 +785,18 @@
 
   function renderApiKeyCard(saved) {
     document.getElementById('apiKeyInput').value = saved ? saved.key : '';
-    document.getElementById('apiModelSelect').value = (saved && saved.model) || 'claude-opus-5';
+    document.getElementById('apiModelSelect').value = (saved && saved.model) || 'claude-haiku-4-5';
     document.getElementById('apiKeyStatus').textContent = saved
       ? '저장된 키를 사용합니다 (' + (API_MODELS[saved.model] || {}).label + ').'
       : '키를 입력하고 저장하면 이 화면에서 바로 시작할 수 있습니다.';
     updateUsageDisplay();
   }
 
-  var APIKEY_CARD_COLLAPSE_KEY = 'essay20q_apikeycard_collapsed_v1';
-
-  function getApiKeyCardCollapsed() {
-    try { return localStorage.getItem(APIKEY_CARD_COLLAPSE_KEY) === '1'; } catch (e) { return false; }
+  function openApiKeyModal() {
+    document.getElementById('apiKeyModal').classList.add('show');
   }
-  function setApiKeyCardCollapsed(collapsed) {
-    try { localStorage.setItem(APIKEY_CARD_COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (e) { /* ignore */ }
-  }
-  function applyApiKeyCardCollapse(collapsed) {
-    document.getElementById('apiKeyCardBody').hidden = collapsed;
-    document.getElementById('apiKeyToggleBtn').textContent = collapsed ? '자세히 보기' : '간략히 보기';
-  }
-  function toggleApiKeyCard() {
-    var collapsed = !document.getElementById('apiKeyCardBody').hidden;
-    applyApiKeyCardCollapse(collapsed);
-    setApiKeyCardCollapsed(collapsed);
+  function closeApiKeyModal() {
+    document.getElementById('apiKeyModal').classList.remove('show');
   }
 
   function updateUsageDisplay() {
@@ -766,7 +807,7 @@
       return;
     }
     var cfg = loadApiKeyConfig();
-    var price = API_MODELS[(cfg && cfg.model) || 'claude-opus-5'];
+    var price = API_MODELS[(cfg && cfg.model) || 'claude-haiku-4-5'];
     var cost = (state.usage.inputTokens / 1e6) * price.inPrice + (state.usage.outputTokens / 1e6) * price.outPrice;
     el.textContent = '이번 세션 사용량 — 입력 ' + state.usage.inputTokens.toLocaleString() + ' · 출력 ' +
       state.usage.outputTokens.toLocaleString() + ' 토큰 (약 $' + cost.toFixed(3) + ', ' + price.label + ' 기준)';
@@ -1495,9 +1536,49 @@
   function showSetupPage() {
     document.getElementById('introPage').hidden = true;
     document.getElementById('setupPage').hidden = false;
+    if (situationTopicSeed && !document.getElementById('topicInput').value.trim()) {
+      document.getElementById('topicInput').value = situationTopicSeed;
+      updateCounters();
+      evaluateStartButton();
+      saveState();
+    }
+    situationTopicSeed = null;
+  }
+
+  function renderSituationDetail() {
+    var i = Number(document.getElementById('situationSelect').value);
+    var item = SITUATIONS[i];
+    var focusEl = document.getElementById('situationFocus');
+    if (item.f) {
+      focusEl.className = 'focus';
+      focusEl.innerHTML = item.f;
+    } else {
+      focusEl.className = 'focus none';
+      focusEl.textContent = '좁힐 지점이 따로 적혀 있지 않은 항목입니다 — 배경부터 풀어 쓰고 시작하세요.';
+    }
+  }
+
+  function goToIntroFromSituation(withSeed) {
+    var banner = document.getElementById('chosenSituationBanner');
+    if (withSeed) {
+      var i = Number(document.getElementById('situationSelect').value);
+      var item = SITUATIONS[i];
+      situationTopicSeed = item.t;
+      document.getElementById('chosenSituationText').innerHTML =
+        '<b>' + item.t + '</b>' + (item.f ? '<br>' + item.f : '');
+      banner.hidden = false;
+    } else {
+      situationTopicSeed = null;
+      banner.hidden = true;
+    }
+    document.getElementById('situationPage').hidden = true;
+    document.getElementById('introPage').hidden = false;
   }
 
   function wireInputs() {
+    document.getElementById('situationSelect').addEventListener('change', renderSituationDetail);
+    document.getElementById('situationNextBtn').addEventListener('click', function () { goToIntroFromSituation(true); });
+    document.getElementById('situationSkipBtn').addEventListener('click', function () { goToIntroFromSituation(false); });
     document.getElementById('introStartBtn').addEventListener('click', showSetupPage);
     document.getElementById('topicInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
     document.getElementById('backgroundInput').addEventListener('input', function () { updateCounters(); evaluateStartButton(); saveState(); });
@@ -1505,17 +1586,22 @@
     document.getElementById('startBtn').addEventListener('click', startFlow);
 
     document.getElementById('exampleFillBtn').addEventListener('click', function () {
-      document.getElementById('topicInput').value = SAMPLE_TOPIC;
       document.getElementById('backgroundInput').value = SAMPLE_BACKGROUND;
       updateCounters(); evaluateStartButton(); saveState();
     });
     document.getElementById('exampleClearBtn').addEventListener('click', function () {
-      document.getElementById('topicInput').value = '';
       document.getElementById('backgroundInput').value = '';
       updateCounters(); evaluateStartButton(); saveState();
     });
 
-    document.getElementById('apiKeyToggleBtn').addEventListener('click', toggleApiKeyCard);
+    document.getElementById('apiKeyOpenBtn').addEventListener('click', openApiKeyModal);
+    document.getElementById('apiKeyModalClose').addEventListener('click', closeApiKeyModal);
+    document.getElementById('apiKeyModal').addEventListener('click', function (e) {
+      if (e.target === document.getElementById('apiKeyModal')) closeApiKeyModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.getElementById('apiKeyModal').classList.contains('show')) closeApiKeyModal();
+    });
     document.getElementById('apiKeySaveBtn').addEventListener('click', function () {
       var key = document.getElementById('apiKeyInput').value.trim();
       if (!key) { alert('API 키를 입력해 주세요.'); return; }
@@ -1616,8 +1702,11 @@
     updateCounters();
     initRail();
     wireInputs();
+    renderSituationDetail();
 
     if (hasProgress(state)) {
+      document.getElementById('situationPage').hidden = true;
+      document.getElementById('introPage').hidden = true;
       showSetupPage();
       document.getElementById('resumeBanner').hidden = false;
       // keep visual state at rest (intro-like) until the viewer decides
