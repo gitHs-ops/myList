@@ -130,16 +130,12 @@
   .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
 
   /* ---------- situation picker (opening screen) ---------- */
-  .situation-select{
-    width:100%; border:1px solid var(--line); border-radius:12px;
-    background:var(--surface-2); color:var(--ink); padding:12px 14px;
-    font:inherit; font-size:14.5px; margin-top:2px;
-  }
   .situation-detail{
     margin-top:16px; padding:14px 16px; border-radius:12px;
     background:var(--accent-tint); border:1px solid var(--accent-strong-tint);
   }
   .situation-detail .focus{ font-size:14.5px; color:var(--ink); }
+  .situation-detail .focus + .focus{ margin-top:10px; padding-top:10px; border-top:1px solid var(--accent-strong-tint); }
   .situation-detail .focus b{ color:var(--accent-strong); }
   .situation-detail .focus.none{ color:var(--ink-faint); font-style:italic; }
 
@@ -275,31 +271,13 @@
     <section id="situationPage">
       <section class="card intro">
         <h2>어떤 상황인가요</h2>
-        <p>스무고개가 잘 듣는 열두 가지 상황입니다. 가장 가까운 것을 고르면, 다음 화면의 주제란에 미리 채워 드립니다 — 그대로 두거나 고쳐서 시작하시면 됩니다.</p>
-        <div style="margin-top:14px">
-          <label class="field-label" for="situationSelect">상황 고르기</label>
-          <select id="situationSelect" class="situation-select">
-            <option value="0">1) 사업 아이템이 불명확할 때</option>
-            <option value="1">2) 보고서·기획안 방향을 못 잡을 때</option>
-            <option value="2">3) 블로그나 유튜브 주제를 못 정할 때</option>
-            <option value="3">4) 이직·퇴사를 고민할 때</option>
-            <option value="4">5) 앱·서비스 기능이 자꾸 늘어날 때</option>
-            <option value="5">6) 개발 외주를 맡기기 전</option>
-            <option value="6">7) 강의·교육 과정을 설계할 때</option>
-            <option value="7">8) 마케팅 예산을 어디에 쓸지 의견이 갈릴 때</option>
-            <option value="8">9) 팀 목표나 KPI를 잡을 때</option>
-            <option value="9">10) 진로나 커리어가 흐릿할 때</option>
-            <option value="10">11) 불안 초조 우울 할 때</option>
-            <option value="11">12) 앱개발 방향 정할 때</option>
-          </select>
-        </div>
-        <div class="situation-detail" id="situationDetail">
-          <div class="focus" id="situationFocus"><b>“뭐로 돈을 벌지”</b>에서 실행계획까지</div>
-        </div>
+        <p>스무고개가 잘 듣는 열두 가지 상황입니다. 해당하는 것을 하나 이상 고르면, 다음 화면의 주제란에 미리 채워 드립니다 — 그대로 두거나 고쳐서 시작하시면 됩니다.</p>
+        <div class="chips" id="situationChipRow" style="margin-top:14px"></div>
+        <div class="situation-detail" id="situationDetail" hidden></div>
       </section>
 
       <div class="start-row">
-        <button class="btn primary" id="situationNextBtn" type="button">이 상황으로 시작하기</button>
+        <button class="btn primary" id="situationNextBtn" type="button" disabled>이 상황으로 시작하기</button>
         <button class="link-btn" id="situationSkipBtn" type="button">선택 없이 바로 시작</button>
       </div>
     </section>
@@ -307,7 +285,7 @@
     <section id="introPage" hidden>
       <section class="card intro">
         <div class="situation-detail" id="chosenSituationBanner" hidden style="margin-top:0;margin-bottom:18px">
-          <div class="focus" id="chosenSituationText"></div>
+          <div id="chosenSituationText"></div>
         </div>
         <h2>이렇게 진행돼요</h2>
         <p>정해진 질문지가 아니라, 방금 남긴 답변을 읽고 그때그때 다음 질문을 만듭니다.<br>총 20개의 질문이 한 라운드이며, 진행은 세 단계를 거칩니다.</p>
@@ -517,7 +495,7 @@
       <select id="apiModelSelect" class="modal-field">
         <option value="claude-opus-5">Claude Opus 5 (가장 성능 좋음)</option>
         <option value="claude-sonnet-5">Claude Sonnet 5 (더 저렴)</option>
-        <option value="claude-haiku-4-5" selected>Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)</option>
+        <option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)</option>
       </select>
     </div>
     <div class="btn-row">
@@ -744,7 +722,7 @@
   var API_MODELS = {
     'claude-opus-5':   { label: 'Claude Opus 5 (가장 성능 좋음)',            inPrice: 5,  outPrice: 25 },
     'claude-sonnet-5': { label: 'Claude Sonnet 5 (더 저렴)',                   inPrice: 2,  outPrice: 10 },
-    'claude-haiku-4-5':{ label: 'Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)',  inPrice: 1,  outPrice: 5  }
+    'claude-haiku-4-5-20251001':{ label: 'Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)',  inPrice: 1,  outPrice: 5  }
   };
 
   function loadApiKeyConfig() {
@@ -753,7 +731,7 @@
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || !parsed.key) return null;
-      if (!API_MODELS[parsed.model]) parsed.model = 'claude-haiku-4-5';
+      if (!API_MODELS[parsed.model]) parsed.model = 'claude-haiku-4-5-20251001';
       return parsed;
     } catch (e) { return null; }
   }
@@ -791,7 +769,7 @@
 
   function renderApiKeyCard(saved) {
     document.getElementById('apiKeyInput').value = saved ? saved.key : '';
-    document.getElementById('apiModelSelect').value = (saved && saved.model) || 'claude-haiku-4-5';
+    document.getElementById('apiModelSelect').value = (saved && saved.model) || 'claude-haiku-4-5-20251001';
     document.getElementById('apiKeyStatus').textContent = saved
       ? '저장된 키를 사용합니다 (' + (API_MODELS[saved.model] || {}).label + ').'
       : '키를 입력하고 저장하면 이 화면에서 바로 시작할 수 있습니다.';
@@ -813,7 +791,7 @@
       return;
     }
     var cfg = loadApiKeyConfig();
-    var price = API_MODELS[(cfg && cfg.model) || 'claude-haiku-4-5'];
+    var price = API_MODELS[(cfg && cfg.model) || 'claude-haiku-4-5-20251001'];
     var cost = (state.usage.inputTokens / 1e6) * price.inPrice + (state.usage.outputTokens / 1e6) * price.outPrice;
     el.textContent = '이번 세션 사용량 — 입력 ' + state.usage.inputTokens.toLocaleString() + ' · 출력 ' +
       state.usage.outputTokens.toLocaleString() + ' 토큰 (약 $' + cost.toFixed(3) + ', ' + price.label + ' 기준)';
@@ -1083,7 +1061,8 @@
 
     situationTopicSeed = null;
     document.getElementById('chosenSituationBanner').hidden = true;
-    document.getElementById('situationSelect').value = '0';
+    situationSelected = SITUATIONS.map(function () { return false; });
+    renderSituationChips();
     renderSituationDetail();
     document.getElementById('setupPage').hidden = true;
     document.getElementById('introPage').hidden = true;
@@ -1560,27 +1539,44 @@
     situationTopicSeed = null;
   }
 
+  var situationSelected = SITUATIONS.map(function () { return false; });
+
+  function renderSituationChips() {
+    var row = document.getElementById('situationChipRow');
+    row.innerHTML = '';
+    SITUATIONS.forEach(function (item, i) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'chip'; btn.textContent = item.t;
+      btn.dataset.state = situationSelected[i] ? 'like' : 'neutral';
+      btn.addEventListener('click', function () {
+        situationSelected[i] = !situationSelected[i];
+        btn.dataset.state = situationSelected[i] ? 'like' : 'neutral';
+        renderSituationDetail();
+      });
+      row.appendChild(btn);
+    });
+  }
+
+  function situationFocusLine(item) {
+    if (item.f) return '<div class="focus"><b>' + item.t + '</b><br>' + item.f + '</div>';
+    return '<div class="focus none"><b>' + item.t + '</b><br>좁힐 지점이 따로 적혀 있지 않은 항목입니다 — 배경부터 풀어 쓰고 시작하세요.</div>';
+  }
+
   function renderSituationDetail() {
-    var i = Number(document.getElementById('situationSelect').value);
-    var item = SITUATIONS[i];
-    var focusEl = document.getElementById('situationFocus');
-    if (item.f) {
-      focusEl.className = 'focus';
-      focusEl.innerHTML = item.f;
-    } else {
-      focusEl.className = 'focus none';
-      focusEl.textContent = '좁힐 지점이 따로 적혀 있지 않은 항목입니다 — 배경부터 풀어 쓰고 시작하세요.';
-    }
+    var picked = SITUATIONS.filter(function (item, i) { return situationSelected[i]; });
+    var box = document.getElementById('situationDetail');
+    document.getElementById('situationNextBtn').disabled = picked.length === 0;
+    if (picked.length === 0) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = picked.map(situationFocusLine).join('');
   }
 
   function goToIntroFromSituation(withSeed) {
     var banner = document.getElementById('chosenSituationBanner');
-    if (withSeed) {
-      var i = Number(document.getElementById('situationSelect').value);
-      var item = SITUATIONS[i];
-      situationTopicSeed = item.t;
-      document.getElementById('chosenSituationText').innerHTML =
-        '<b>' + item.t + '</b>' + (item.f ? '<br>' + item.f : '');
+    var picked = withSeed ? SITUATIONS.filter(function (item, i) { return situationSelected[i]; }) : [];
+    if (picked.length) {
+      situationTopicSeed = picked.map(function (item) { return item.t; }).join(' / ');
+      document.getElementById('chosenSituationText').innerHTML = picked.map(situationFocusLine).join('');
       banner.hidden = false;
     } else {
       situationTopicSeed = null;
@@ -1592,7 +1588,7 @@
   }
 
   function wireInputs() {
-    document.getElementById('situationSelect').addEventListener('change', renderSituationDetail);
+    renderSituationChips();
     document.getElementById('situationNextBtn').addEventListener('click', function () { goToIntroFromSituation(true); });
     document.getElementById('situationSkipBtn').addEventListener('click', function () { goToIntroFromSituation(false); });
     document.getElementById('introStartBtn').addEventListener('click', showSetupPage);
