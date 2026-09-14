@@ -468,8 +468,8 @@
 
   </main>
 
-  <footer>
-    이 페이지의 진행 상황은 이 브라우저에만 저장됩니다 · <button class="link-btn" id="resetBtn">새로 시작하기</button>
+  <footer id="pageFooter" hidden>
+    <button class="link-btn" id="resetBtn">처음으로</button>
   </footer>
 </div>
 
@@ -1088,6 +1088,7 @@
     document.getElementById('setupPage').hidden = true;
     document.getElementById('introPage').hidden = true;
     document.getElementById('situationPage').hidden = false;
+    document.getElementById('pageFooter').hidden = true;
   }
 
   // ---------------------------------------------------------------- loading UI
@@ -1587,6 +1588,7 @@
     }
     document.getElementById('situationPage').hidden = true;
     document.getElementById('introPage').hidden = false;
+    document.getElementById('pageFooter').hidden = false;
   }
 
   function wireInputs() {
@@ -1721,6 +1723,7 @@
     if (hasProgress(state)) {
       document.getElementById('situationPage').hidden = true;
       document.getElementById('introPage').hidden = true;
+      document.getElementById('pageFooter').hidden = false;
       showSetupPage();
       document.getElementById('resumeBanner').hidden = false;
       // keep visual state at rest (intro-like) until the viewer decides
