@@ -69,6 +69,7 @@ cd sketch3d/server && npm install && npm start
 - Node 서브프로젝트(`hyundai-proxy/`, `sketch3d/server/`)는 폴더별로 package.json/.env/.gitignore를 완전히 독립적으로 관리
 - 커밋 메시지 실관행: `add|update|fix|chore <파일/기능>: <한국어 요약>` (예: `update sketch3d: 인허가 PDF 도면 이미지 축소`)
 - 수정 후에는 브라우저 확인(스크린샷 검토) 요청 → 이상 없으면 `git add [파일] && git commit && git push origin main`
+- **`car-maintenance.html`·`hyundai-proxy/`의 변경은 Claude가 커밋 대상에서 항상 제외한다** (2026-09-14, 사용자 지시) — 이 두 파일/폴더는 사용자가 별도로 진행 중인 작업이라 `git add -A` 등으로 쓸어담지 말고, 요청받은 파일만 콕 집어 add할 것. 이 저장소에서 커밋+푸시하기 전에 `git status`로 이 두 경로가 끼어 있지 않은지 항상 확인한다.
 
 ## 사용자 페르소나 및 응답 규칙
 
