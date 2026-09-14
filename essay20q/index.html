@@ -633,8 +633,14 @@
       '  이번 라운드 문답 기록에 뒤집기 질문이 있었다면 반복하지 말고 다음 단계로 넘어가세요.\n' +
       '- 15~20번째: 대상, 방법, 수량, 기간, 우선순위, 검증 방법, 실행 계획이 구체적으로 정해지도록 좁혀가는 질문.\n' +
       '- 질문은 한 번에 하나만, 에세이(서술형) 톤으로 2~4문장 이내로 작성하세요.\n' +
-      '- 직전 답변이 "잘 모르겠다"는 뜻이면, 구체적인 후보 3~5개를 제시하고 각각 끌리는지 아닌지 고르게\n' +
-      '  하세요(answerType: "choice").\n' +
+      '- 질문에 구체적인 예시나 후보 항목을 넣을 수 있다면(예: "일정관리, 협업 소통, 자료 정리, 반복\n' +
+      '  작업 자동화 등이 있었나요?"처럼 나열형으로 물으려는 경우) 그 항목들을 질문 문장 안에 풀어\n' +
+      '  쓰지 말고 반드시 choices 배열에 하나씩 넣고 answerType을 "choice"로 지정하세요. 질문 문장은\n' +
+      '  "해당하는 것이 있다면 골라주세요" 정도로 짧게 쓰면 됩니다 — 사용자는 각 항목을 고르거나, 없으면\n' +
+      '  자유롭게 직접 적을 수도 있습니다.\n' +
+      '- answerType은 "open"보다 "choice"를 우선 고려하세요. 예시로 들 만한 항목이 전혀 없고 숫자·기간·\n' +
+      '  이름처럼 사용자만 아는 구체적 사실을 직접 묻는 질문일 때만 "open"을 쓰세요. 같은 이유로 직전\n' +
+      '  답변이 "잘 모르겠다"는 뜻이면 반드시 구체적인 후보 3~5개를 choices로 제시하세요.\n' +
       '- 이 페이지는 실시간 웹 검색을 할 수 없습니다. 판단할 근거가 부족해도 추측하지 말고, 부족한 정보를\n' +
       '  사용자에게 직접 묻는 질문으로 다음 질문을 구성하세요.\n' +
       '- 이미 나온 질문이나 이미 답변된 내용을 반복하지 마세요.';
@@ -1074,6 +1080,14 @@
     document.getElementById('resumeBanner').hidden = true;
     updateCounters();
     render();
+
+    situationTopicSeed = null;
+    document.getElementById('chosenSituationBanner').hidden = true;
+    document.getElementById('situationSelect').value = '0';
+    renderSituationDetail();
+    document.getElementById('setupPage').hidden = true;
+    document.getElementById('introPage').hidden = true;
+    document.getElementById('situationPage').hidden = false;
   }
 
   // ---------------------------------------------------------------- loading UI
