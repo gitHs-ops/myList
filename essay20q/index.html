@@ -276,10 +276,6 @@
 
     <section id="setupPage" hidden>
 
-    <div class="situation-detail" id="chosenSituationBanner" hidden style="margin-top:0;margin-bottom:18px">
-      <div id="chosenSituationText"></div>
-    </div>
-
     <section class="card field-card" id="topicCard">
       <h2>주제 — 하고 싶은 일 · 목표 · 고민</h2>
       <p>지금 이루고 싶은 일, 도달하고 싶은 목표, 마음에 걸리는 고민을 한두 문장으로 적어주세요.<br>완벽하게 정리된 문장이 아니어도 됩니다 — 이어지는 질문들이 함께 다듬어 줍니다.</p>
@@ -472,7 +468,7 @@
       <select id="apiModelSelect" class="modal-field">
         <option value="claude-opus-5">Claude Opus 5 (가장 성능 좋음)</option>
         <option value="claude-sonnet-5">Claude Sonnet 5 (더 저렴)</option>
-        <option value="claude-haiku-4-5-20251001" selected>Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)</option>
+        <option value="claude-haiku-4-5" selected>Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)</option>
       </select>
     </div>
     <div class="btn-row">
@@ -711,7 +707,7 @@
   var API_MODELS = {
     'claude-opus-5':   { label: 'Claude Opus 5 (가장 성능 좋음)',            inPrice: 5,  outPrice: 25 },
     'claude-sonnet-5': { label: 'Claude Sonnet 5 (더 저렴)',                   inPrice: 2,  outPrice: 10 },
-    'claude-haiku-4-5-20251001':{ label: 'Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)',  inPrice: 1,  outPrice: 5  }
+    'claude-haiku-4-5':{ label: 'Claude Haiku 4.5 (기본 · 가장 저렴 · 빠름)',  inPrice: 1,  outPrice: 5  }
   };
 
   function loadApiKeyConfig() {
@@ -720,7 +716,7 @@
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || !parsed.key) return null;
-      if (!API_MODELS[parsed.model]) parsed.model = 'claude-haiku-4-5-20251001';
+      if (!API_MODELS[parsed.model]) parsed.model = 'claude-haiku-4-5';
       return parsed;
     } catch (e) { return null; }
   }
@@ -758,7 +754,7 @@
 
   function renderApiKeyCard(saved) {
     document.getElementById('apiKeyInput').value = saved ? saved.key : '';
-    document.getElementById('apiModelSelect').value = (saved && saved.model) || 'claude-haiku-4-5-20251001';
+    document.getElementById('apiModelSelect').value = (saved && saved.model) || 'claude-haiku-4-5';
     document.getElementById('apiKeyStatus').textContent = saved
       ? '저장된 키를 사용합니다 (' + (API_MODELS[saved.model] || {}).label + ').'
       : '키를 입력하고 저장하면 이 화면에서 바로 시작할 수 있습니다.';
@@ -780,7 +776,7 @@
       return;
     }
     var cfg = loadApiKeyConfig();
-    var price = API_MODELS[(cfg && cfg.model) || 'claude-haiku-4-5-20251001'];
+    var price = API_MODELS[(cfg && cfg.model) || 'claude-haiku-4-5'];
     var cost = (state.usage.inputTokens / 1e6) * price.inPrice + (state.usage.outputTokens / 1e6) * price.outPrice;
     el.textContent = '이번 세션 사용량 — 입력 ' + state.usage.inputTokens.toLocaleString() + ' · 출력 ' +
       state.usage.outputTokens.toLocaleString() + ' 토큰 (약 $' + cost.toFixed(3) + ', ' + price.label + ' 기준)';
@@ -851,12 +847,14 @@
           'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true'
         },
-        body: JSON.stringify({
-          model: cfg.model,
-          max_tokens: 4096,
-          output_config: { effort: effort },
-          messages: [{ role: 'user', content: promptText }]
-        }),
+        body: JSON.stringify(Object.assign(
+          {
+            model: cfg.model,
+            max_tokens: 4096,
+            messages: [{ role: 'user', content: promptText }]
+          },
+          cfg.model === 'claude-haiku-4-5' ? {} : { output_config: { effort: effort } }
+        )),
         signal: signal
       });
     } catch (e) {
@@ -1049,7 +1047,6 @@
     render();
 
     situationSelectedIndex = null;
-    document.getElementById('chosenSituationBanner').hidden = true;
     situationPicked = null;
     renderSituationChips();
     renderSituationDetail();
@@ -1551,22 +1548,16 @@
   }
 
   function goToSetupFromSituation(withSeed) {
-    var banner = document.getElementById('chosenSituationBanner');
     var i = withSeed ? situationPicked : null;
     situationSelectedIndex = i;
     document.getElementById('situationPage').hidden = true;
     document.getElementById('pageFooter').hidden = false;
     showSetupPage();
     if (i !== null) {
-      var item = SITUATIONS[i];
-      document.getElementById('chosenSituationText').innerHTML = situationFocusLine(item);
-      banner.hidden = false;
-      document.getElementById('topicInput').value = item.t;
+      document.getElementById('topicInput').value = SITUATIONS[i].t;
       updateCounters();
       evaluateStartButton();
       saveState();
-    } else {
-      banner.hidden = true;
     }
   }
 
