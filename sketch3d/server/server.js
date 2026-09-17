@@ -153,7 +153,7 @@ app.post('/api/extract', async (req, res) => {
 
     const response = await client.messages.create({
       model: MODEL,
-      max_tokens: 16000,
+      max_tokens: 32000,
       system: SYSTEM,
       output_config: { format: { type: 'json_schema', schema: WALL_SCHEMA } },
       messages: [{
@@ -264,7 +264,7 @@ app.post('/api/edit', async (req, res) => {
 
     const response = await client.messages.create({
       model: MODEL,
-      max_tokens: 16000,
+      max_tokens: 32000,
       system: EDIT_SYSTEM,
       output_config: { format: { type: 'json_schema', schema: EDIT_SCHEMA } },
       messages: [{
