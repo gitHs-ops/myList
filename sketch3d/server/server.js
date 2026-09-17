@@ -151,7 +151,10 @@ app.post('/api/extract', async (req, res) => {
       ? `스케치 ${list.length}장이 제공됩니다. 같은 건물을 다른 각도/층/치수메모로 그린 것으로 보고, 모든 장을 종합해 하나의 평면(벽 집합)으로 합치세요. `
       : '';
 
-    const response = await client.messages.create({
+    // max_tokens가 크면(현재 32000) SDK가 "10분 넘게 걸릴 수 있는 요청은 스트리밍
+    // 필수"라며 비스트리밍 create()를 거부한다 — stream()으로 받아 finalMessage()로
+    // 합친 뒤 기존 코드와 동일하게 처리한다(response.content/usage 구조 동일).
+    const stream = client.messages.stream({
       model: MODEL,
       max_tokens: 32000,
       system: SYSTEM,
@@ -169,6 +172,7 @@ app.post('/api/extract', async (req, res) => {
         ]
       }]
     });
+    const response = await stream.finalMessage();
 
     const textBlock = response.content.find(b => b.type === 'text');
     if (!textBlock) return res.status(502).json({ error: 'no text in model response', stop: response.stop_reason });
@@ -262,7 +266,9 @@ app.post('/api/edit', async (req, res) => {
       ? `\n\n현재 배치된 가구 목록(치수 수정 지시가 있을 때만 사용, 추가/삭제/이동 금지):\n\`\`\`json\n${JSON.stringify(furniture)}\n\`\`\``
       : '';
 
-    const response = await client.messages.create({
+    // max_tokens가 크면(현재 32000) SDK가 비스트리밍 create()를 거부한다(10분 초과 가능
+    // 요청은 스트리밍 필수) — stream()+finalMessage()로 우회, 결과 구조는 동일.
+    const stream = client.messages.stream({
       model: MODEL,
       max_tokens: 32000,
       system: EDIT_SYSTEM,
@@ -272,6 +278,7 @@ app.post('/api/edit', async (req, res) => {
         content: `현재 벽 JSON:\n\`\`\`json\n${JSON.stringify(walls)}\n\`\`\`${furnitureBlock}\n\n수정 지시: ${instruction}\n\n지시를 반영한 전체 벽 JSON을 반환하세요.`
       }]
     });
+    const response = await stream.finalMessage();
 
     const textBlock = response.content.find(b => b.type === 'text');
     if (!textBlock) return res.status(502).json({ error: 'no text in model response', stop: response.stop_reason });
