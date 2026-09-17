@@ -1816,8 +1816,7 @@ function markViewsDirty() {
 viewsGenBtn.addEventListener('click', () => {
   renderViews();
   hasGeneratedViews = true;
-  viewsGenBtn.disabled = true;
-  viewsGenBtn.textContent = '📐 도면 생성';
+  viewsGenBtn.textContent = '🔄 도면 재생성';
 });
 
 /* ---------- 평면도·입면도 개별 파일 저장 ---------- */
@@ -1860,8 +1859,7 @@ document.getElementById('viewEnlargeClose').addEventListener('click', () => view
 function redrawEnlarged() {
   renderViews();
   hasGeneratedViews = true;
-  viewsGenBtn.disabled = true;
-  viewsGenBtn.textContent = '📐 도면 생성';
+  viewsGenBtn.textContent = '🔄 도면 재생성';
   if (currentEnlargeKey) {
     const img = document.getElementById('view' + currentEnlargeKey);
     viewEnlargeImg.src = img.src;
