@@ -791,6 +791,8 @@
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
     #btnSysLog:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
     .help-dialog.sys-log-dialog { max-width: 780px; }
+    .sys-log-id { font: 11.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text-secondary);
+      background: var(--field-bg); border: 1px solid var(--field-border); border-radius: 8px; padding: 6px 10px; margin: 0 0 10px; word-break: break-all; }
     .sys-log-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
     .sys-log-list { height: 52vh; overflow: auto; background: #fff; border: 1px solid var(--field-border); border-radius: 10px;
       padding: 8px 10px; font: 11.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
@@ -818,6 +820,7 @@
     '<button class="dialog-close-x" id="sysLogX" aria-label="닫기" title="닫기">×</button>' +
     '<h3 id="sysLogTitle">시스템 로그</h3>' +
     '<p>버튼 클릭·체크/선택 변경·오류·상태 메시지·API 호출을 시간순으로 기록합니다. 입력한 글자(접근 코드·채팅 내용)는 기록하지 않으며, 이 브라우저에만 저장됩니다(최근 300건 유지).</p>' +
+    '<div class="sys-log-id" id="sysLogId"></div>' +
     '<div class="sys-log-tools">' +
       '<button type="button" class="dim-btn" id="sysLogCopy">📋 복사</button>' +
       '<button type="button" class="dim-btn" id="sysLogSave">💾 파일로 저장</button>' +
@@ -828,6 +831,22 @@
   document.body.appendChild(dlg);
   const listEl = dlg.querySelector('#sysLogList');
   const titleEl = dlg.querySelector('#sysLogTitle');
+  const idEl = dlg.querySelector('#sysLogId');
+
+  /* 실행 주체 식별: 기기ID(이 브라우저에 한 번 만들어 저장하는 임의 ID) + 접속 IP(인터넷 주소).
+     기기ID는 브라우저 저장소를 지우면 새로 생기고, IP는 외부 IP 확인 서비스(ipify)에 GET 한 번 보내 얻는다. */
+  let deviceId = '';
+  try {
+    deviceId = localStorage.getItem('sketch3d_device_id') || '';
+    if (!deviceId) {
+      deviceId = crypto.randomUUID ? crypto.randomUUID()
+        : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('sketch3d_device_id', deviceId);
+    }
+  } catch (e) { deviceId = deviceId || 'temp-' + Math.random().toString(16).slice(2, 10); }
+  let publicIp = '확인 중…';
+  function renderId() { idEl.textContent = `기기ID: ${deviceId} · 접속 IP: ${publicIp}`; }
+  renderId();
 
   function updateCount() {
     btn.textContent = `📋 시스템 로그 (${logs.length})`;
@@ -898,6 +917,8 @@
       '[sketch3d 시스템 로그]',
       '저장 시각: ' + fmtTime(Date.now(), true),
       '페이지: ' + location.origin + location.pathname,
+      '기기ID: ' + deviceId,
+      '접속 IP: ' + publicIp,
       '브라우저: ' + navigator.userAgent,
       '화면: ' + innerWidth + 'x' + innerHeight,
       '건수: ' + logs.length,
@@ -1038,7 +1059,17 @@
   };
 
   updateCount();
-  add('session', `페이지 로드 · 화면 ${innerWidth}×${innerHeight}`);
+  add('session', `페이지 로드 · 화면 ${innerWidth}×${innerHeight} · 기기ID ${deviceId}`);
+
+  // 접속 IP는 로그 팝업 상단·내보내기 머리말·세션 기록에 반영. 실패해도(차단·오프라인) 나머지 로그는 정상 동작.
+  (function () {
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 4000);
+    rawFetch('https://api64.ipify.org?format=json', { signal: ctl.signal, cache: 'no-store' })
+      .then(r => r.json())
+      .then(j => { publicIp = (j && j.ip) || '확인 불가'; })
+      .catch(() => { publicIp = '확인 불가(차단·오프라인)'; })
+      .then(() => { clearTimeout(to); renderId(); add('session', '접속 IP: ' + publicIp); });
+  })();
 })();
 </script>
 
