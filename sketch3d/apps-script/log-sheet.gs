@@ -44,7 +44,7 @@
 
 /** 이 수집기 전용 설정 — 전역 이름 하나(SKETCH3D_LOG)만 쓰도록 묶어 둔다(다른 파일과 충돌 방지). */
 var SKETCH3D_LOG = {
-  SHEET_ID: '',                 // 독립형 프로젝트일 때만 스프레드시트 ID 를 넣는다. 시트에서 만든 프로젝트면 비워둔다.
+  SHEET_ID: '1nlCiRHXnC8qWleP8AZCG1h8jWMMoWVBcs_DbGYDxtis',   // 기록 대상 스프레드시트. 비우면 이 스크립트가 붙어 있는 시트를 쓴다(독립형 프로젝트는 반드시 지정).
   SHEET_NAME: 'sketch3d-log',
   HEADERS: ['수신시각', '기록시각', '세션', '기기ID', 'IP', '유형', '메시지', '페이지', '브라우저', '화면', '순번'],
   TYPE_LABEL: {
