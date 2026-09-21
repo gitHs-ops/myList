@@ -853,7 +853,7 @@
      · 실패분은 대기열에 남겨 다음 방문 때 재전송 (최대 500건)
      · 텍스트 입력값(접근 코드·채팅 내용)은 애초에 기록하지 않으므로 전송 대상에도 없다
      · 수신부 코드·배포 방법은 sketch3d/apps-script/log-sheet.gs 참고 */
-  const SHEET_LOG_URL = '';   // ← Apps Script 웹앱 배포 URL(https://script.google.com/macros/s/.../exec). 비워두면 전송하지 않는다.
+  const SHEET_LOG_URL = 'https://script.google.com/macros/s/AKfycbxohbHIeRnf9XJOwTTimlXK70fO8age2BBYAao7VKP19oWyfdrgyBolc0ii_lJny3Rkzw/exec';   // Apps Script 웹앱 배포 URL. 비워두면 전송하지 않는다.
   const MASK_IP = false;      // true 로 두면 IP 끝자리를 가려서(1.2.3.*) 보낸다
   const QKEY = 'sketch3d_syslog_queue', QMAX = 500, BATCH = 20, SEND_INTERVAL = 10000;
   const nativeFetch = window.fetch.bind(window);   // fetch 를 감싸기 전 원본 — 전송 자체가 API 로그로 되먹임되는 것을 막는다
