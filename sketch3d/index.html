@@ -761,6 +761,287 @@
   </div>
 </div>
 
+<!-- ===== 시스템 로그: 좌측 하단 버튼 + 팝업. 버튼·체크·선택 변경·Enter·오류·상태 메시지·API 호출을 기록 =====
+     메인 모듈 스크립트보다 먼저 실행되는 독립 스크립트(캡처 단계 리스너라 다른 핸들러가 전파를 막아도 기록됨).
+     ⚠ 텍스트 입력값(접근 코드·채팅 내용 등)과 요청 헤더·본문은 절대 기록하지 않는다. -->
+<script>
+(function () {
+  'use strict';
+  const KEY = 'sketch3d_syslog', MAX = 1000, KEEP = 300;
+  const LBL = { click: '클릭', check: '체크', change: '변경', key: '키', status: '상태', api: 'API', error: '오류', session: '세션' };
+  let logs = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || '[]');
+    if (Array.isArray(saved)) logs = saved.filter(e => e && typeof e.msg === 'string' && typeof e.ts === 'number').slice(-KEEP);
+  } catch (e) { /* 저장소를 못 읽어도 로그 기능은 메모리로 동작 */ }
+
+  const p2 = n => String(n).padStart(2, '0');
+  function fmtTime(ts, withDate) {
+    const d = new Date(ts);
+    const t = `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+    return withDate ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${t}` : t;
+  }
+
+  /* ---------- UI: 스타일 + 좌측 하단 버튼 + 팝업 ---------- */
+  const style = document.createElement('style');
+  style.textContent = `
+    #btnSysLog { position: fixed; left: 14px; bottom: 14px; z-index: 40; padding: 7px 13px; border-radius: 999px;
+      border: 1px solid var(--field-border); background: var(--field-bg); color: var(--text-secondary);
+      font: 600 12px var(--font-main); cursor: pointer; box-shadow: 0 6px 18px rgba(15,23,42,.10);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    #btnSysLog:hover { border-color: var(--accent-primary); color: var(--accent-secondary); }
+    .help-dialog.sys-log-dialog { max-width: 780px; }
+    .sys-log-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+    .sys-log-list { height: 52vh; overflow: auto; background: #fff; border: 1px solid var(--field-border); border-radius: 10px;
+      padding: 8px 10px; font: 11.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .sys-log-row { display: flex; gap: 8px; align-items: baseline; border-bottom: 1px dashed rgba(148,163,184,.25); padding: 1px 0; }
+    .sys-log-row .t { flex: none; color: var(--text-secondary); }
+    .sys-log-row .k { flex: none; min-width: 34px; font-weight: 700; color: var(--accent-secondary); }
+    .sys-log-row .m { word-break: break-all; color: var(--text-primary); }
+    .sys-log-row.error .k, .sys-log-row.error .m { color: var(--danger); }
+    .sys-log-row.api .k { color: #0891b2; }
+    .sys-log-row.status .k { color: var(--warning); }
+    .sys-log-row.session .k, .sys-log-row.session .m { color: var(--text-secondary); }
+    .sys-log-empty { color: var(--text-secondary); padding: 12px 4px; }
+  `;
+  document.head.appendChild(style);
+
+  const btn = document.createElement('button');
+  btn.id = 'btnSysLog';
+  btn.type = 'button';
+  document.body.appendChild(btn);
+
+  const dlg = document.createElement('dialog');
+  dlg.id = 'sysLogDialog';
+  dlg.className = 'help-dialog sys-log-dialog';
+  dlg.innerHTML =
+    '<button class="dialog-close-x" id="sysLogX" aria-label="닫기" title="닫기">×</button>' +
+    '<h3 id="sysLogTitle">시스템 로그</h3>' +
+    '<p>버튼 클릭·체크/선택 변경·오류·상태 메시지·API 호출을 시간순으로 기록합니다. 입력한 글자(접근 코드·채팅 내용)는 기록하지 않으며, 이 브라우저에만 저장됩니다(최근 300건 유지).</p>' +
+    '<div class="sys-log-tools">' +
+      '<button type="button" class="dim-btn" id="sysLogCopy">📋 복사</button>' +
+      '<button type="button" class="dim-btn" id="sysLogSave">💾 파일로 저장</button>' +
+      '<button type="button" class="dim-btn" id="sysLogClear">🗑 지우기</button>' +
+    '</div>' +
+    '<div class="sys-log-list" id="sysLogList"></div>' +
+    '<button type="button" class="btn ghost" id="sysLogClose" style="margin-top:14px">닫기</button>';
+  document.body.appendChild(dlg);
+  const listEl = dlg.querySelector('#sysLogList');
+  const titleEl = dlg.querySelector('#sysLogTitle');
+
+  function updateCount() {
+    btn.textContent = `📋 시스템 로그 (${logs.length})`;
+    titleEl.textContent = `시스템 로그 (${logs.length}건)`;
+  }
+
+  function makeRow(e) {
+    const row = document.createElement('div');
+    row.className = 'sys-log-row ' + e.type;
+    row.title = fmtTime(e.ts, true);
+    const t = document.createElement('span'); t.className = 't'; t.textContent = fmtTime(e.ts);
+    const k = document.createElement('span'); k.className = 'k'; k.textContent = LBL[e.type] || e.type;
+    const m = document.createElement('span'); m.className = 'm'; m.textContent = e.msg;
+    row.append(t, k, m);
+    return row;
+  }
+  function renderAll() {
+    listEl.textContent = '';
+    if (!logs.length) {
+      const empty = document.createElement('div'); empty.className = 'sys-log-empty'; empty.textContent = '기록이 없습니다.';
+      listEl.appendChild(empty);
+    } else {
+      const frag = document.createDocumentFragment();
+      logs.forEach(e => frag.appendChild(makeRow(e)));
+      listEl.appendChild(frag);
+    }
+    listEl.scrollTop = listEl.scrollHeight;
+  }
+
+  let persistTimer = null;
+  function persist() {
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(flush, 600);
+  }
+  function flush() {
+    try { localStorage.setItem(KEY, JSON.stringify(logs.slice(-KEEP))); } catch (e) { /* 용량·차단 시 메모리만 유지 */ }
+  }
+  window.addEventListener('pagehide', flush);
+
+  function add(type, msg) {
+    const e = { ts: Date.now(), type, msg: String(msg) };
+    logs.push(e);
+    if (logs.length > MAX) logs.splice(0, logs.length - MAX);
+    persist();
+    updateCount();
+    if (dlg.open) {
+      if (listEl.querySelector('.sys-log-empty')) listEl.textContent = '';
+      const nearBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < 40;
+      listEl.appendChild(makeRow(e));
+      while (listEl.children.length > MAX) listEl.removeChild(listEl.firstChild);
+      if (nearBottom) listEl.scrollTop = listEl.scrollHeight;
+    }
+  }
+  window.sysLog = add; // 필요하면 콘솔·다른 스크립트에서도 sysLog('click', '...') 로 남길 수 있다
+
+  /* ---------- 팝업 동작 ---------- */
+  btn.addEventListener('click', () => { renderAll(); dlg.showModal(); listEl.scrollTop = listEl.scrollHeight; });
+  dlg.querySelector('#sysLogX').addEventListener('click', () => dlg.close());
+  dlg.querySelector('#sysLogClose').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (ev) => {
+    const r = dlg.getBoundingClientRect();
+    const inside = r.top <= ev.clientY && ev.clientY <= r.bottom && r.left <= ev.clientX && ev.clientX <= r.right;
+    if (!inside) dlg.close();
+  });
+
+  function toText() {
+    const head = [
+      '[sketch3d 시스템 로그]',
+      '저장 시각: ' + fmtTime(Date.now(), true),
+      '페이지: ' + location.origin + location.pathname,
+      '브라우저: ' + navigator.userAgent,
+      '화면: ' + innerWidth + 'x' + innerHeight,
+      '건수: ' + logs.length,
+      ''
+    ];
+    return head.concat(logs.map(e => `${fmtTime(e.ts, true)}  [${LBL[e.type] || e.type}]  ${e.msg}`)).join('\n');
+  }
+  function flash(el, text) {
+    const old = el.textContent;
+    el.textContent = text;
+    setTimeout(() => { el.textContent = old; }, 1300);
+  }
+  dlg.querySelector('#sysLogCopy').addEventListener('click', function () {
+    const self = this, text = toText();
+    const done = () => flash(self, '✅ 복사됨');
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      dlg.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { flash(self, '⚠ 복사 실패'); }
+      ta.remove();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  });
+  dlg.querySelector('#sysLogSave').addEventListener('click', () => {
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([toText()], { type: 'text/plain;charset=utf-8' }));
+    a.download = `sketch3d-system-log-${stamp}.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+  dlg.querySelector('#sysLogClear').addEventListener('click', () => {
+    logs = [];
+    flush();
+    updateCount();
+    renderAll();
+  });
+
+  /* ---------- 이벤트 수집 ---------- */
+  const SEL = 'button, a[href], summary, input, select, [role="button"], .views img, #drop';
+  function labelOf(el) {
+    let t = '';
+    if (el.id === 'drop') t = '스케치 업로드 영역';
+    else if (el.id === 'btnSysLog') t = '시스템 로그 열기';   // 버튼 글자에 건수가 붙어 있어 고정 문구 사용
+    else if (el.tagName === 'INPUT') { const lab = el.closest('label'); t = lab ? lab.textContent : ''; }
+    else if (el.tagName === 'IMG') t = el.alt || el.title || '';
+    else if (el.tagName === 'SELECT') t = el.title || '';
+    else t = el.textContent || '';
+    t = t.replace(/\s+/g, ' ').trim();
+    if (t.length < 2) t = (el.getAttribute('aria-label') || el.title || t || '').replace(/\s+/g, ' ').trim();
+    if (t.length > 40) t = t.slice(0, 40) + '…';
+    return (t || el.tagName.toLowerCase()) + (el.id ? ' #' + el.id : '');
+  }
+  const inLog = el => !!(el && el.closest && el.closest('#sysLogDialog'));
+
+  document.addEventListener('click', function (e) {
+    const target = e.target;
+    if (!target || !target.closest || inLog(target)) return;
+    const el = target.closest(SEL);
+    if (!el) return;
+    const auto = e.isTrusted ? '' : ' (코드 호출)';
+    const tag = el.tagName, type = (el.type || '').toLowerCase();
+    if (tag === 'SELECT') return;                                   // 선택 변경은 change 로 기록
+    if (tag === 'INPUT') {
+      if (type === 'checkbox' || type === 'radio') {
+        add('check', labelOf(el) + ' → ' + (el.checked ? (type === 'radio' ? '선택' : '켬') : '끔') + auto);
+      } else if (type === 'button' || type === 'submit' || type === 'reset' || type === 'file') {
+        add('click', labelOf(el) + auto);
+      }
+      return;                                                        // 텍스트·범위·색상 입력 클릭은 기록하지 않음(값은 change 에서)
+    }
+    add('click', labelOf(el) + auto);
+  }, true);
+
+  document.addEventListener('change', function (e) {
+    const el = e.target;
+    if (!el || !el.tagName || inLog(el)) return;
+    const type = (el.type || '').toLowerCase();
+    if (el.tagName === 'SELECT') {
+      const opt = el.options && el.options[el.selectedIndex];
+      add('change', (el.title || el.id || 'select') + (el.id ? ' #' + el.id : '') + ' → ' + (opt ? opt.text.trim() : el.value));
+    } else if (el.tagName === 'INPUT' && (type === 'range' || type === 'color')) {
+      add('change', (el.title || el.id || type) + (el.id ? ' #' + el.id : '') + ' → ' + el.value);
+    } else if (el.tagName === 'INPUT' && type === 'file') {
+      add('change', '파일 선택 ' + (el.files ? el.files.length : 0) + '개' + (el.id ? ' #' + el.id : ''));
+    }
+    // 텍스트 입력(접근 코드 등)·체크박스(click 에서 기록)는 여기서 기록하지 않는다
+  }, true);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    const el = e.target;
+    if (!el || !el.tagName || inLog(el)) return;
+    if (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text', 'search', 'number', 'password', ''].includes((el.type || '').toLowerCase()))) {
+      add('key', (e.shiftKey ? 'Shift+' : '') + 'Enter 입력' + (el.id ? ' #' + el.id : ' (' + el.tagName.toLowerCase() + ')'));
+    }
+  }, true);
+
+  window.addEventListener('error', function (e) {
+    if (e.message) add('error', `${e.message} (${String(e.filename || '').split('/').pop()}:${e.lineno})`);
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    const r = e.reason;
+    add('error', 'Promise 거부: ' + (r && r.message ? r.message : String(r)));
+  });
+
+  const st = document.getElementById('status');
+  if (st) {
+    new MutationObserver(function () {
+      if (!st.classList.contains('show')) return;
+      const txt = (st.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!txt) return;
+      const kind = ['ok', 'err', 'info'].find(k => st.classList.contains(k)) || '';
+      add('status', (kind ? '[' + kind + '] ' : '') + (txt.length > 300 ? txt.slice(0, 300) + '…' : txt));
+    }).observe(st, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+  }
+
+  // API(http/https) 호출만 기록 — 주소(쿼리 제외)·메서드·결과·소요시간. 헤더·본문은 기록하지 않는다.
+  const rawFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    let raw = typeof input === 'string' ? input : (input && input.url) || '';
+    if (!/^https?:|^\//i.test(raw)) return rawFetch(input, init);   // data:·blob: 등은 제외
+    let short = raw;
+    try { const u = new URL(raw, location.href); short = u.host + u.pathname; } catch (e) { /* 원문 유지 */ }
+    const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+    const t0 = performance.now();
+    add('api', `${method} ${short} 요청`);
+    return rawFetch(input, init).then(function (res) {
+      add('api', `${method} ${short} → HTTP ${res.status} (${((performance.now() - t0) / 1000).toFixed(1)}초)`);
+      return res;
+    }, function (err) {
+      add('error', `${method} ${short} 실패: ${err && err.message} (${((performance.now() - t0) / 1000).toFixed(1)}초)`);
+      throw err;
+    });
+  };
+
+  updateCount();
+  add('session', `페이지 로드 · 화면 ${innerWidth}×${innerHeight}`);
+})();
+</script>
+
 <script type="importmap">
 {
   "imports": {
