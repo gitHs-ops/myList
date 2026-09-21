@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>N빵 계산기 · 총무 최소부담</title>
+<style>
+  :root{
+    --deep:#0b4f6c;
+    --mid:#1b98a6;
+    --light:#a8e6df;
+    --gold:#e0a325;
+    --ink:#10262e;
+    --paper:#fffdf8;
+    --line:#e2ebea;
+    --muted:#74898c;
+    --minus:#c0392b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; height:100%;}
+  html{ background:var(--mid); }
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:linear-gradient(170deg,var(--deep) 0%, var(--mid) 55%, var(--light) 100%) no-repeat;
+    background-size:100% 100%;
+    color:var(--ink);
+    display:flex; justify-content:center;
+    min-height:100%;
+  }
+  #app{ width:100%; max-width:460px; padding:20px 16px 48px; }
+
+  header h1{ margin:4px 0 2px; font-size:23px; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.25); }
+  header p{ margin:0 0 16px; font-size:12.5px; color:#e9fffb; opacity:.9; line-height:1.5; }
+
+  .card{
+    background:var(--paper); border-radius:16px; padding:16px;
+    box-shadow:0 8px 22px rgba(0,0,0,.16); margin-bottom:12px;
+  }
+  .card-label{ font-size:12.5px; font-weight:800; color:var(--deep); margin-bottom:10px; letter-spacing:-.2px; }
+
+  /* 금액 입력 */
+  .amount-wrap{ position:relative; }
+  .amount-wrap .won{ position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:16px; font-weight:700; color:var(--muted); }
+  #totalInput{
+    width:100%; padding:13px 44px 13px 14px; font-size:24px; font-weight:800; text-align:right;
+    border:2px solid var(--line); border-radius:12px; color:var(--ink); background:#fff;
+    font-family:inherit; outline:none;
+  }
+  #totalInput:focus{ border-color:var(--mid); }
+  .quick-row{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .quick{
+    flex:1 1 0; min-width:58px; padding:9px 0; border-radius:9px; border:1px solid var(--line);
+    background:#fff; color:var(--deep); font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .quick:active{ transform:scale(.96); }
+  .quick.clear{ color:var(--minus); }
+
+  /* 인원 스테퍼 */
+  .stepper{ display:flex; align-items:center; justify-content:center; gap:14px; }
+  .stepper button{
+    width:50px; height:50px; border-radius:50%; border:none; background:var(--deep); color:#fff;
+    font-size:26px; font-weight:800; line-height:1; cursor:pointer; font-family:inherit;
+    -webkit-appearance:none; appearance:none; touch-action:manipulation; user-select:none;
+  }
+  .stepper button:disabled{ background:#c6d3d3; }
+  .stepper button:active:not(:disabled){ transform:scale(.93); }
+  .people-val{ font-size:30px; font-weight:900; color:var(--deep); min-width:82px; text-align:center; }
+  .people-val span{ font-size:15px; font-weight:700; margin-left:2px; }
+  .people-sub{ text-align:center; font-size:11.5px; color:var(--muted); margin-top:8px; }
+
+  /* 결과 */
+  .result{
+    background:linear-gradient(140deg,#083f58,#116b78);
+    border-radius:16px; padding:18px; color:#fff; box-shadow:0 10px 26px rgba(0,0,0,.26); margin-bottom:12px;
+  }
+  .badge{
+    display:inline-block; font-size:11px; font-weight:800; padding:4px 11px; border-radius:11px;
+    background:rgba(255,255,255,.18); margin-bottom:12px; letter-spacing:-.2px;
+  }
+  .badge.even{ background:rgba(88,214,161,.3); }
+  .badge.adj{ background:rgba(224,163,37,.38); }
+  .badge.fund{ background:rgba(255,255,255,.3); color:#fff8e1; }
+
+  .row{ display:flex; align-items:baseline; justify-content:space-between; padding:11px 0; border-bottom:1px dashed rgba(255,255,255,.2); }
+  .row:last-child{ border-bottom:none; }
+  .row .who{ font-size:14px; font-weight:700; }
+  .row .who small{ display:block; font-size:11px; font-weight:600; opacity:.75; margin-top:2px; }
+  .row .amt{ font-size:21px; font-weight:900; white-space:nowrap; }
+  .row .amt.refund{ color:#ffd76e; }
+  .row .amt.zero{ opacity:.8; }
+  .tag{ font-size:10px; font-weight:800; background:rgba(255,255,255,.22); padding:2px 7px; border-radius:8px; margin-left:6px; vertical-align:middle; }
+
+  .verify{ margin-top:12px; font-size:11.5px; opacity:.85; line-height:1.6; }
+  .note{
+    margin-top:10px; font-size:12px; line-height:1.6; background:rgba(255,255,255,.12);
+    border-radius:10px; padding:10px 12px;
+  }
+  .note.warn{ background:rgba(224,163,37,.25); }
+
+  .copy-btn{
+    width:100%; padding:14px; border:none; border-radius:13px; background:var(--gold); color:#3a2a00;
+    font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; box-shadow:0 6px 16px rgba(0,0,0,.18);
+  }
+  .copy-btn:active{ transform:scale(.98); }
+  .copy-btn.copied{ background:#58d6a1; color:#063a26; }
+
+  .rule{ font-size:11.5px; color:var(--muted); line-height:1.7; }
+  .rule b{ color:var(--deep); }
+  footer{ text-align:center; font-size:11px; color:#e9fffb; opacity:.75; margin-top:14px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>N빵 계산기</h1>
+    <p>1,000원 단위 · 총무 최소부담 방식</p>
+  </header>
+
+  <div class="card">
+    <div class="card-label">총 금액</div>
+    <div class="amount-wrap">
+      <input id="totalInput" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+      <span class="won">원</span>
+    </div>
+    <div class="quick-row">
+      <button class="quick" data-add="10000">+1만</button>
+      <button class="quick" data-add="50000">+5만</button>
+      <button class="quick" data-add="100000">+10만</button>
+      <button class="quick clear" data-add="0">지움</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">인원수 (총무 포함)</div>
+    <div class="stepper">
+      <button id="minusBtn" type="button" aria-label="인원 감소">−</button>
+      <div class="people-val"><span id="peopleVal">4</span><span>명</span></div>
+      <button id="plusBtn" type="button" aria-label="인원 증가">+</button>
+    </div>
+    <div class="people-sub">총무 1명 + 일반회원 <b id="regularCount">3</b>명</div>
+  </div>
+
+  <div class="result">
+    <div id="badge" class="badge">금액을 입력해 주세요</div>
+    <div id="rows"></div>
+    <div id="verify" class="verify"></div>
+    <div id="notes"></div>
+  </div>
+
+  <button id="copyBtn" class="copy-btn" type="button">정산 결과 복사</button>
+
+  <div class="card" style="margin-top:12px;">
+    <div class="card-label">계산 규칙</div>
+    <div class="rule">
+      · 총액 ÷ 인원이 <b>1,000원 단위로 딱 떨어지면</b> 전원 같은 금액, 총무 별도 계산 없음<br>
+      · 떨어지지 않으면 일반회원은 1인당 <b>1,000원 단위 올림</b>으로 공평하게 부담<br>
+      · <b>총무는 남은 차액만 부담</b>(최소부담)하며 항상 일반회원 금액 이하<br>
+      · 1인당 최소 1,000원이므로, 총액이 적으면 걷은 돈이 남아 <b>총무가 차액을 받고 기금으로 적립</b>
+    </div>
+  </div>
+
+  <footer>myList · N빵 계산기</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(s){ return document.querySelector(s); };
+  var UNIT = 1000;
+
+  var state = { total:0, people:4 };
+
+  function formatWon(n){
+    var neg = n < 0;
+    var s = Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (neg ? '-' : '') + s;
+  }
+
+  // ---------- 계산 ----------
+  // 반환: even(딱 떨어짐) / regularShare(일반회원 1인당) / treasurerShare(총무, 음수면 받음)
+  function calculate(total, people){
+    if(!total || total <= 0) return { valid:false };
+
+    var regularCount = people - 1;
+    var exact = total / people;
+    var even = (total % people === 0) && (exact % UNIT === 0);
+
+    // 딱 떨어지면 전원 동일 부담, 총무 별도 계산 없음
+    if(even){
+      return {
+        valid:true, even:true, regularCount:regularCount,
+        regularShare:exact, treasurerShare:exact,
+        collected: exact * people, fund:0
+      };
+    }
+
+    // 총무 혼자인 경우
+    if(regularCount <= 0){
+      return {
+        valid:true, even:false, solo:true, regularCount:0,
+        regularShare:0, treasurerShare:total,
+        collected: total, fund:0
+      };
+    }
+
+    // 일반회원: 1,000원 단위 올림 → 총무가 남은 차액만 부담(최소부담)
+    var regularShare = Math.ceil(exact / UNIT) * UNIT;
+    if(regularShare < UNIT) regularShare = UNIT;
+
+    var treasurerShare = total - regularShare * regularCount;
+    var collected = regularShare * regularCount + Math.max(0, treasurerShare);
+
+    return {
+      valid:true, even:false, regularCount:regularCount,
+      regularShare:regularShare, treasurerShare:treasurerShare,
+      collected: collected,
+      fund: collected - total   // 총무가 받는 금액 = 기금 적립액
+    };
+  }
+
+  // ---------- 렌더링 ----------
+  function render(){
+    $('#peopleVal').textContent = state.people;
+    $('#regularCount').textContent = Math.max(0, state.people - 1);
+    $('#minusBtn').disabled = state.people <= 1;
+    $('#plusBtn').disabled = state.people >= 99;
+
+    var r = calculate(state.total, state.people);
+    var badge = $('#badge'), rows = $('#rows'), verify = $('#verify'), notes = $('#notes');
+    rows.innerHTML = ''; notes.innerHTML = ''; verify.textContent = '';
+
+    if(!r.valid){
+      badge.className = 'badge';
+      badge.textContent = '금액을 입력해 주세요';
+      return;
+    }
+
+    var isRefund = r.treasurerShare < 0;
+
+    if(r.even){
+      badge.className = 'badge even';
+      badge.textContent = '딱 떨어짐 · 전원 동일 부담';
+    } else if(isRefund){
+      badge.className = 'badge fund';
+      badge.textContent = '기금 적립 · 총무가 차액을 받음';
+    } else if(r.solo){
+      badge.className = 'badge';
+      badge.textContent = '총무 1명 · 전액 부담';
+    } else {
+      badge.className = 'badge adj';
+      badge.textContent = '안 떨어짐 · 총무 최소부담으로 조정';
+    }
+
+    if(r.even){
+      rows.innerHTML =
+        '<div class="row"><span class="who">전원 <small>총무 포함 ' + state.people + '명</small></span>' +
+        '<span class="amt">' + formatWon(r.regularShare) + '원</span></div>';
+    } else {
+      if(r.regularCount > 0){
+        rows.innerHTML +=
+          '<div class="row"><span class="who">일반회원<span class="tag">공평부담</span>' +
+          '<small>1인당 · ' + r.regularCount + '명</small></span>' +
+          '<span class="amt">' + formatWon(r.regularShare) + '원</span></div>';
+      }
+      var amtCls = isRefund ? ' refund' : (r.treasurerShare === 0 ? ' zero' : '');
+      var amtTxt = isRefund
+        ? '+' + formatWon(-r.treasurerShare) + '원 받음'
+        : formatWon(r.treasurerShare) + '원';
+      rows.innerHTML +=
+        '<div class="row"><span class="who">총무<span class="tag">' + (r.solo ? '전액' : '최소부담') + '</span>' +
+        '<small>' + (isRefund ? '기금으로 적립' : '남은 차액') + '</small></span>' +
+        '<span class="amt' + amtCls + '">' + amtTxt + '</span></div>';
+    }
+
+    verify.textContent =
+      '검산: ' +
+      (r.even
+        ? formatWon(r.regularShare) + '원 × ' + state.people + '명'
+        : (r.regularCount > 0 ? formatWon(r.regularShare) + '원 × ' + r.regularCount + '명' +
+            (r.treasurerShare > 0 ? ' + 총무 ' + formatWon(r.treasurerShare) + '원' : '') : '총무 단독')) +
+      ' = ' + formatWon(r.collected) + '원 / 총액 ' + formatWon(state.total) + '원';
+
+    if(r.even){
+      notes.innerHTML = '<div class="note">나누어 떨어지므로 총무 금액을 별도로 계산하지 않습니다.</div>';
+    } else if(isRefund){
+      notes.innerHTML =
+        '<div class="note warn">1인당 최소 1,000원 기준으로 걷으면 총액보다 ' + formatWon(r.fund) +
+        '원이 더 걷힙니다. 총무는 부담 없이 이 차액을 받아 <b>기금으로 적립</b>합니다.</div>';
+    } else if(r.fund > 0){
+      notes.innerHTML =
+        '<div class="note">총무가 남은 차액 ' + formatWon(r.treasurerShare) + '원만 부담합니다.</div>';
+    }
+  }
+
+  // ---------- 입력 처리 ----------
+  function setTotal(n){
+    state.total = Math.max(0, Math.min(99999999, Math.floor(n || 0)));
+    $('#totalInput').value = state.total ? formatWon(state.total) : '';
+    render();
+  }
+
+  $('#totalInput').addEventListener('input', function(){
+    var digits = this.value.replace(/[^0-9]/g, '');
+    var n = digits ? parseInt(digits, 10) : 0;
+    if(n > 99999999) n = 99999999;
+    state.total = n;
+    this.value = n ? formatWon(n) : '';
+    render();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.quick'), function(btn){
+    btn.addEventListener('click', function(){
+      var add = parseInt(btn.getAttribute('data-add'), 10);
+      setTotal(add === 0 ? 0 : state.total + add);
+    });
+  });
+
+  $('#minusBtn').addEventListener('click', function(){
+    if(state.people > 1){ state.people--; render(); }
+  });
+  $('#plusBtn').addEventListener('click', function(){
+    if(state.people < 99){ state.people++; render(); }
+  });
+
+  // ---------- 결과 복사 ----------
+  function buildText(){
+    var r = calculate(state.total, state.people);
+    if(!r.valid) return null;
+    var L = [];
+    L.push('[N빵 정산]');
+    L.push('총 금액: ' + formatWon(state.total) + '원');
+    L.push('인원: ' + state.people + '명 (총무 1명 + 일반회원 ' + Math.max(0, state.people - 1) + '명)');
+    L.push('');
+    if(r.even){
+      L.push('· 전원 1인당 ' + formatWon(r.regularShare) + '원');
+      L.push('※ 딱 떨어져서 총무 별도 계산 없음');
+    } else {
+      if(r.regularCount > 0) L.push('· 일반회원 1인당: ' + formatWon(r.regularShare) + '원');
+      if(r.treasurerShare < 0){
+        L.push('· 총무: ' + formatWon(-r.treasurerShare) + '원 받음 (기금 적립)');
+        L.push('');
+        L.push('※ 1인당 최소 1,000원 기준으로 걷어 총액보다 ' + formatWon(r.fund) + '원이 남으며, 기금으로 적립합니다.');
+      } else {
+        L.push('· 총무: ' + formatWon(r.treasurerShare) + '원 (최소부담)');
+        L.push('');
+        L.push('※ 딱 안 떨어져서 일반회원은 1,000원 단위로 공평하게, 총무가 남은 차액만 부담합니다.');
+      }
+    }
+    return L.join('\n');
+  }
+
+  function copyText(text){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:none;padding:0;';
+    document.body.appendChild(ta);
+    var isIOS = /iP(hone|od|ad)/.test(navigator.userAgent || '') ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if(isIOS){
+      var range = document.createRange();
+      range.selectNodeContents(ta);
+      var sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      ta.setSelectionRange(0, text.length);
+    } else {
+      ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+    }
+    var ok = false;
+    try{ ok = document.execCommand('copy'); }catch(e){ ok = false; }
+    if(window.getSelection) window.getSelection().removeAllRanges();
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  $('#copyBtn').addEventListener('click', function(){
+    var text = buildText();
+    if(!text){ alert('먼저 총 금액을 입력해 주세요.'); return; }
+    var btn = this;
+    function done(){
+      btn.textContent = '복사됨!';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = '정산 결과 복사'; btn.classList.remove('copied'); }, 1500);
+    }
+    if(copyText(text)){ done(); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){
+        window.prompt('아래 내용을 직접 복사해 주세요:', text);
+      });
+    } else {
+      window.prompt('아래 내용을 직접 복사해 주세요:', text);
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
