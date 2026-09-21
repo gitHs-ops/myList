@@ -964,9 +964,7 @@
   const SEL = 'button, a[href], summary, input, select, [role="button"], .views img, #drop';
   function labelOf(el) {
     let t = '';
-    if (el.id === 'drop') t = '스케치 업로드 영역';
-    else if (el.id === 'btnSysLog') t = '시스템 로그 열기';   // 버튼 글자에 건수가 붙어 있어 고정 문구 사용
-    else if (el.tagName === 'INPUT') { const lab = el.closest('label'); t = lab ? lab.textContent : ''; }
+    if (el.id === 'drop') t = '스케치 업로드 영역';    else if (el.tagName === 'INPUT') { const lab = el.closest('label'); t = lab ? lab.textContent : ''; }
     else if (el.tagName === 'IMG') t = el.alt || el.title || '';
     else if (el.tagName === 'SELECT') t = el.title || '';
     else t = el.textContent || '';
@@ -982,6 +980,7 @@
     if (!target || !target.closest || inLog(target)) return;
     const el = target.closest(SEL);
     if (!el) return;
+    if (el.id === 'btnSysLog') return;                              // 로그 열기 버튼 자체는 기록하지 않음
     const auto = e.isTrusted ? '' : ' (코드 호출)';
     const tag = el.tagName, type = (el.type || '').toLowerCase();
     if (tag === 'SELECT') return;                                   // 선택 변경은 change 로 기록
@@ -1030,8 +1029,10 @@
 
   const st = document.getElementById('status');
   if (st) {
+    let booted = false;   // 페이지 로드 완료 전(기동 중 자동 생성 등)의 상태 메시지는 시스템 시작 이벤트라 제외
+    window.addEventListener('load', () => setTimeout(() => { booted = true; }, 300));
     new MutationObserver(function () {
-      if (!st.classList.contains('show')) return;
+      if (!booted || !st.classList.contains('show')) return;
       const txt = (st.textContent || '').replace(/\s+/g, ' ').trim();
       if (!txt) return;
       const kind = ['ok', 'err', 'info'].find(k => st.classList.contains(k)) || '';
@@ -1059,16 +1060,15 @@
   };
 
   updateCount();
-  add('session', `페이지 로드 · 화면 ${innerWidth}×${innerHeight} · 기기ID ${deviceId}`);
-
-  // 접속 IP는 로그 팝업 상단·내보내기 머리말·세션 기록에 반영. 실패해도(차단·오프라인) 나머지 로그는 정상 동작.
+  // 시스템 시작 이벤트(페이지 로드·기동 시 자동 상태 메시지)는 기록하지 않는다 — 기기ID·접속 IP는 팝업 상단·내보내기 머리말에 표시.
+  // 접속 IP 조회가 실패해도(차단·오프라인) 나머지 로그는 정상 동작.
   (function () {
     const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 4000);
     rawFetch('https://api64.ipify.org?format=json', { signal: ctl.signal, cache: 'no-store' })
       .then(r => r.json())
       .then(j => { publicIp = (j && j.ip) || '확인 불가'; })
       .catch(() => { publicIp = '확인 불가(차단·오프라인)'; })
-      .then(() => { clearTimeout(to); renderId(); add('session', '접속 IP: ' + publicIp); });
+      .then(() => { clearTimeout(to); renderId(); });
   })();
 })();
 </script>
