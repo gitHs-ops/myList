@@ -820,7 +820,7 @@
   dlg.innerHTML =
     '<button class="dialog-close-x" id="sysLogX" aria-label="닫기" title="닫기">×</button>' +
     '<h3 id="sysLogTitle">시스템 로그</h3>' +
-    '<p>버튼 클릭·체크/선택 변경·오류·상태 메시지·API 호출을 시간순으로 기록합니다. 입력한 글자(접근 코드·채팅 내용)는 기록하지 않으며, 이 브라우저에만 저장됩니다(최근 300건 유지).</p>' +
+    '<p>버튼 클릭·체크/선택 변경·오류·상태 메시지·API 호출을 시간순으로 기록합니다. 입력한 글자(접근 코드·채팅 내용)는 기록하지 않습니다. 이 브라우저에 최근 300건이 남고, 전송이 켜져 있으면 기기ID·접속 IP와 함께 운영자 구글 시트로도 전송됩니다.</p>' +
     '<div class="sys-log-id" id="sysLogId"></div>' +
     '<div class="sys-log-tools">' +
       '<button type="button" class="dim-btn" id="sysLogCopy">📋 복사</button>' +
@@ -846,7 +846,85 @@
     }
   } catch (e) { deviceId = deviceId || 'temp-' + Math.random().toString(16).slice(2, 10); }
   let publicIp = '확인 중…';
-  function renderId() { idEl.textContent = `기기ID: ${deviceId} · 접속 IP: ${publicIp}`; }
+
+  /* ---------- 구글 시트 전송 (Apps Script 웹앱) ----------
+     로컬 보관(최근 300건)과 별개로, 기록을 모아 시트에 올려 여러 사용자의 로그를 한곳에서 본다.
+     · 전송 단위: 20건이 쌓이거나 10초마다, 그리고 페이지를 떠날 때(sendBeacon)
+     · 실패분은 대기열에 남겨 다음 방문 때 재전송 (최대 500건)
+     · 텍스트 입력값(접근 코드·채팅 내용)은 애초에 기록하지 않으므로 전송 대상에도 없다
+     · 수신부 코드·배포 방법은 sketch3d/apps-script/log-sheet.gs 참고 */
+  const SHEET_LOG_URL = '';   // ← Apps Script 웹앱 배포 URL(https://script.google.com/macros/s/.../exec). 비워두면 전송하지 않는다.
+  const MASK_IP = false;      // true 로 두면 IP 끝자리를 가려서(1.2.3.*) 보낸다
+  const QKEY = 'sketch3d_syslog_queue', QMAX = 500, BATCH = 20, SEND_INTERVAL = 10000;
+  const nativeFetch = window.fetch.bind(window);   // fetch 를 감싸기 전 원본 — 전송 자체가 API 로그로 되먹임되는 것을 막는다
+  const sessionId = (crypto.randomUUID ? crypto.randomUUID()
+    : Date.now().toString(16) + Math.random().toString(16).slice(2)).slice(0, 8);
+  const IPV = /^[0-9a-f.:]+$/i;
+  let sendSeq = 0, sendTimer = null, sending = false, queue = [];
+  try {
+    const q = JSON.parse(localStorage.getItem(QKEY) || '[]');
+    if (Array.isArray(q)) queue = q.slice(-QMAX);
+  } catch (e) { /* 대기열을 못 읽어도 기록 기능은 그대로 동작 */ }
+
+  function saveQueue() { try { localStorage.setItem(QKEY, JSON.stringify(queue.slice(-QMAX))); } catch (e) { /* 용량 초과 시 메모리만 유지 */ } }
+  function maskIp(ip) {
+    if (!MASK_IP || !ip || !IPV.test(ip)) return ip;
+    return ip.indexOf(':') >= 0 ? ip.replace(/:[^:]*$/, ':*') : ip.replace(/\.\d+$/, '.*');
+  }
+  function envelope(rows) {
+    const nowIp = maskIp(publicIp);
+    return {
+      app: 'sketch3d', session: sessionId, device: deviceId, ip: nowIp,
+      page: location.origin + location.pathname,
+      ua: navigator.userAgent, screen: innerWidth + 'x' + innerHeight,
+      // 기록 시점에 IP 조회가 끝나지 않았던 항목은 전송 시점의 IP로 채운다
+      rows: rows.map(r => ({ seq: r.seq, ts: r.ts, type: r.type, msg: r.msg, ip: IPV.test(r.ip || '') ? maskIp(r.ip) : nowIp }))
+    };
+  }
+  function scheduleSend() {
+    if (!SHEET_LOG_URL || sendTimer) return;
+    sendTimer = setTimeout(function () { sendTimer = null; flushQueue(false); }, SEND_INTERVAL);
+  }
+  function flushQueue(useBeacon) {
+    if (!SHEET_LOG_URL || !queue.length) return;
+    if (sending && !useBeacon) return;
+    clearTimeout(sendTimer); sendTimer = null;
+    const batch = queue.slice(0, useBeacon ? QMAX : BATCH);
+    const body = JSON.stringify(envelope(batch));
+    if (useBeacon) {
+      let ok = false;
+      try { ok = navigator.sendBeacon(SHEET_LOG_URL, new Blob([body], { type: 'text/plain;charset=utf-8' })); } catch (e) { ok = false; }
+      if (ok) { queue = queue.slice(batch.length); saveQueue(); }
+      return;
+    }
+    sending = true;
+    queue = queue.slice(batch.length); saveQueue();
+    // Apps Script 는 CORS 응답 헤더를 붙이지 못하므로 no-cors 로 보내고 성공 여부는 네트워크 도달로만 판단한다
+    nativeFetch(SHEET_LOG_URL, {
+      method: 'POST', mode: 'no-cors', keepalive: true,
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body
+    }).catch(function () {
+      queue = batch.concat(queue).slice(-QMAX); saveQueue();   // 실패분은 되돌려 다음 기회에 재전송
+    }).then(function () {
+      sending = false;
+      renderId();
+      if (queue.length) scheduleSend();
+    });
+  }
+  function enqueue(e) {
+    if (!SHEET_LOG_URL) return;
+    queue.push({ seq: ++sendSeq, ts: e.ts, type: e.type, msg: e.msg, ip: e.ip });
+    if (queue.length > QMAX) queue.splice(0, queue.length - QMAX);
+    saveQueue();
+    if (queue.length >= BATCH) flushQueue(false); else scheduleSend();
+  }
+  window.addEventListener('pagehide', function () { flushQueue(true); });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flushQueue(true); });
+
+  function renderId() {
+    const send = !SHEET_LOG_URL ? '끔' : (queue.length ? `켬 (대기 ${queue.length}건)` : '켬');
+    idEl.textContent = `기기ID: ${deviceId} · 접속 IP: ${publicIp} · 시트 전송: ${send}`;
+  }
   renderId();
 
   function updateCount() {
@@ -900,6 +978,7 @@
     if (logs.length > MAX) logs.splice(0, logs.length - MAX);
     persist();
     updateCount();
+    enqueue(e);   // 구글 시트 전송 대기열
     if (dlg.open) {
       if (listEl.querySelector('.sys-log-empty')) listEl.textContent = '';
       const nearBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < 40;
@@ -1069,6 +1148,7 @@
   };
 
   updateCount();
+  if (queue.length) scheduleSend();   // 지난 방문에서 못 보낸 기록부터 올린다
   // 시스템 시작 이벤트(페이지 로드·기동 시 자동 상태 메시지)는 기록하지 않는다 — 기기ID·접속 IP는 팝업 상단·내보내기 머리말에 표시.
   // 접속 IP 조회가 실패해도(차단·오프라인) 나머지 로그는 정상 동작.
   (function () {
