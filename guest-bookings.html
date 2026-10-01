@@ -215,9 +215,9 @@ function parseCsv(t){
 }
 const ALIAS={platform:['플랫폼','채널','platform','channel'],bookingNo:['예약번호','bookingno','bookingid','booking id','reservation','id'],
   guest:['게스트','게스트명','이름','투숙객','예약자','guest','name'],phone:['연락처','전화','전화번호','phone','tel'],
-  room:['객실','객실명','방','room','roomtype'],people:['인원','투숙인원','people','guests','pax'],
+  room:['객실','객실명','객실유형','방','room','roomtype'],people:['인원','투숙인원','people','guests','pax'],
   checkIn:['체크인','입실','입실일','checkin','check-in','arrival'],checkOut:['체크아웃','퇴실','퇴실일','checkout','check-out','departure'],
-  amount:['금액','결제금액','요금','amount','price','total'],status:['상태','예약상태','status'],memo:['메모','비고','요청사항','memo','note','notes']};
+  amount:['금액','총금액','결제금액','요금','amount','price','total'],status:['상태','예약상태','status'],memo:['메모','비고','요청사항','memo','note','notes']};
 function normDate(s){
   s=String(s||'').trim();let m=s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
   return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:'';
