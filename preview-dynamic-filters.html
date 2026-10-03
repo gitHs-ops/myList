@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Filters 미리보기</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; background: #fafafa; }
+  table.Table { border-collapse: collapse; background: #fff; border: 1px solid #ccc; }
+  table.Table td { padding: 8px 10px; vertical-align: top; }
+  .gx-attribute { display: flex; align-items: center; gap: 8px; }
+  .AttributeLabel, .AttributeRealWidthLabel { font-size: 13px; color: #444; white-space: nowrap; }
+  select.Attribute, input.AttributeRealWidth { padding: 4px 6px; font-size: 14px; }
+  input.AttributeRealWidth { width: 40ch; }
+  .Image { width: 24px; height: 24px; border: 0; border-radius: 4px; color: #fff; font-size: 16px; line-height: 24px; cursor: pointer; }
+  .GX_Image_ActionNewDynamicFilter_Class { background: #2e7d32; }
+  .GX_Image_ActionRemoveDynamicFilter_Class { background: #c62828; }
+</style>
+</head>
+<body>
+<table id="TABLEMERGEDDYNAMICFILTERS2" class="Table">
+  <tr>
+    <td>
+      <div class="gx-attribute">
+        <label class="gx-form-item AttributeLabel" for="vDYNAMICFILTERSOPERATOR2" style="width:25%;">Dynamic Filters Operator2</label>
+        <select id="vDYNAMICFILTERSOPERATOR2" class="Attribute">
+          <option value="0">=</option>
+          <option value="1">&lt;&gt;</option>
+          <option value="2">含む</option>
+          <option value="3">前方一致</option>
+        </select>
+      </div>
+    </td>
+    <td id="FILTER_O7_ATTR_SZKNM2_CELL">
+      <div class="gx-attribute">
+        <label class="gx-form-item AttributeRealWidthLabel" for="vO7_ATTR_SZKNM2" style="width:25%;">o7_attr_szknm2</label>
+        <input type="text" id="vO7_ATTR_SZKNM2" class="AttributeRealWidth" size="40" maxlength="120">
+      </div>
+    </td>
+    <td id="DYNAMICFILTERS_ADDFILTER2_CELL">
+      <button type="button" id="ADDDYNAMICFILTERS2" class="Image GX_Image_ActionNewDynamicFilter_Class" title="フィルタの追加">+</button>
+    </td>
+    <td id="DYNAMICFILTERS_REMOVEFILTER2_CELL">
+      <button type="button" id="REMOVEDYNAMICFILTERS2" class="Image GX_Image_ActionRemoveDynamicFilter_Class" title="フィルタを削除">×</button>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
